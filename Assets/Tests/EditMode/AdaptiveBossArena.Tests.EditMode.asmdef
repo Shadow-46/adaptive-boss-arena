@@ -1,0 +1,32 @@
+{
+  "name": "AdaptiveBossArena.Tests.EditMode",
+  "rootNamespace": "AdaptiveBossArena.Tests.EditMode",
+  "references": [
+    "UnityEngine.TestRunner",
+    "UnityEditor.TestRunner",
+    "AdaptiveBossArena.Utilities",
+    "AdaptiveBossArena.Core",
+    "AdaptiveBossArena.Combat",
+    "AdaptiveBossArena.Player",
+    "AdaptiveBossArena.Learning",
+    "AdaptiveBossArena.AI",
+    "AdaptiveBossArena.UI",
+    "AdaptiveBossArena.Game",
+    "AdaptiveBossArena.Editor"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

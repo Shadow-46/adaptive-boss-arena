@@ -1,0 +1,28 @@
+{
+  "name": "AdaptiveBossArena.Tests.PlayMode",
+  "rootNamespace": "AdaptiveBossArena.Tests.PlayMode",
+  "references": [
+    "UnityEngine.TestRunner",
+    "UnityEditor.TestRunner",
+    "AdaptiveBossArena.Utilities",
+    "AdaptiveBossArena.Core",
+    "AdaptiveBossArena.Combat",
+    "AdaptiveBossArena.Player",
+    "AdaptiveBossArena.Learning",
+    "AdaptiveBossArena.AI",
+    "AdaptiveBossArena.Game"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
