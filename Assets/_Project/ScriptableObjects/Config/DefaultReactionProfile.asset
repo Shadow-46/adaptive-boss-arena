@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6ab00d737f222004dac80bf0f6621bfd, type: 3}
+  m_Name: DefaultReactionProfile
+  m_EditorClassIdentifier: AdaptiveBossArena.Core::AdaptiveBossArena.Core.Perception.ReactionProfile
+  _id: reaction.default
+  _designerNotes: Baseline human-plausible reaction limits. Later phases tighten
+    these toward the fast end but must never go below it.
+  _perceptionLatencySeconds: 0.14
+  _minReactionSeconds: 0.22
+  _maxReactionSeconds: 0.42
+  _missedOpportunityChance: 0.12

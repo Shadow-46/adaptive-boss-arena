@@ -1,0 +1,29 @@
+{
+  "name": "AdaptiveBossArena.Editor",
+  "rootNamespace": "AdaptiveBossArena.Editor",
+  "references": [
+    "AdaptiveBossArena.Utilities",
+    "AdaptiveBossArena.Core",
+    "AdaptiveBossArena.Combat",
+    "AdaptiveBossArena.Player",
+    "AdaptiveBossArena.Learning",
+    "AdaptiveBossArena.AI",
+    "AdaptiveBossArena.UI",
+    "AdaptiveBossArena.Game",
+    "Unity.InputSystem",
+    "Unity.RenderPipelines.Universal.Runtime",
+    "Unity.RenderPipelines.Core.Runtime",
+    "UnityEngine.UI"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ac21de358414c5f498a0ca80359bd13a, type: 3}
+  m_Name: DefaultArenaConfig
+  m_EditorClassIdentifier: AdaptiveBossArena.Game::AdaptiveBossArena.Game.ArenaConfig
+  _id: arena.default
+  _designerNotes: 
+  _radius: 16
+  _wallHeight: 3
+  _wallSegments: 32
+  _playerSpawn: {x: 0, y: 0, z: -6}
+  _bossSpawn: {x: 0, y: 0, z: 6}
+  _cameraHeight: 10.5
+  _cameraDistance: 6
+  _cameraPitchDegrees: 60
+  _cameraFollowHalfLife: 0.18
+  _cameraBiasTowardBoss: 0.3
