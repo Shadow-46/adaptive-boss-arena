@@ -1,0 +1,19 @@
+{
+  "name": "AdaptiveBossArena.AI",
+  "rootNamespace": "AdaptiveBossArena.AI",
+  "references": [
+    "AdaptiveBossArena.Utilities",
+    "AdaptiveBossArena.Core",
+    "AdaptiveBossArena.Combat",
+    "AdaptiveBossArena.Learning"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
