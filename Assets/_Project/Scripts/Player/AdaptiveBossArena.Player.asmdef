@@ -1,0 +1,19 @@
+{
+  "name": "AdaptiveBossArena.Player",
+  "rootNamespace": "AdaptiveBossArena.Player",
+  "references": [
+    "AdaptiveBossArena.Utilities",
+    "AdaptiveBossArena.Core",
+    "AdaptiveBossArena.Combat",
+    "Unity.InputSystem"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
