@@ -1,0 +1,16 @@
+{
+  "name": "AdaptiveBossArena.Core",
+  "rootNamespace": "AdaptiveBossArena.Core",
+  "references": [
+    "AdaptiveBossArena.Utilities"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
