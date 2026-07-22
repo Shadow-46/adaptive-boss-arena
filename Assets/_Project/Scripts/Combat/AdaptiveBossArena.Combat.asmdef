@@ -1,0 +1,17 @@
+{
+  "name": "AdaptiveBossArena.Combat",
+  "rootNamespace": "AdaptiveBossArena.Combat",
+  "references": [
+    "AdaptiveBossArena.Utilities",
+    "AdaptiveBossArena.Core"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
