@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b5eac27a7b3ae6d4294060e296da746b, type: 3}
+  m_Name: DefaultPlayerAnimation
+  m_EditorClassIdentifier: AdaptiveBossArena.Combat::AdaptiveBossArena.Combat.Feel.CharacterAnimationConfig
+  _id: animation.player
+  _designerNotes: 
+  _idleBobAmplitude: 0.04
+  _idleBobFrequency: 1.4
+  _idleSwayDegrees: 2
+  _moveLeanDegrees: 11
+  _anticipationCrouch: 0.13
+  _anticipationSquash: 0.14
+  _anticipationLeanDegrees: 15
+  _strikeLunge: 0.38
+  _strikeStretch: 0.16
+  _strikeLeanDegrees: 19
+  _heavyMultiplier: 1.5
+  _guardCrouch: 0.1
+  _guardLeanDegrees: 9
+  _dashLeanDegrees: 24
+  _dashStretch: 0.2
+  _healCrouch: 0.18
+  _recoilDistance: 0.3
+  _recoilDurationSeconds: 0.22
+  _recoilSquash: 0.13
+  _deathFallDegrees: 82
+  _deathSink: 0.35
+  _flourishRearDegrees: 26
+  _flourishStretch: 0.24
+  _flourishDurationSeconds: 0.7
+  _positionHalfLife: 0.05
+  _rotationHalfLife: 0.05
+  _scaleHalfLife: 0.06
