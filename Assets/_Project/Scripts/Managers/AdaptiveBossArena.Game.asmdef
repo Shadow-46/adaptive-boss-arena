@@ -1,0 +1,25 @@
+{
+  "name": "AdaptiveBossArena.Game",
+  "rootNamespace": "AdaptiveBossArena.Game",
+  "references": [
+    "AdaptiveBossArena.Utilities",
+    "AdaptiveBossArena.Core",
+    "AdaptiveBossArena.Combat",
+    "AdaptiveBossArena.Player",
+    "AdaptiveBossArena.Learning",
+    "AdaptiveBossArena.AI",
+    "AdaptiveBossArena.UI",
+    "Unity.InputSystem",
+    "Unity.RenderPipelines.Core.Runtime",
+    "Unity.RenderPipelines.Universal.Runtime"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
