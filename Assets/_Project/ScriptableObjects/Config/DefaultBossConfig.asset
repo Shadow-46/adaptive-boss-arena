@@ -1,0 +1,88 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 47ab908cf8cb694428259cbcda21405f, type: 3}
+  m_Name: DefaultBossConfig
+  m_EditorClassIdentifier: AdaptiveBossArena.AI::AdaptiveBossArena.AI.BossConfig
+  _id: boss.default
+  _designerNotes: 
+  _maxHealth: 650
+  _maxPoise: 100
+  _poiseRegenPerSecond: 12
+  _moveSpeed: 5
+  _turnSpeedDegreesPerSecond: 220
+  _reactionProfile: {fileID: 11400000, guid: c374e3bf32bdf5c49be748aa714d26b8, type: 2}
+  _phases:
+  - _name: Measured
+    _healthThreshold: 1
+    _attacks:
+    - {fileID: 11400000, guid: c36e1a4c0c2652e44a0844711735c22a, type: 2}
+    - {fileID: 11400000, guid: 9a2b3bde94dd7424783e41b43ef210e0, type: 2}
+    _signatureAttack: {fileID: 11400000, guid: 9a2b3bde94dd7424783e41b43ef210e0, type: 2}
+    _moveSpeedMultiplier: 1
+    _attackCooldownSeconds: 1.15
+    _adaptationRateMultiplier: 1
+  - _name: Pressing
+    _healthThreshold: 0.66
+    _attacks:
+    - {fileID: 11400000, guid: c36e1a4c0c2652e44a0844711735c22a, type: 2}
+    - {fileID: 11400000, guid: 9a2b3bde94dd7424783e41b43ef210e0, type: 2}
+    - {fileID: 11400000, guid: 5c47ed3ac6dcb0648801a9e6e503bc50, type: 2}
+    - {fileID: 11400000, guid: 126f8a091d25e214590b283ab2bcce93, type: 2}
+    - {fileID: 11400000, guid: 1b8a10dd73636cc43b5fa064f62ca83f, type: 2}
+    _signatureAttack: {fileID: 11400000, guid: 5c47ed3ac6dcb0648801a9e6e503bc50, type: 2}
+    _moveSpeedMultiplier: 1.15
+    _attackCooldownSeconds: 0.85
+    _adaptationRateMultiplier: 1.4
+  - _name: Relentless
+    _healthThreshold: 0.33
+    _attacks:
+    - {fileID: 11400000, guid: c36e1a4c0c2652e44a0844711735c22a, type: 2}
+    - {fileID: 11400000, guid: 9a2b3bde94dd7424783e41b43ef210e0, type: 2}
+    - {fileID: 11400000, guid: 5c47ed3ac6dcb0648801a9e6e503bc50, type: 2}
+    - {fileID: 11400000, guid: a85d1e6c062cdc148afac1575b1b5abb, type: 2}
+    - {fileID: 11400000, guid: 126f8a091d25e214590b283ab2bcce93, type: 2}
+    - {fileID: 11400000, guid: 1b8a10dd73636cc43b5fa064f62ca83f, type: 2}
+    _signatureAttack: {fileID: 11400000, guid: a85d1e6c062cdc148afac1575b1b5abb, type: 2}
+    _moveSpeedMultiplier: 1.3
+    _attackCooldownSeconds: 0.6
+    _adaptationRateMultiplier: 2
+  - _name: Last Stand
+    _healthThreshold: 0.15
+    _attacks:
+    - {fileID: 11400000, guid: c36e1a4c0c2652e44a0844711735c22a, type: 2}
+    - {fileID: 11400000, guid: 9a2b3bde94dd7424783e41b43ef210e0, type: 2}
+    - {fileID: 11400000, guid: 5c47ed3ac6dcb0648801a9e6e503bc50, type: 2}
+    - {fileID: 11400000, guid: a85d1e6c062cdc148afac1575b1b5abb, type: 2}
+    - {fileID: 11400000, guid: 126f8a091d25e214590b283ab2bcce93, type: 2}
+    - {fileID: 11400000, guid: 1b8a10dd73636cc43b5fa064f62ca83f, type: 2}
+    _signatureAttack: {fileID: 11400000, guid: a85d1e6c062cdc148afac1575b1b5abb, type: 2}
+    _moveSpeedMultiplier: 1.4
+    _attackCooldownSeconds: 0.45
+    _adaptationRateMultiplier: 2.5
+  _phaseShockwave: {fileID: 11400000, guid: d2dc5bf9fb135f244ab52724961d8436, type: 2}
+  _counterStrategies:
+  - {fileID: 11400000, guid: 6aead648c06a50a4792974cd4a807bef, type: 2}
+  - {fileID: 11400000, guid: f3b2c171636b6e04ea5fcfa0fc0b8e36, type: 2}
+  - {fileID: 11400000, guid: c32feebd7dd6a7145a8b86e519a77eec, type: 2}
+  - {fileID: 11400000, guid: 885bb229468103245875f4147c628a97, type: 2}
+  - {fileID: 11400000, guid: d492ae8ccfbb24d45a424edb0ad140e9, type: 2}
+  - {fileID: 11400000, guid: 25c207c4eefbf96449e1025efcdd0057, type: 2}
+  - {fileID: 11400000, guid: e9776edbbaf093e42b683221a3caa68c, type: 2}
+  - {fileID: 11400000, guid: ae89b9b1ba4df1640b4e94bad2be1705, type: 2}
+  _analysisIntervalSeconds: 2.5
+  _minSecondsBetweenAdaptations: 12
+  _memoryHalfLifeSeconds: 45
+  _resolveThreshold: 100
+  _resolveBuildPerSecond: 3.2
+  _resolveBuildPerWhiff: 14
+  _baselinePreferredRange: 3
+  _baselineAggression: 0.5

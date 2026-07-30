@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c8a332eeccae9a4190f3b00cd65538c, type: 3}
+  m_Name: WeaponEnergyBlade
+  m_EditorClassIdentifier: AdaptiveBossArena.Combat::AdaptiveBossArena.Combat.WeaponDefinition
+  _id: weapon.weaponenergyblade
+  _designerNotes: 
+  _displayName: Energy Blade
+  _signatureColor: {r: 0.7, g: 1, b: 0.8, a: 0.6}
+  _modelPrefab: {fileID: 0}
+  _lightComboChain:
+  - {fileID: 11400000, guid: 161e8470f16946b4da1bc4c746fed900, type: 2}
+  - {fileID: 11400000, guid: e8e5a4f68150aae47a3974085ac02aaa, type: 2}
+  - {fileID: 11400000, guid: 562917821e9f09d42940508e26aee691, type: 2}
+  - {fileID: 11400000, guid: 6c11f08fdcd1c514098c673ced9d65bf, type: 2}
+  _heavyAttack: {fileID: 11400000, guid: 817e8f6a6ab3fd247b3803288036af66, type: 2}
+  _specialAttack: {fileID: 11400000, guid: 8388a66b6debb2841b9d4a205b0f090b, type: 2}
+  _empoweredSpecialAttack: {fileID: 11400000, guid: d95173ff38412924ca299a40843c32b2, type: 2}
+  _riposteAttack: {fileID: 11400000, guid: 817e8f6a6ab3fd247b3803288036af66, type: 2}
+  _defence: 2
+  _deflectWindowSeconds: 0.28
+  _deflectPostureDamage: 16
+  _moveSpeedMultiplier: 1.12
+  _staminaCostMultiplier: 0.85

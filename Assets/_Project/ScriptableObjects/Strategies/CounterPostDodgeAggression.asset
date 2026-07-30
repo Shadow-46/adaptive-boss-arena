@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08912429313b6b04b854987a056f0393, type: 3}
+  m_Name: CounterPostDodgeAggression
+  m_EditorClassIdentifier: AdaptiveBossArena.Learning::AdaptiveBossArena.Learning.CounterStrategy
+  _id: strategy.counterpostdodgeaggression
+  _designerNotes: 
+  _triggerFeature: 2
+  _comparison: 0
+  _threshold: 0.6
+  _minimumConfidence: 0.5
+  _selectionWeight: 1.4
+  _minimumPhase: 1
+  _repeatable: 0
+  _adjustments:
+  - _parameter: 0
+    _targetValue: 0.35
+  - _parameter: 7
+    _targetValue: 0.3
+  _easeInSeconds: 6
+  _tellMessage: It waits for your opening now.
+  _tellAudioCueId: 

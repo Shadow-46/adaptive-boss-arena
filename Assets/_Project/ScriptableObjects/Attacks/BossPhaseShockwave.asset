@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3a6935f1554604d4896784ff1562b921, type: 3}
+  m_Name: BossPhaseShockwave
+  m_EditorClassIdentifier: AdaptiveBossArena.Combat::AdaptiveBossArena.Combat.AttackDefinition
+  _id: attack.bossphaseshockwave
+  _designerNotes: 
+  _displayName: Cataclysmic Wave
+  _castVfxPrefab: {fileID: 0}
+  _damage: 22
+  _damageType: 4
+  _poiseDamage: 30
+  _stagger: 1
+  _knockbackSpeed: 9
+  _startupSeconds: 0.95
+  _activeSeconds: 0.4
+  _recoverySeconds: 0.7
+  _shape: 0
+  _offset: {x: 0, y: 1, z: 1}
+  _range: 8.5
+  _arcDegrees: 360
+  _boxHalfExtents: {x: 0.6, y: 0.6, z: 1}
+  _staminaCost: 0
+  _lungeSpeed: 0
+  _hitStopSeconds: 0.12
+  _cameraTrauma: 0.6
+  _leavesHazard: 1
+  _hazardRadius: 4
+  _hazardDamagePerTick: 3
+  _hazardDurationSeconds: 4.5
+  _unblockable: 1
+  _telegraphColor: {r: 1, g: 0.35, b: 0.2, a: 0.55}
+  _showTelegraph: 1
+  _comboWindowStart: 0.1
+  _comboWindowEnd: 0.85

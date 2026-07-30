@@ -1,0 +1,55 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0fe249486eb716f4b92c1e6fe5d19c39, type: 3}
+  m_Name: DefaultPlayerConfig
+  m_EditorClassIdentifier: AdaptiveBossArena.Player::AdaptiveBossArena.Player.PlayerConfig
+  _id: player.default
+  _designerNotes: 
+  _maxHealth: 100
+  _maxStamina: 100
+  _staminaRegenPerSecond: 28
+  _staminaRegenDelaySeconds: 0.6
+  _moveSpeed: 7
+  _accelerationSeconds: 0.06
+  _decelerationSeconds: 0.08
+  _turnSpeedDegreesPerSecond: 1080
+  _dashDistance: 4.5
+  _dashDurationSeconds: 0.18
+  _dashCooldownSeconds: 0.25
+  _dashStaminaCost: 22
+  _invulnerabilityFraction: 0.75
+  _dashExitSpeedFraction: 0.35
+  _weapons:
+  - {fileID: 11400000, guid: 2431a21a84cf23d4abd5c018405a4040, type: 2}
+  - {fileID: 11400000, guid: 052f41240908e9146a0bfdd63dad6973, type: 2}
+  - {fileID: 11400000, guid: 89a83304c3ac42149bf9d1c4f1d3b3cd, type: 2}
+  _lightComboChain:
+  - {fileID: 11400000, guid: b612f7e88df49f04e9a415fa54141bd4, type: 2}
+  - {fileID: 11400000, guid: 1400dc5f7369ad747a87d9cb94217ca0, type: 2}
+  - {fileID: 11400000, guid: 1631fc85fd19d7c498de86b0b9a6c158, type: 2}
+  _heavyAttack: {fileID: 11400000, guid: d082abd4fa32c194692bbf10c6614da3, type: 2}
+  _specialAttack: {fileID: 11400000, guid: b649a2c3532349a4289f1b5e9cb553f3, type: 2}
+  _specialCooldownSeconds: 8
+  _empoweredSpecialAttack: {fileID: 0}
+  _maxFocus: 100
+  _focusPerDeflect: 34
+  _focusPerPerfectDodge: 26
+  _riposteAttack: {fileID: 0}
+  _executionAttack: {fileID: 11400000, guid: ebc03bd400ae8a040892263c650ed6c0, type: 2}
+  _maxPosture: 100
+  _postureRegenPerSecond: 22
+  _blockPostureCost: 22
+  _blockChipFraction: 0.15
+  _deflectPostureDamage: 28
+  _healAmount: 35
+  _healCharges: 3
+  _healChannelSeconds: 0.9
