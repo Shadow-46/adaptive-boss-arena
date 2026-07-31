@@ -1,15 +1,49 @@
 # Adaptive Boss Arena
 
-A single-encounter action game where the boss learns.
+**A single-encounter action game where the boss studies you.** Fight one boss in one arena; it builds
+a statistical profile of your habits — how you attack, dodge, space and panic — and counter-adapts to
+punish them, *without ever reading your input*. Winning means noticing it has adapted, and adapting back.
 
-You fight one boss in one arena. It watches how you play — how often you attack, which way you
-roll, how far you like to stand, whether you always swing right after a dodge — and gradually
-changes its approach to punish your habits. Winning means noticing that it has adapted, and
-adapting back.
+![Unity](https://img.shields.io/badge/Unity-6000.3%20LTS-222c37?logo=unity&logoColor=white)
+![Edit-mode tests](https://img.shields.io/badge/edit--mode%20tests-213%20passing-3fb950)
+![License](https://img.shields.io/badge/license-MIT-3b82f6)
+![Assets](https://img.shields.io/badge/assets-generated%20from%20code-8957e5)
 
-> **Design constraint:** the boss never reads your input. It reacts only to what a human opponent
-> could see, after a human-plausible delay. This is enforced by the assembly graph, not by good
-> intentions. See [Docs/ARCHITECTURE.md](Docs/ARCHITECTURE.md).
+⬇ **[Download for Windows](https://github.com/Shadow-46/adaptive-boss-arena/releases/latest)** — unzip and run `AdaptiveBossArena.exe`. *(A one-click in-browser demo is on the way.)*
+
+It's a Sekiro-style deflect duel built in Unity 6, **entirely from code-generated assets** (no
+hand-authored scenes or prefabs), and it never lets the boss cheat:
+
+> **The one rule that outranks the rest.** The boss may not read your input, buffered input, stamina,
+> cooldowns or invincibility frames. It reacts only to what a human opponent could perceive on screen,
+> and only after a human-plausible delay. This is enforced by the **assembly dependency graph** — the
+> AI and learning code literally cannot compile against the code that would let them cheat, and a test
+> fails the build if that boundary is ever breached. See [Docs/ARCHITECTURE.md](Docs/ARCHITECTURE.md).
+
+### The anti-cheat firewall
+
+```mermaid
+flowchart TD
+    U[Utilities] --> C[Core]
+    C --> CB[Combat]
+    CB --> P[Player<br/>+ Input System]
+    CB --> L[Learning]
+    L --> AI[AI]
+    CB --> UI[UI]
+    P --> G[Game<br/>composition root]
+    AI --> G
+    L --> G
+    UI --> G
+    G --> ED[Editor<br/>asset generators]
+    classDef boss fill:#3a1420,stroke:#e0524f,color:#ffd9d9
+    classDef player fill:#0f2740,stroke:#5aa0ff,color:#d9ecff
+    class AI,L boss
+    class P player
+```
+
+The **AI** and **Learning** assemblies have **no arrow to Player or the Input System** — that missing
+edge is the firewall. All the player state the boss is allowed to know reaches it through a delayed,
+perception-limited channel, so feints genuinely work and the fight stays fair.
 
 ---
 
@@ -18,10 +52,12 @@ adapting back.
 **All seven build phases complete, plus a top-tier polish pass — the game runs end to end from a
 title screen through a framed, animated fight.**
 
-There is a fight. You can move, dash, combo, heal, deflect, and be staggered. The boss watches you,
-moves through three phases with dramatic transitions, strings its attacks into combos, and gradually
-develops answers to whatever you keep doing. It is wrapped in a title screen, a "ready — fight"
-intro, slow-motion outcome beats, and a working settings menu.
+There is a fight. You can move, dash, combo, heal, deflect, build focus, and be staggered. The boss
+watches you, escalates through four phases (ending in a desperation **Last Stand**) with dramatic
+transitions, strings its attacks into combos, throws unblockable "perilous" attacks and arena-scarring
+set-pieces, and gradually develops answers to whatever you keep doing. It is wrapped in a title screen,
+a "ready — fight" intro, slow-motion outcome beats, a post-fight dossier on how it read you, challenge
+modifiers, and a working settings menu.
 
 | Phase | Scope | Status |
 |-------|-------|--------|
