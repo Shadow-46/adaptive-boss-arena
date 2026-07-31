@@ -37,6 +37,15 @@ namespace AdaptiveBossArena.Game
         /// <summary>Height the phase-transition shockwave erupts from, roughly the boss's centre.</summary>
         private const float ShockwaveHeight = 1.2f;
 
+        /// <summary>Field-of-view kick, in degrees, that widens the view on a dash for a burst of speed.</summary>
+        private const float DashFovWiden = 6f;
+
+        /// <summary>Field-of-view narrowing on a clean deflect, snapping focus onto the parry.</summary>
+        private const float DeflectFovNarrow = 3.5f;
+
+        /// <summary>Field-of-view narrowing on a perfect dodge, complementing the slow-motion.</summary>
+        private const float PerfectDodgeFovNarrow = 5f;
+
         [SerializeField]
         [Tooltip("Raised on a perfect dodge.")]
         private VoidEventChannel _perfectDodgeChannel;
@@ -47,6 +56,7 @@ namespace AdaptiveBossArena.Game
 
         private ImpactBurstPool _bursts;
         private ICombatEventBus _events;
+        private IScreenShake _shake;
         private WeaponTrail _playerTrail;
         private WeaponTrail _bossTrail;
         private Transform _bossTransform;
@@ -58,6 +68,8 @@ namespace AdaptiveBossArena.Game
 
         private void Start()
         {
+            ServiceRegistry.Current.TryGet(out _shake);
+
             if (ServiceRegistry.Current.TryGet(out _events))
             {
                 _events.EventRecorded += OnCombatEvent;
@@ -112,6 +124,13 @@ namespace AdaptiveBossArena.Game
                     // no position and fires for the same moment. Listening to both would double the
                     // burst on the single most important beat in the fight.
                     Burst(combatEvent.Position, -combatEvent.Direction, ImpactFlavour.Deflect);
+                    _shake?.PunchFov(-DeflectFovNarrow);
+                    break;
+
+                case CombatEventKind.DodgePerformed:
+                    // The whole camera breathes out on a dash, which is most of what makes a roll read
+                    // as a burst of speed rather than a teleport.
+                    _shake?.PunchFov(DashFovWiden);
                     break;
 
                 case CombatEventKind.Blocked:
@@ -202,6 +221,10 @@ namespace AdaptiveBossArena.Game
 
         private void OnPerfectDodge()
         {
+            // A tight zoom-in to match the slow-motion — the frame narrows onto the opening the read
+            // just bought.
+            _shake?.PunchFov(-PerfectDodgeFovNarrow);
+
             // Placed on the player rather than at an impact point, because nothing was struck. The
             // burst marks where they were when they slipped it.
             if (_playerTrail != null)

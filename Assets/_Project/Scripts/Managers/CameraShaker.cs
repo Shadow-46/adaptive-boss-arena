@@ -22,6 +22,9 @@ namespace AdaptiveBossArena.Game
     [DisallowMultipleComponent]
     public sealed class CameraShaker : MonoBehaviour, IScreenShake
     {
+        /// <summary>Largest field-of-view kick, so a flurry of dashes cannot balloon the view.</summary>
+        private const float MaxFovKick = 10f;
+
         [Header("Intensity")]
         [SerializeField]
         [Range(0f, 2f)]
@@ -61,14 +64,30 @@ namespace AdaptiveBossArena.Game
         [Tooltip("How fast a punch springs back. Higher is snappier.")]
         private float _punchDecayPerSecond = 5f;
 
+        [SerializeField]
+        [Range(2f, 20f)]
+        [Tooltip("How fast a field-of-view kick springs back.")]
+        private float _fovDecayPerSecond = 7f;
+
         private TraumaShake _shake;
+        private Camera _camera;
         private Vector3 _restLocalPosition;
+        private float _baseFieldOfView;
         private float _punch;
+        private float _fovKick;
 
         private void Awake()
         {
             _shake = new TraumaShake(_decayPerSecond, _frequency);
             _restLocalPosition = transform.localPosition;
+
+            // The perspective camera the FOV kick animates. Resolved forgivingly: the shaker usually
+            // carries the camera, but a rig that puts it elsewhere still works.
+            _camera = GetComponent<Camera>() ?? GetComponentInChildren<Camera>() ?? Camera.main;
+            if (_camera != null)
+            {
+                _baseFieldOfView = _camera.fieldOfView;
+            }
 
             ServiceRegistry.Current.RegisterOrReplace<IScreenShake>(this);
         }
@@ -79,6 +98,16 @@ namespace AdaptiveBossArena.Game
 
             _shake.Tick(deltaTime);
             _punch = Mathf.Max(0f, _punch - _punchDecayPerSecond * deltaTime);
+
+            // The field-of-view kick springs back toward zero from either side — faster when large,
+            // with a floor so it settles exactly at rest rather than asymptotically hovering off it.
+            _fovKick = Mathf.MoveTowards(
+                _fovKick, 0f, _fovDecayPerSecond * (Mathf.Abs(_fovKick) + 1f) * deltaTime);
+
+            if (_camera != null)
+            {
+                _camera.fieldOfView = _baseFieldOfView + _fovKick * _userIntensity;
+            }
 
             if (!_shake.IsShaking && _punch <= 0f)
             {
@@ -133,10 +162,29 @@ namespace AdaptiveBossArena.Game
         }
 
         /// <inheritdoc />
+        public void PunchFov(float degrees)
+        {
+            if (_userIntensity <= 0f)
+            {
+                return;
+            }
+
+            // Clamped so a rapid string of dashes cannot balloon the view; the largest single kick
+            // is what lands, not their sum.
+            _fovKick = Mathf.Clamp(_fovKick + degrees, -MaxFovKick, MaxFovKick);
+        }
+
+        /// <inheritdoc />
         public void ClearTrauma()
         {
             _shake.Reset();
             _punch = 0f;
+            _fovKick = 0f;
+
+            if (_camera != null)
+            {
+                _camera.fieldOfView = _baseFieldOfView;
+            }
         }
 
         /// <summary>Sets the player-facing intensity scale, from the settings menu.</summary>

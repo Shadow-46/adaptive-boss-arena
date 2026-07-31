@@ -32,6 +32,17 @@ namespace AdaptiveBossArena.Core.Services
         void Punch(float amount);
 
         /// <summary>
+        /// Kicks the camera's field of view briefly, then springs it back.
+        /// </summary>
+        /// <remarks>
+        /// A positive value widens the view for a burst of speed — a dash — while a negative one
+        /// narrows it for a moment of focus, such as the slow-motion after a perfect dodge. It rides
+        /// the same accessibility intensity as shake, so turning camera motion down calms it too.
+        /// </remarks>
+        /// <param name="degrees">Signed field-of-view change; positive widens, negative narrows.</param>
+        void PunchFov(float degrees);
+
+        /// <summary>
         /// Scales all shake and punch, for the accessibility setting.
         /// </summary>
         /// <remarks>
