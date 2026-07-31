@@ -62,10 +62,17 @@ namespace AdaptiveBossArena.Game
 
             string finalPath = PathFor(key);
             string tempPath = finalPath + TempExtension;
+            string json = JsonUtility.ToJson(data, prettyPrint: true);
 
             try
             {
-                File.WriteAllText(tempPath, JsonUtility.ToJson(data, prettyPrint: true));
+#if UNITY_WEBGL && !UNITY_EDITOR
+                // The browser build's virtual filesystem does not support File.Replace, and the write
+                // is persisted to IndexedDB by the runtime anyway, so a plain write is both correct and
+                // free of the console error the atomic path would raise every time settings change.
+                File.WriteAllText(finalPath, json);
+#else
+                File.WriteAllText(tempPath, json);
 
                 // File.Replace is atomic where the platform supports it and keeps the previous
                 // version as a backup, which gives a corrupt write something to fall back to.
@@ -77,6 +84,7 @@ namespace AdaptiveBossArena.Game
                 {
                     File.Move(tempPath, finalPath);
                 }
+#endif
             }
             catch (Exception exception)
             {
