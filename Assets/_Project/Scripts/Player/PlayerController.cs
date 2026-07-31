@@ -60,10 +60,10 @@ namespace AdaptiveBossArena.Player
         private const float PerfectDodgeTimeScale = 0.35f;
 
         /// <summary>Freeze on a clean deflect. Longer than a normal hit — this is the moment to sell.</summary>
-        private const float DeflectHitStopSeconds = 0.09f;
+        private const float DeflectHitStopSeconds = 0.12f;
 
         /// <summary>Camera trauma on a clean deflect.</summary>
-        private const float DeflectTrauma = 0.3f;
+        private const float DeflectTrauma = 0.42f;
 
         /// <summary>Transition priority for raising a guard, above attacking but below dashing.</summary>
         private const int GuardTransitionPriority = 95;

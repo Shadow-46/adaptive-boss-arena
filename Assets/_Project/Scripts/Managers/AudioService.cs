@@ -117,6 +117,12 @@ namespace AdaptiveBossArena.Game
 
             /// <summary>A ground hazard erupting.</summary>
             public const string Hazard = "hazard.erupt";
+
+            /// <summary>A guard being raised.</summary>
+            public const string GuardRaise = "guard.raise";
+
+            /// <summary>A single heartbeat, pulsed while the player is near death.</summary>
+            public const string Heartbeat = "player.heartbeat";
         }
 
         private void Awake()
@@ -332,6 +338,10 @@ namespace AdaptiveBossArena.Game
 
             // A low, broadband rumble for a hazard erupting from the ground.
             _clips[Cues.Hazard] = ToneGenerator.CreateImpact("hazard.erupt", 0.5f, 340f, seed: 41);
+
+            // A short, soft shift for raising a guard, and a low resonant thud for the heartbeat.
+            _clips[Cues.GuardRaise] = ToneGenerator.CreateImpact("guard.raise", 0.09f, 900f, seed: 47);
+            _clips[Cues.Heartbeat] = ToneGenerator.CreateImpact("player.heartbeat", 0.2f, 85f, seed: 43);
 
             // Three stacked loops, harmonically related so they layer without dissonance: a low bed,
             // a fifth above it for tension, and a rhythmic pulse an octave up for the final phase.

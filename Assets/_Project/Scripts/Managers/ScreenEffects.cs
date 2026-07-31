@@ -41,6 +41,15 @@ namespace AdaptiveBossArena.Game
         private const float DeflectBloomAdd = 0.7f;
         private const float PulseDecayPerSecond = 3.5f;
 
+        /// <summary>Health fraction below which the heartbeat begins.</summary>
+        private const float HeartbeatStartHealth = 0.35f;
+
+        /// <summary>Seconds between beats when the heartbeat first begins.</summary>
+        private const float HeartbeatSlowSeconds = 1.1f;
+
+        /// <summary>Seconds between beats at the brink of death — a racing pulse.</summary>
+        private const float HeartbeatFastSeconds = 0.42f;
+
         private static readonly Color LowHealthVignetteColor = new Color(0.5f, 0.02f, 0.03f);
 
         [SerializeField]
@@ -66,10 +75,13 @@ namespace AdaptiveBossArena.Game
         private float _baseAberration;
         private float _baseBloom;
 
+        private IAudioService _audio;
+
         private float _health = 1f;
         private float _lowHealthEased;
         private float _damagePulse;
         private float _deflectPunch;
+        private float _heartbeatTimer;
 
         private void OnEnable()
         {
@@ -118,6 +130,8 @@ namespace AdaptiveBossArena.Game
             _baseSaturation = _color != null ? _color.saturation.value : 0f;
             _baseAberration = _aberration != null ? _aberration.intensity.value : 0f;
             _baseBloom = _bloom != null ? _bloom.intensity.value : 0f;
+
+            ServiceRegistry.Current.TryGet(out _audio);
         }
 
         private void Update()
@@ -131,7 +145,38 @@ namespace AdaptiveBossArena.Game
             float ease = 1f - Mathf.Exp(-deltaTime / Mathf.Max(0.0001f, LowHealthEaseHalfLife));
             _lowHealthEased = Mathf.Lerp(_lowHealthEased, lowHealthTarget, ease);
 
+            TickHeartbeat(deltaTime);
             Apply();
+        }
+
+        /// <summary>
+        /// Pulses a heartbeat while the player is near death, racing faster as their health falls.
+        /// </summary>
+        /// <remarks>
+        /// A sound rather than a flash, so it stays on for players who suppress flashing — it is the
+        /// audible half of the same "you are dying" signal the reddening vignette carries. It stops the
+        /// moment the player is dead or safe.
+        /// </remarks>
+        private void TickHeartbeat(float deltaTime)
+        {
+            bool dying = _health > 0.001f && _health <= HeartbeatStartHealth;
+
+            if (!dying || _audio == null)
+            {
+                // Reset so the first beat lands immediately on the next brush with death.
+                _heartbeatTimer = 0f;
+                return;
+            }
+
+            _heartbeatTimer -= deltaTime;
+
+            if (_heartbeatTimer <= 0f)
+            {
+                _audio.PlayCue2D(AudioService.Cues.Heartbeat);
+
+                float urgency = Mathf.Clamp01(Mathf.InverseLerp(HeartbeatStartHealth, LowHealthFloor, _health));
+                _heartbeatTimer = Mathf.Lerp(HeartbeatSlowSeconds, HeartbeatFastSeconds, urgency);
+            }
         }
 
         /// <summary>Assigns the references. Used by the scene generator.</summary>

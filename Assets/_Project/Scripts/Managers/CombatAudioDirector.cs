@@ -142,6 +142,10 @@ namespace AdaptiveBossArena.Game
                     _audio.PlayCue(AudioService.Cues.Block, combatEvent.Position);
                     break;
 
+                case CombatEventKind.GuardRaised:
+                    _audio.PlayCue2D(AudioService.Cues.GuardRaise);
+                    break;
+
                 case CombatEventKind.PoiseBroken:
                     _audio.PlayCue(AudioService.Cues.PostureBreak, combatEvent.Position);
                     break;
