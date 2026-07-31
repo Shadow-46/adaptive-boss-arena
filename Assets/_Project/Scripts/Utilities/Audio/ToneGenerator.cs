@@ -111,6 +111,53 @@ namespace AdaptiveBossArena.Utilities.Audio
         }
 
         /// <summary>
+        /// Builds a soft rising shimmer, for restorative moments like a heal.
+        /// </summary>
+        /// <remarks>
+        /// Harmonic partials rather than the inharmonic ones of the metallic ring, so it reads as
+        /// warm and musical rather than struck. A gentle upward pitch glide and a soft attack make it
+        /// feel like something being restored rather than something being hit.
+        /// </remarks>
+        /// <param name="name">Clip name.</param>
+        /// <param name="baseHz">Fundamental of the chime.</param>
+        /// <param name="durationSeconds">Total length.</param>
+        /// <returns>The generated clip.</returns>
+        public static AudioClip CreateShimmer(
+            string name,
+            float baseHz = 660f,
+            float durationSeconds = 0.6f)
+        {
+            int sampleCount = Mathf.Max(1, Mathf.RoundToInt(SampleRate * durationSeconds));
+            var samples = new float[sampleCount];
+
+            float[] partials = { 1f, 1.5f, 2f, 3f };
+            float[] gains = { 1f, 0.5f, 0.32f, 0.18f };
+
+            for (int i = 0; i < sampleCount; i++)
+            {
+                float time = i / (float)SampleRate;
+                float progress = i / (float)sampleCount;
+
+                // A small upward glide is what makes it read as "rising" — recovery, not a chord.
+                float glide = Mathf.Lerp(0.97f, 1.06f, progress);
+
+                float value = 0f;
+                for (int p = 0; p < partials.Length; p++)
+                {
+                    value += Mathf.Sin(2f * Mathf.PI * baseHz * partials[p] * glide * time) * gains[p];
+                }
+
+                // A soft attack (no sharp transient) keeps it gentle; the slow decay lets it bloom.
+                float attack = Mathf.Clamp01(progress / 0.09f);
+                float decay = FastDecay(progress, sharpness: 3.2f);
+
+                samples[i] = value * attack * decay * 0.16f;
+            }
+
+            return BuildClip(name, samples);
+        }
+
+        /// <summary>
         /// Builds a swing whoosh: filtered noise that rises then falls.
         /// </summary>
         /// <remarks>

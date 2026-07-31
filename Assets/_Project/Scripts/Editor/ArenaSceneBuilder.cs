@@ -377,7 +377,7 @@ namespace AdaptiveBossArena.Editor
                 channels.PlayerDied, channels.BossDefeated, channels.Deflect, channels.PerfectDodge);
 
             var audioDirector = Object.FindAnyObjectByType<CombatAudioDirector>();
-            audioDirector?.Bind(channels.Deflect, channels.PerfectDodge, channels.BossPhase);
+            audioDirector?.Bind(channels.Deflect, channels.PerfectDodge, channels.BossPhase, channels.PlayerFocus);
 
             var effectsDirector = Object.FindAnyObjectByType<CombatEffectsDirector>();
             effectsDirector?.Bind(channels.PerfectDodge, channels.BossPhase);

@@ -35,8 +35,15 @@ namespace AdaptiveBossArena.Game
         [Tooltip("Carries the boss phase index, used to trigger the roar.")]
         private IntEventChannel _phaseChannel;
 
+        [SerializeField]
+        [Tooltip("Carries normalised player focus, used to chime the moment it fills.")]
+        private FloatEventChannel _focusChannel;
+
         private IAudioService _audio;
         private ICombatEventBus _events;
+
+        /// <summary>Latches so the focus-full chime plays once per fill, not every frame it is full.</summary>
+        private bool _focusWasFull;
 
         private void Start()
         {
@@ -60,6 +67,11 @@ namespace AdaptiveBossArena.Game
             if (_phaseChannel != null)
             {
                 _phaseChannel.Raised += OnPhaseChanged;
+            }
+
+            if (_focusChannel != null)
+            {
+                _focusChannel.Raised += OnFocusChanged;
             }
 
             _audio?.PlayMusic("music.bed");
@@ -86,6 +98,24 @@ namespace AdaptiveBossArena.Game
             {
                 _phaseChannel.Raised -= OnPhaseChanged;
             }
+
+            if (_focusChannel != null)
+            {
+                _focusChannel.Raised -= OnFocusChanged;
+            }
+        }
+
+        /// <summary>Chimes once the instant focus fills, so the player hears the empowered special arm.</summary>
+        private void OnFocusChanged(float normalized)
+        {
+            bool full = normalized >= 0.999f;
+
+            if (full && !_focusWasFull)
+            {
+                _audio?.PlayCue2D(AudioService.Cues.FocusFull);
+            }
+
+            _focusWasFull = full;
         }
 
         /// <summary>Maps a witnessed occurrence onto a cue.</summary>
@@ -114,6 +144,23 @@ namespace AdaptiveBossArena.Game
 
                 case CombatEventKind.PoiseBroken:
                     _audio.PlayCue(AudioService.Cues.PostureBreak, combatEvent.Position);
+                    break;
+
+                case CombatEventKind.DodgePerformed:
+                    _audio.PlayCue2D(AudioService.Cues.Dash);
+                    break;
+
+                case CombatEventKind.HealStarted:
+                    _audio.PlayCue2D(AudioService.Cues.Heal);
+                    break;
+
+                case CombatEventKind.WeaponDrawn:
+                    _audio.PlayCue2D(AudioService.Cues.WeaponDraw);
+                    break;
+
+                case CombatEventKind.Riposte:
+                    // The execution's own emphatic beat, on top of the impact it lands.
+                    _audio.PlayCue2D(AudioService.Cues.Execution);
                     break;
             }
         }
@@ -152,14 +199,17 @@ namespace AdaptiveBossArena.Game
         /// <param name="deflect">Clean deflect channel.</param>
         /// <param name="perfectDodge">Perfect dodge channel.</param>
         /// <param name="phase">Boss phase channel.</param>
+        /// <param name="focus">Normalised player focus channel.</param>
         public void Bind(
             VoidEventChannel deflect,
             VoidEventChannel perfectDodge,
-            IntEventChannel phase)
+            IntEventChannel phase,
+            FloatEventChannel focus)
         {
             _deflectChannel = deflect;
             _perfectDodgeChannel = perfectDodge;
             _phaseChannel = phase;
+            _focusChannel = focus;
         }
     }
 }

@@ -147,6 +147,11 @@ namespace AdaptiveBossArena.Editor
         {
             BossController controller = root.AddComponent<BossController>();
 
+            // Heavier, slower-cadenced footfalls than the player, so the boss reads as a large mass
+            // moving around the arena even as a primitive.
+            root.AddComponent<Combat.Feel.FootstepEmitter>()
+                .Configure(Game.AudioService.Cues.FootstepBoss, strideLength: 2.4f);
+
             BossConfig config = GeneratedAssets.Config<BossConfig>("DefaultBossConfig");
 
             if (config != null)

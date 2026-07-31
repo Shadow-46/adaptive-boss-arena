@@ -52,12 +52,16 @@ namespace AdaptiveBossArena.Combat
 
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
 
+        /// <summary>Cue played when a hazard erupts. A string, since Combat sits below the audio service.</summary>
+        private const string HazardCueId = "hazard.erupt";
+
         private readonly Collider[] _overlap = new Collider[8];
 
         private Transform _disc;
         private MeshRenderer _renderer;
         private MaterialPropertyBlock _properties;
         private ITimeService _time;
+        private IAudioService _audio;
 
         private HazardTicker _ticker;
         private Vector3 _center;
@@ -114,6 +118,13 @@ namespace AdaptiveBossArena.Combat
 
             gameObject.SetActive(true);
             ApplyVisual(0f);
+
+            // A low rumble the moment it erupts, so a hazard forming behind you is heard, not only seen.
+            _audio ??= ServiceRegistry.Current != null &&
+                       ServiceRegistry.Current.TryGet(out IAudioService audio)
+                ? audio
+                : null;
+            _audio?.PlayCue(HazardCueId, center);
         }
 
         private void Update()

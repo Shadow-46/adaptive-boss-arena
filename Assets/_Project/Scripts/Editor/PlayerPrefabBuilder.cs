@@ -187,6 +187,10 @@ namespace AdaptiveBossArena.Editor
             PlayerInputReader inputReader = root.AddComponent<PlayerInputReader>();
             PlayerController controller = root.AddComponent<PlayerController>();
 
+            // Footsteps in cadence with actual travel. The player's are a light, quick tap.
+            root.AddComponent<Combat.Feel.FootstepEmitter>()
+                .Configure(Game.AudioService.Cues.FootstepPlayer, strideLength: 1.5f);
+
             var actions = AssetDatabase.LoadAssetAtPath<InputActionAsset>(InputActionsGenerator.AssetPath);
             if (actions != null)
             {

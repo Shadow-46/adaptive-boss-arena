@@ -353,6 +353,7 @@ GameObject:
   - component: {fileID: 6474268553655857599}
   - component: {fileID: 5331263374399064184}
   - component: {fileID: 7175888155217693637}
+  - component: {fileID: 852768330243084299}
   m_Layer: 8
   m_Name: Player
   m_TagString: Player
@@ -438,6 +439,20 @@ MonoBehaviour:
   _postureChannel: {fileID: 11400000, guid: ab7b26d4fac6b6e4d9cd4867a6be5ac5, type: 2}
   _focusChannel: {fileID: 11400000, guid: cdbca16f66d3b6142b95b1de325580af, type: 2}
   _weaponChannel: {fileID: 11400000, guid: bf47e1c2534db1b47ae252301e3fb7a2, type: 2}
+--- !u!114 &852768330243084299
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5837845982677326046}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 248b8bc5817a70f4abe29db631860792, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AdaptiveBossArena.Combat::AdaptiveBossArena.Combat.Feel.FootstepEmitter
+  _cueId: step.player
+  _strideLength: 1.5
 --- !u!1 &6730441461060767621
 GameObject:
   m_ObjectHideFlags: 0

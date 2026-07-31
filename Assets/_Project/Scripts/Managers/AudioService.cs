@@ -93,6 +93,30 @@ namespace AdaptiveBossArena.Game
 
             /// <summary>A perfect dodge.</summary>
             public const string PerfectDodge = "dodge.perfect";
+
+            /// <summary>A dash launching.</summary>
+            public const string Dash = "dodge.whoosh";
+
+            /// <summary>A heal being channelled.</summary>
+            public const string Heal = "player.heal";
+
+            /// <summary>A weapon being drawn.</summary>
+            public const string WeaponDraw = "weapon.draw";
+
+            /// <summary>An execution — the riposte into a broken guard.</summary>
+            public const string Execution = "player.execution";
+
+            /// <summary>A player footstep.</summary>
+            public const string FootstepPlayer = "step.player";
+
+            /// <summary>A boss footstep — heavier and lower.</summary>
+            public const string FootstepBoss = "step.boss";
+
+            /// <summary>The focus meter reaching full.</summary>
+            public const string FocusFull = "focus.full";
+
+            /// <summary>A ground hazard erupting.</summary>
+            public const string Hazard = "hazard.erupt";
         }
 
         private void Awake()
@@ -286,6 +310,28 @@ namespace AdaptiveBossArena.Game
             _clips[Cues.PerfectDodge] = ToneGenerator.CreateMetallicRing("dodge.perfect", 1560f, 0.3f);
 
             _clips[Cues.BossRoar] = ToneGenerator.CreateRoar("boss.roar");
+
+            // A shorter, breathier whoosh than a swing, so a dash reads as the player moving rather
+            // than attacking.
+            _clips[Cues.Dash] = ToneGenerator.CreateWhoosh("dodge.whoosh", 0.2f, seed: 21);
+
+            // Warm and rising for the heal; a bright, short chime the instant focus fills.
+            _clips[Cues.Heal] = ToneGenerator.CreateShimmer("player.heal", 520f, 0.7f);
+            _clips[Cues.FocusFull] = ToneGenerator.CreateShimmer("focus.full", 1040f, 0.4f);
+
+            // A short high metallic 'shing' for drawing a weapon.
+            _clips[Cues.WeaponDraw] = ToneGenerator.CreateMetallicRing("weapon.draw", 1500f, 0.2f);
+
+            // The execution is the heaviest, lowest impact the player can make — the payoff of a
+            // broken guard, so it hits harder than any ordinary blow.
+            _clips[Cues.Execution] = ToneGenerator.CreateImpact("player.execution", 0.38f, 520f, seed: 29);
+
+            // Footsteps: a soft tap for the player, a heavier and much lower thud for the boss.
+            _clips[Cues.FootstepPlayer] = ToneGenerator.CreateImpact("step.player", 0.08f, 520f, seed: 31);
+            _clips[Cues.FootstepBoss] = ToneGenerator.CreateImpact("step.boss", 0.16f, 220f, seed: 37);
+
+            // A low, broadband rumble for a hazard erupting from the ground.
+            _clips[Cues.Hazard] = ToneGenerator.CreateImpact("hazard.erupt", 0.5f, 340f, seed: 41);
 
             // Three stacked loops, harmonically related so they layer without dissonance: a low bed,
             // a fifth above it for tension, and a rhythmic pulse an octave up for the final phase.
