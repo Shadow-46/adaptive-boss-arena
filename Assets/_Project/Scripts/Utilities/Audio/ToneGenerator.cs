@@ -195,6 +195,50 @@ namespace AdaptiveBossArena.Utilities.Audio
         }
 
         /// <summary>
+        /// Builds a sharp, alarming sting to warn of a perilous, unblockable attack.
+        /// </summary>
+        /// <remarks>
+        /// A tritone — the most tense interval there is — under a fast tremolo, so it reads instantly
+        /// as danger rather than as any ordinary swing. The player hears "do not block this" before
+        /// the red telegraph has fully bloomed.
+        /// </remarks>
+        /// <param name="name">Clip name.</param>
+        /// <param name="rootHz">Fundamental of the sting.</param>
+        /// <param name="durationSeconds">Total length.</param>
+        /// <returns>The generated clip.</returns>
+        public static AudioClip CreatePerilWarning(
+            string name,
+            float rootHz = 300f,
+            float durationSeconds = 0.42f)
+        {
+            int sampleCount = Mathf.Max(1, Mathf.RoundToInt(SampleRate * durationSeconds));
+            var samples = new float[sampleCount];
+
+            float[] partials = { 1f, 1.414f, 2f };
+            float[] gains = { 1f, 0.85f, 0.4f };
+
+            for (int i = 0; i < sampleCount; i++)
+            {
+                float time = i / (float)SampleRate;
+                float progress = i / (float)sampleCount;
+
+                float value = 0f;
+                for (int p = 0; p < partials.Length; p++)
+                {
+                    value += Mathf.Sin(2f * Mathf.PI * rootHz * partials[p] * time) * gains[p];
+                }
+
+                // A fast tremolo makes it pulse like an alarm rather than sit like a chord.
+                float tremolo = 0.7f + 0.3f * Mathf.Sin(2f * Mathf.PI * 18f * time);
+                float envelope = FastDecay(progress, sharpness: 2.4f);
+
+                samples[i] = value * envelope * tremolo * 0.2f;
+            }
+
+            return BuildClip(name, samples);
+        }
+
+        /// <summary>
         /// Builds a low roar for boss phase transitions.
         /// </summary>
         /// <param name="name">Clip name.</param>

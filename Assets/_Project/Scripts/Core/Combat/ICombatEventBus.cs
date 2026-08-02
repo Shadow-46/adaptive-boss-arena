@@ -83,6 +83,15 @@ namespace AdaptiveBossArena.Core.Combat
         /// <summary>Category of the attack involved, where one applies.</summary>
         public DamageType DamageType { get; init; }
 
+        /// <summary>
+        /// True when the attack that began is a perilous, unblockable one.
+        /// </summary>
+        /// <remarks>
+        /// Carried on the wind-up so presentation can sound and show the "do not block this" warning.
+        /// The learning system ignores it — it is a fact about the boss's own attack, not the player.
+        /// </remarks>
+        public bool Unblockable { get; init; }
+
         /// <summary>Where it happened, for events that have a position.</summary>
         public Vector3 Position { get; init; }
 

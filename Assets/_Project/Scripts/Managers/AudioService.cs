@@ -123,6 +123,9 @@ namespace AdaptiveBossArena.Game
 
             /// <summary>A single heartbeat, pulsed while the player is near death.</summary>
             public const string Heartbeat = "player.heartbeat";
+
+            /// <summary>The warning sting on a perilous, unblockable wind-up.</summary>
+            public const string Peril = "peril.warning";
         }
 
         private void Awake()
@@ -342,6 +345,9 @@ namespace AdaptiveBossArena.Game
             // A short, soft shift for raising a guard, and a low resonant thud for the heartbeat.
             _clips[Cues.GuardRaise] = ToneGenerator.CreateImpact("guard.raise", 0.09f, 900f, seed: 47);
             _clips[Cues.Heartbeat] = ToneGenerator.CreateImpact("player.heartbeat", 0.2f, 85f, seed: 43);
+
+            // The perilous-attack warning: a tense tritone sting under a fast tremolo.
+            _clips[Cues.Peril] = ToneGenerator.CreatePerilWarning("peril.warning");
 
             // Three stacked loops, harmonically related so they layer without dissonance: a low bed,
             // a fifth above it for tension, and a rhythmic pulse an octave up for the final phase.

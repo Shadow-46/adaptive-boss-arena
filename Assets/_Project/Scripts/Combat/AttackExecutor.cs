@@ -134,6 +134,7 @@ namespace AdaptiveBossArena.Combat
                 Actor = _team,
                 Timestamp = _time.CombatTime,
                 DamageType = attack.DamageType,
+                Unblockable = attack.Unblockable,
                 Position = _origin.position,
                 Direction = _origin.forward,
                 SeparationDistance = separationDistance

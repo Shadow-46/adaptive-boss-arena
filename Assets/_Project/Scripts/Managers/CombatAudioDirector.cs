@@ -130,8 +130,11 @@ namespace AdaptiveBossArena.Game
             {
                 case CombatEventKind.AttackStarted:
                     // Played on the wind-up rather than the strike, so it functions as an audible
-                    // telegraph as well as a flourish.
-                    _audio.PlayCue(AudioService.Cues.Whoosh, combatEvent.Position);
+                    // telegraph as well as a flourish. A perilous, unblockable wind-up gets an
+                    // unmistakable warning sting instead — the audible half of "do not block this".
+                    _audio.PlayCue(
+                        combatEvent.Unblockable ? AudioService.Cues.Peril : AudioService.Cues.Whoosh,
+                        combatEvent.Position);
                     break;
 
                 case CombatEventKind.AttackLanded:
