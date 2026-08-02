@@ -8,8 +8,10 @@ punish them, *without ever reading your input*. Winning means noticing it has ad
 ![Edit-mode tests](https://img.shields.io/badge/edit--mode%20tests-213%20passing-3fb950)
 ![License](https://img.shields.io/badge/license-MIT-3b82f6)
 ![Assets](https://img.shields.io/badge/assets-generated%20from%20code-8957e5)
+[![Play in browser](https://img.shields.io/badge/▶%20play-in%20your%20browser-3fb950?logo=unity&logoColor=white)](https://shadow-46.github.io/adaptive-boss-arena/)
 
-⬇ **[Download for Windows](https://github.com/Shadow-46/adaptive-boss-arena/releases/latest)** — unzip and run `AdaptiveBossArena.exe`. *(A one-click in-browser demo is on the way.)*
+▶ **[Play in your browser](https://shadow-46.github.io/adaptive-boss-arena/)** — no install, runs the WebGL build straight from GitHub Pages.
+⬇ **[Download for Windows](https://github.com/Shadow-46/adaptive-boss-arena/releases/latest)** — unzip and run `AdaptiveBossArena.exe`.
 
 It's a Sekiro-style deflect duel built in Unity 6, **entirely from code-generated assets** (no
 hand-authored scenes or prefabs), and it never lets the boss cheat:
