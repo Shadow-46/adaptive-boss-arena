@@ -46,6 +46,9 @@ namespace AdaptiveBossArena.Game
         /// <summary>Field-of-view narrowing on a perfect dodge, complementing the slow-motion.</summary>
         private const float PerfectDodgeFovNarrow = 5f;
 
+        /// <summary>Screen-shake trauma on an overbalance, a small jolt so the stumble lands physically.</summary>
+        private const float OverbalanceTrauma = 0.2f;
+
         [SerializeField]
         [Tooltip("Raised on a perfect dodge.")]
         private VoidEventChannel _perfectDodgeChannel;
@@ -53,6 +56,10 @@ namespace AdaptiveBossArena.Game
         [SerializeField]
         [Tooltip("Carries the boss phase index, used to erupt a shockwave on each escalation.")]
         private IntEventChannel _bossPhaseChannel;
+
+        [SerializeField]
+        [Tooltip("Raised when the boss overbalances, used to kick up dust at its feet.")]
+        private VoidEventChannel _overbalanceChannel;
 
         private ImpactBurstPool _bursts;
         private ICombatEventBus _events;
@@ -85,6 +92,11 @@ namespace AdaptiveBossArena.Game
                 _bossPhaseChannel.Raised += OnBossPhaseChanged;
             }
 
+            if (_overbalanceChannel != null)
+            {
+                _overbalanceChannel.Raised += OnOverbalance;
+            }
+
             ResolveTrails();
         }
 
@@ -104,6 +116,27 @@ namespace AdaptiveBossArena.Game
             {
                 _bossPhaseChannel.Raised -= OnBossPhaseChanged;
             }
+
+            if (_overbalanceChannel != null)
+            {
+                _overbalanceChannel.Raised -= OnOverbalance;
+            }
+        }
+
+        /// <summary>Kicks up dust at the boss's feet as it stumbles, marking the opening a read bought.</summary>
+        /// <remarks>
+        /// A dull, dispersed burst low to the ground — the block flavour reads as dust rather than
+        /// sparks — plus a small jolt, so the overextension is felt as well as seen. Placed on the
+        /// boss because the miss is the boss's, not the player's.
+        /// </remarks>
+        private void OnOverbalance()
+        {
+            if (_bossTransform != null)
+            {
+                _bursts.Play(_bossTransform.position + Vector3.up * 0.25f, Vector3.up, ImpactFlavour.Block);
+            }
+
+            _shake?.AddTrauma(OverbalanceTrauma);
         }
 
         /// <summary>Maps a witnessed occurrence onto a burst or a trail.</summary>
@@ -238,10 +271,12 @@ namespace AdaptiveBossArena.Game
         /// <summary>Assigns the channels. Used by the scene generator.</summary>
         /// <param name="perfectDodge">Perfect dodge channel.</param>
         /// <param name="bossPhase">Boss phase index channel.</param>
-        public void Bind(VoidEventChannel perfectDodge, IntEventChannel bossPhase)
+        /// <param name="overbalance">Boss overbalance channel.</param>
+        public void Bind(VoidEventChannel perfectDodge, IntEventChannel bossPhase, VoidEventChannel overbalance)
         {
             _perfectDodgeChannel = perfectDodge;
             _bossPhaseChannel = bossPhase;
+            _overbalanceChannel = overbalance;
         }
     }
 }

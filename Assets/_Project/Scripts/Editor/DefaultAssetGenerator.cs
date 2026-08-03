@@ -953,6 +953,10 @@ namespace AdaptiveBossArena.Editor
                 "Carries the tell message for a newly adopted counter-strategy. Listened to by the " +
                 "heads-up display so the player can perceive that the boss has changed.");
             CreateChannel<BoolEventChannel>("OnPauseStateChanged", "Carries whether the game is now paused.");
+            CreateChannel<VoidEventChannel>(
+                "OnBossOverbalanced",
+                "Raised when a committed boss swing whiffs hard enough to overbalance it. Drives the " +
+                "stumble, dust and stagger sound that show the opening the player's read just bought.");
         }
 
         private static void CreateChannel<TChannel>(string assetName, string description)

@@ -239,6 +239,55 @@ namespace AdaptiveBossArena.Utilities.Audio
         }
 
         /// <summary>
+        /// Builds an unsteady low lurch for the moment a committed boss swing overbalances it.
+        /// </summary>
+        /// <remarks>
+        /// The pitch sags downward across the sound — the audible equivalent of tipping off balance —
+        /// under a slow wobble and slightly detuned partials, so it lands as a heavy stumble the player
+        /// can read as an opening rather than as a clean note.
+        /// </remarks>
+        /// <param name="name">Clip name.</param>
+        /// <param name="rootHz">Fundamental. Low, because a large mass losing its footing is low.</param>
+        /// <param name="durationSeconds">Total length.</param>
+        /// <returns>The generated clip.</returns>
+        public static AudioClip CreateStumble(
+            string name,
+            float rootHz = 165f,
+            float durationSeconds = 0.55f)
+        {
+            int sampleCount = Mathf.Max(1, Mathf.RoundToInt(SampleRate * durationSeconds));
+            var samples = new float[sampleCount];
+
+            // Slightly detuned partials, so the tone never quite settles and reads as unsteady.
+            float[] partials = { 1f, 1.5f, 2.02f };
+            float[] gains = { 1f, 0.5f, 0.3f };
+
+            for (int i = 0; i < sampleCount; i++)
+            {
+                float time = i / (float)SampleRate;
+                float progress = i / (float)sampleCount;
+
+                // The pitch sags across the sound, and a slow wobble makes the fall a lurch, not a slide.
+                float glide = Mathf.Lerp(1f, 0.72f, progress);
+                float wobble = 1f + 0.04f * Mathf.Sin(2f * Mathf.PI * 6.5f * time);
+
+                float value = 0f;
+                for (int p = 0; p < partials.Length; p++)
+                {
+                    value += Mathf.Sin(2f * Mathf.PI * rootHz * partials[p] * glide * wobble * time) * gains[p];
+                }
+
+                // A soft knock in, then a long heavy fall as the boss settles.
+                float attack = Mathf.Clamp01(progress / 0.06f);
+                float envelope = attack * FastDecay(progress, sharpness: 1.6f);
+
+                samples[i] = value * envelope * 0.22f;
+            }
+
+            return BuildClip(name, samples);
+        }
+
+        /// <summary>
         /// Builds a low roar for boss phase transitions.
         /// </summary>
         /// <param name="name">Clip name.</param>

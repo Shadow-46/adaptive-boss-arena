@@ -126,6 +126,9 @@ namespace AdaptiveBossArena.Game
 
             /// <summary>The warning sting on a perilous, unblockable wind-up.</summary>
             public const string Peril = "peril.warning";
+
+            /// <summary>The unsteady stagger when a committed boss swing overbalances it.</summary>
+            public const string Overbalance = "boss.overbalance";
         }
 
         private void Awake()
@@ -348,6 +351,9 @@ namespace AdaptiveBossArena.Game
 
             // The perilous-attack warning: a tense tritone sting under a fast tremolo.
             _clips[Cues.Peril] = ToneGenerator.CreatePerilWarning("peril.warning");
+
+            // The boss overbalancing: an unsteady low lurch whose pitch sags as it tips.
+            _clips[Cues.Overbalance] = ToneGenerator.CreateStumble("boss.overbalance");
 
             // Three stacked loops, harmonically related so they layer without dissonance: a low bed,
             // a fifth above it for tension, and a rhythmic pulse an octave up for the final phase.

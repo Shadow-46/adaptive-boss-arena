@@ -39,6 +39,10 @@ namespace AdaptiveBossArena.Game
         [Tooltip("Carries normalised player focus, used to chime the moment it fills.")]
         private FloatEventChannel _focusChannel;
 
+        [SerializeField]
+        [Tooltip("Raised when the boss overbalances, used to sound the unsteady stagger.")]
+        private VoidEventChannel _overbalanceChannel;
+
         private IAudioService _audio;
         private ICombatEventBus _events;
 
@@ -74,6 +78,11 @@ namespace AdaptiveBossArena.Game
                 _focusChannel.Raised += OnFocusChanged;
             }
 
+            if (_overbalanceChannel != null)
+            {
+                _overbalanceChannel.Raised += OnOverbalance;
+            }
+
             _audio?.PlayMusic("music.bed");
         }
 
@@ -103,7 +112,15 @@ namespace AdaptiveBossArena.Game
             {
                 _focusChannel.Raised -= OnFocusChanged;
             }
+
+            if (_overbalanceChannel != null)
+            {
+                _overbalanceChannel.Raised -= OnOverbalance;
+            }
         }
+
+        /// <summary>Sounds the unsteady stagger the instant the boss overbalances, marking the opening.</summary>
+        private void OnOverbalance() => _audio?.PlayCue2D(AudioService.Cues.Overbalance);
 
         /// <summary>Chimes once the instant focus fills, so the player hears the empowered special arm.</summary>
         private void OnFocusChanged(float normalized)
@@ -207,16 +224,19 @@ namespace AdaptiveBossArena.Game
         /// <param name="perfectDodge">Perfect dodge channel.</param>
         /// <param name="phase">Boss phase channel.</param>
         /// <param name="focus">Normalised player focus channel.</param>
+        /// <param name="overbalance">Boss overbalance channel.</param>
         public void Bind(
             VoidEventChannel deflect,
             VoidEventChannel perfectDodge,
             IntEventChannel phase,
-            FloatEventChannel focus)
+            FloatEventChannel focus,
+            VoidEventChannel overbalance)
         {
             _deflectChannel = deflect;
             _perfectDodgeChannel = perfectDodge;
             _phaseChannel = phase;
             _focusChannel = focus;
+            _overbalanceChannel = overbalance;
         }
     }
 }

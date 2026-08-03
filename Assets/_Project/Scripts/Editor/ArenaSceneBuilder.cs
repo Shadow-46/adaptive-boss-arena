@@ -377,10 +377,12 @@ namespace AdaptiveBossArena.Editor
                 channels.PlayerDied, channels.BossDefeated, channels.Deflect, channels.PerfectDodge);
 
             var audioDirector = Object.FindAnyObjectByType<CombatAudioDirector>();
-            audioDirector?.Bind(channels.Deflect, channels.PerfectDodge, channels.BossPhase, channels.PlayerFocus);
+            audioDirector?.Bind(
+                channels.Deflect, channels.PerfectDodge, channels.BossPhase, channels.PlayerFocus,
+                channels.Overbalance);
 
             var effectsDirector = Object.FindAnyObjectByType<CombatEffectsDirector>();
-            effectsDirector?.Bind(channels.PerfectDodge, channels.BossPhase);
+            effectsDirector?.Bind(channels.PerfectDodge, channels.BossPhase, channels.Overbalance);
         }
 
         /// <summary>Places a generated combatant prefab at its spawn point.</summary>

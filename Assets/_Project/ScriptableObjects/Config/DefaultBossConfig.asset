@@ -85,5 +85,9 @@ MonoBehaviour:
   _resolveThreshold: 100
   _resolveBuildPerSecond: 3.2
   _resolveBuildPerWhiff: 14
+  _overbalanceMaxChance: 0.6
+  _overbalanceIntensityThreshold: 0.15
+  _overbalanceRecoverySeconds: 1.1
+  _overbalancePoiseMultiplier: 2.4
   _baselinePreferredRange: 3
   _baselineAggression: 0.5

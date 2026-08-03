@@ -377,6 +377,7 @@ MonoBehaviour:
   _defeatChannel: {fileID: 11400000, guid: c5546605bc2ea7149bb26cd2c312490e, type: 2}
   _adaptationChannel: {fileID: 11400000, guid: d3ef88f6ac1dd7c4aad791cf3e113fca, type: 2}
   _postureChannel: {fileID: 11400000, guid: 8e05c01673cd0984ea6b067eb0627657, type: 2}
+  _overbalanceChannel: {fileID: 11400000, guid: ac6795191d2d3dd4aa56df9ad1aac8bf, type: 2}
 --- !u!114 &1929724036121720058
 MonoBehaviour:
   m_ObjectHideFlags: 0

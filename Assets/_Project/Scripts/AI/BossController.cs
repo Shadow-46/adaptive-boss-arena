@@ -289,8 +289,13 @@ namespace AdaptiveBossArena.AI
             _context.OverbalanceSeconds = _overbalance.ExtraRecoverySeconds(commitment);
             _context.OverbalancePoiseMultiplier = _overbalance.PoiseVulnerabilityMultiplier(commitment);
 
-            // Announced so presentation can stumble the boss and mark the opening; the mechanic itself
-            // is already live in the context. Nothing here reads or reacts to the player.
+            // A lurch forward in the direction it overcommitted, so the miss reads on the body as an
+            // overextension rather than the boss simply pausing. Same presentation channel the aura
+            // pulse uses on an adaptation, kept here beside the mechanic it accompanies.
+            _animator?.Recoil(_context.Motor.Facing);
+
+            // Announced so the directors can dust, sound and mark the opening; the mechanic itself is
+            // already live in the context. Nothing here reads or reacts to the player.
             _overbalanceChannel?.Raise();
         }
 
@@ -809,13 +814,15 @@ namespace AdaptiveBossArena.AI
             IntEventChannel phase,
             VoidEventChannel defeat,
             StringEventChannel adaptation,
-            FloatEventChannel posture)
+            FloatEventChannel posture,
+            VoidEventChannel overbalance)
         {
             _healthChannel = health;
             _phaseChannel = phase;
             _defeatChannel = defeat;
             _adaptationChannel = adaptation;
             _postureChannel = posture;
+            _overbalanceChannel = overbalance;
         }
 
         /// <summary>
