@@ -110,6 +110,36 @@ namespace AdaptiveBossArena.AI
         /// <summary>The attack the next entry into the attack state should perform.</summary>
         public AttackDefinition PendingAttack { get; set; }
 
+        /// <summary>
+        /// Whether the swing currently under way is a committed one — a lunge, an unblockable, or a
+        /// combo follow-up — rather than a light poke.
+        /// </summary>
+        /// <remarks>
+        /// Set as each swing begins and read when it whiffs, so the overbalance mechanic only opens
+        /// the boss up after a commitment it actually overextended on. A poke that misses costs
+        /// nothing, which is what keeps the opening a reward for baiting a real swing.
+        /// </remarks>
+        public bool LastAttackWasCommitted { get; set; }
+
+        /// <summary>Seconds of stumble remaining after the boss overbalanced on a committed whiff.</summary>
+        public float OverbalanceSeconds { get; set; }
+
+        /// <summary>
+        /// Incoming-poise multiplier captured when the boss overbalanced, applied while the stumble
+        /// lasts.
+        /// </summary>
+        public float OverbalancePoiseMultiplier { get; set; } = 1f;
+
+        /// <summary>True while the boss is stumbling from an overbalanced swing, open to a punish.</summary>
+        public bool IsOverbalanced => OverbalanceSeconds > 0f;
+
+        /// <summary>
+        /// The factor incoming poise damage is scaled by right now — amplified during an overbalance
+        /// stumble, one otherwise.
+        /// </summary>
+        public float IncomingPoiseMultiplier =>
+            OverbalanceSeconds > 0f ? Mathf.Max(1f, OverbalancePoiseMultiplier) : 1f;
+
         /// <summary>Seconds remaining before the boss may attack again.</summary>
         public float AttackCooldownRemaining { get; set; }
 

@@ -73,6 +73,10 @@ namespace AdaptiveBossArena.AI.States
             // A feint is a single beat by definition; only a committed opener grows into a chain.
             _comboRemaining = _isFeinting ? 0 : ComboLength(context.PhaseIndex, context.Random);
 
+            // A lunging or unblockable opener is a real commitment the boss can be made to regret if it
+            // misses; a light poke is not. A feint is never a commitment — nothing was thrown.
+            context.LastAttackWasCommitted = !_isFeinting && (attack.LungeSpeed > 0f || attack.Unblockable);
+
             context.Motor.Halt();
             context.Attacks.Begin(attack, context.DistanceToPlayer);
         }
@@ -183,6 +187,10 @@ namespace AdaptiveBossArena.AI.States
             }
 
             _comboRemaining--;
+
+            // A follow-up is a commitment by definition — the boss has strung itself into a chain — so
+            // a chain that swings through empty air can overbalance it just as a lunge can.
+            context.LastAttackWasCommitted = true;
             context.Attacks.Begin(next, context.DistanceToPlayer);
         }
 
@@ -274,10 +282,15 @@ namespace AdaptiveBossArena.AI.States
     /// </remarks>
     public sealed class BossRecoverState : StateBase<BossContext>
     {
-        /// <summary>True once the recovery window has closed.</summary>
+        /// <summary>True once the recovery window has closed and any overbalance stumble has passed.</summary>
         /// <param name="context">The boss context.</param>
         /// <returns>Whether the boss may act again.</returns>
-        public bool IsComplete(BossContext context) => context.AttackCooldownRemaining <= 0f;
+        /// <remarks>
+        /// An overbalanced boss is held here through its stumble, so a swing baited into empty air is a
+        /// real, visible opening rather than something the boss immediately acts out of.
+        /// </remarks>
+        public bool IsComplete(BossContext context) =>
+            context.AttackCooldownRemaining <= 0f && !context.IsOverbalanced;
 
         /// <inheritdoc />
         protected override void OnTick(BossContext context, float deltaTime)

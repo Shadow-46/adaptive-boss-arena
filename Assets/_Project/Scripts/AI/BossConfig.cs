@@ -161,6 +161,30 @@ namespace AdaptiveBossArena.AI
                  "winds the gambit up faster.")]
         private float _resolveBuildPerWhiff = 14f;
 
+        [Header("Overbalance (Reads & Punishes)")]
+        [SerializeField]
+        [Range(0f, 1f)]
+        [Tooltip("Chance a committed swing that whiffs overbalances the boss, at full commitment. " +
+                 "Scales down to zero as the boss's commitment falls to its baseline.")]
+        private float _overbalanceMaxChance = 0.6f;
+
+        [SerializeField]
+        [Range(0f, 1f)]
+        [Tooltip("Commitment below which the boss never overbalances, so minor adaptation does not " +
+                 "open it up.")]
+        private float _overbalanceIntensityThreshold = 0.15f;
+
+        [SerializeField]
+        [Range(0.2f, 3f)]
+        [Tooltip("How long the stumble lasts at full commitment, in seconds.")]
+        private float _overbalanceRecoverySeconds = 1.1f;
+
+        [SerializeField]
+        [Range(1f, 4f)]
+        [Tooltip("How much incoming poise damage is multiplied while the boss is overbalanced, so a " +
+                 "hit landed in the window rushes the posture break that opens the execution.")]
+        private float _overbalancePoiseMultiplier = 2.4f;
+
         [Header("Baseline Tuning")]
         [SerializeField]
         [Tooltip("Distance the boss prefers to hold before it has learned anything.")]
@@ -215,6 +239,18 @@ namespace AdaptiveBossArena.AI
 
         /// <summary>Resolve gained each time one of the boss's attacks whiffs.</summary>
         public float ResolveBuildPerWhiff => _resolveBuildPerWhiff;
+
+        /// <summary>Chance a committed whiff overbalances the boss at full commitment.</summary>
+        public float OverbalanceMaxChance => _overbalanceMaxChance;
+
+        /// <summary>Commitment below which the boss never overbalances.</summary>
+        public float OverbalanceIntensityThreshold => _overbalanceIntensityThreshold;
+
+        /// <summary>Length of the overbalance stumble at full commitment, in seconds.</summary>
+        public float OverbalanceRecoverySeconds => _overbalanceRecoverySeconds;
+
+        /// <summary>Incoming-poise multiplier while the boss is overbalanced.</summary>
+        public float OverbalancePoiseMultiplier => _overbalancePoiseMultiplier;
 
         /// <summary>Preferred range before adaptation.</summary>
         public float BaselinePreferredRange => _baselinePreferredRange;

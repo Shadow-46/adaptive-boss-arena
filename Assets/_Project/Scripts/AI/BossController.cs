@@ -76,6 +76,11 @@ namespace AdaptiveBossArena.AI
         [Tooltip("Broadcasts normalised boss posture. Emptying it opens the riposte.")]
         private FloatEventChannel _postureChannel;
 
+        [SerializeField]
+        [Tooltip("Raised when a committed boss swing whiffs hard enough to overbalance it, so " +
+                 "presentation can show the stumble and the opening it leaves.")]
+        private VoidEventChannel _overbalanceChannel;
+
         private CharacterController _characterController;
         private HitFlash _hitFlash;
         private CharacterAnimator _animator;
@@ -109,6 +114,8 @@ namespace AdaptiveBossArena.AI
         private BossAttackSelector _selector;
         private AdaptationManager _adaptation;
         private BossResolve _resolve;
+        private IRandomProvider _random;
+        private OverbalanceEvaluator _overbalance;
         private IScreenShake _screenShake;
         private StateMachine<BossContext> _machine;
 
@@ -225,6 +232,13 @@ namespace AdaptiveBossArena.AI
             _resolve = new BossResolve(
                 _config.ResolveThreshold, _config.ResolveBuildPerSecond, _config.ResolveBuildPerWhiff);
 
+            _random = random;
+            _overbalance = new OverbalanceEvaluator(
+                _config.OverbalanceMaxChance,
+                _config.OverbalanceIntensityThreshold,
+                _config.OverbalanceRecoverySeconds,
+                _config.OverbalancePoiseMultiplier);
+
             _adaptation.StrategyAdopted += OnStrategyAdopted;
             _events.EventRecorded += OnCombatEventRecorded;
         }
@@ -242,7 +256,42 @@ namespace AdaptiveBossArena.AI
             if (combatEvent.Kind == CombatEventKind.AttackWhiffed && combatEvent.Actor == CombatantTeam.Boss)
             {
                 _resolve?.RegisterBossWhiff();
+                TryOverbalance();
             }
+        }
+
+        /// <summary>
+        /// Considers whether the committed swing that just missed overbalances the boss into an open
+        /// stumble.
+        /// </summary>
+        /// <remarks>
+        /// This is a reaction to the boss's <em>own</em> action and its <em>own</em> commitment — never
+        /// to anything about the player — so it needs no perception delay to stay honest: the boss is
+        /// paying for how hard it leaned into a read, exactly when the player stops feeding that read.
+        /// The chance and severity scale with commitment, and are zero when the boss has adapted
+        /// nothing, so a fight it learns nothing in is untouched.
+        /// </remarks>
+        private void TryOverbalance()
+        {
+            if (_context.IsOverbalanced)
+            {
+                return;
+            }
+
+            float commitment = _context.Tuning.CommitmentIntensity;
+
+            if (!_overbalance.ShouldOverbalance(
+                    _context.LastAttackWasCommitted, commitment, _random.NextFloat01()))
+            {
+                return;
+            }
+
+            _context.OverbalanceSeconds = _overbalance.ExtraRecoverySeconds(commitment);
+            _context.OverbalancePoiseMultiplier = _overbalance.PoiseVulnerabilityMultiplier(commitment);
+
+            // Announced so presentation can stumble the boss and mark the opening; the mechanic itself
+            // is already live in the context. Nothing here reads or reacts to the player.
+            _overbalanceChannel?.Raise();
         }
 
         /// <summary>
@@ -281,6 +330,7 @@ namespace AdaptiveBossArena.AI
             float deltaTime = _time.DeltaTime;
 
             _phaseTransitionInvulnRemaining = Mathf.Max(0f, _phaseTransitionInvulnRemaining - deltaTime);
+            _context.OverbalanceSeconds = Mathf.Max(0f, _context.OverbalanceSeconds - deltaTime);
 
             // The boss's only window onto the player, refreshed once per frame and served back
             // delayed. Nothing downstream can ask for anything fresher.
@@ -405,7 +455,9 @@ namespace AdaptiveBossArena.AI
             _hitFlash?.Play();
             _animator?.Recoil(damage.HitDirection);
 
-            if (_poise.ApplyPoiseDamage(damage.PoiseDamage))
+            // While overbalanced the boss's stance is wide open, so a hit landed in the stumble rushes
+            // the posture break that opens the execution — the concrete reward for baiting the read.
+            if (_poise.ApplyPoiseDamage(damage.PoiseDamage * _context.IncomingPoiseMultiplier))
             {
                 _context.RequestStagger(PoiseBreakStaggerSeconds);
             }
@@ -430,6 +482,9 @@ namespace AdaptiveBossArena.AI
             _context.AttackCooldownRemaining = 0f;
             _phaseTransitionInvulnRemaining = 0f;
             _phaseAttackQueued = false;
+            _context.OverbalanceSeconds = 0f;
+            _context.OverbalancePoiseMultiplier = 1f;
+            _context.LastAttackWasCommitted = false;
             _resolve?.Reset();
             _context.StaggerRequested = false;
             _context.IsParrying = false;
@@ -525,6 +580,7 @@ namespace AdaptiveBossArena.AI
         {
             if (!_phaseAttackQueued ||
                 _phaseTransitionInvulnRemaining > 0f ||
+                context.IsOverbalanced ||
                 context.PendingAttack != null ||
                 _config.PhaseShockwave == null)
             {
@@ -557,6 +613,7 @@ namespace AdaptiveBossArena.AI
             }
 
             if (context.AttackCooldownRemaining > 0f ||
+                context.IsOverbalanced ||
                 !context.IsReactionReady ||
                 !context.Perceived.IsValid)
             {
