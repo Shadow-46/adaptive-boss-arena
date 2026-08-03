@@ -467,6 +467,21 @@ namespace AdaptiveBossArena.Tests.EditMode
             // lookup table and the fight would become memorisation.
             Assert.AreEqual(2, seen.Count, "Selection among equal candidates should vary.");
         }
+
+        [Test]
+        public void APanickedWhiffer_DrawsAWhiffRatioCounter()
+        {
+            // WhiffRatio was a fully-computed feature with no strategy answering it. CounterWhiffPunish
+            // closed that gap; this guards that a strategy keyed on WhiffRatio is genuinely selectable
+            // once the habit is both strong and confident.
+            CounterStrategy punishWhiffing = MakeStrategy(
+                BehaviorFeature.WhiffRatio, threshold: 0.5f, minimumConfidence: 0.4f, minimumPhase: 1);
+
+            var selector = new CounterSelector(new XorShiftRandomProvider(7u));
+            BehaviorProfile profile = ProfileWith(BehaviorFeature.WhiffRatio, 0.8f, 100);
+
+            Assert.AreSame(punishWhiffing, selector.Select(new[] { punishWhiffing }, profile, 1, null));
+        }
     }
 
     /// <summary>Tests for the gradual easing that keeps adaptation perceptible rather than abrupt.</summary>
@@ -547,6 +562,50 @@ namespace AdaptiveBossArena.Tests.EditMode
 
             Assert.AreEqual(0f, tuning.Get(BossTuningParameter.ParryChance), 0.001f);
             Assert.AreEqual(3f, tuning.Get(BossTuningParameter.PreferredRange), 0.001f);
+        }
+
+        [Test]
+        public void FreshTuning_HasNoCommitment()
+        {
+            var tuning = new BossTuning(3f, 0.5f);
+
+            // The whole overbalance mechanic keys off this being zero when nothing has been learned,
+            // which is what keeps the base fight untouched.
+            Assert.AreEqual(0f, tuning.CommitmentIntensity, 0.0001f);
+        }
+
+        [Test]
+        public void EasingTheCommittingParameters_RaisesCommitmentIntensity()
+        {
+            var tuning = new BossTuning(3f, baselineAggression: 0.5f);
+            tuning.SetTarget(BossTuningParameter.Aggression, 0.85f);
+            tuning.SetTarget(BossTuningParameter.GapCloserWeight, 0.7f);
+            tuning.SetTarget(BossTuningParameter.ComboExtensionChance, 0.5f);
+
+            for (int i = 0; i < 300; i++)
+            {
+                tuning.Tick(Frame, easeHalfLifeSeconds: 1f, forgetHalfLifeSeconds: 1000f);
+            }
+
+            // A boss that has fully leaned into pressing reads as strongly committed.
+            Assert.Greater(tuning.CommitmentIntensity, 0.5f);
+        }
+
+        [Test]
+        public void NonCommittingParameters_DoNotContributeToCommitment()
+        {
+            var tuning = new BossTuning(3f, 0.5f);
+
+            // Reading a heavy swing raises ParryChance, but parrying is not committing to a lunge — it
+            // must not, on its own, make the boss prone to overbalancing.
+            tuning.SetTarget(BossTuningParameter.ParryChance, 1f);
+
+            for (int i = 0; i < 300; i++)
+            {
+                tuning.Tick(Frame, 1f, 1000f);
+            }
+
+            Assert.AreEqual(0f, tuning.CommitmentIntensity, 0.0001f);
         }
     }
 }

@@ -78,6 +78,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 25c207c4eefbf96449e1025efcdd0057, type: 2}
   - {fileID: 11400000, guid: e9776edbbaf093e42b683221a3caa68c, type: 2}
   - {fileID: 11400000, guid: ae89b9b1ba4df1640b4e94bad2be1705, type: 2}
+  - {fileID: 11400000, guid: 512ff750d4dcd424c9b0e3a8363b95d6, type: 2}
   _analysisIntervalSeconds: 2.5
   _minSecondsBetweenAdaptations: 12
   _memoryHalfLifeSeconds: 45

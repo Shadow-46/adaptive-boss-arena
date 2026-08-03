@@ -494,10 +494,23 @@ namespace AdaptiveBossArena.Editor
                 (BossTuningParameter.FeintChance, 0.6f),
                 (BossTuningParameter.AttackDelay, 0.2f));
 
+            // A player who whiffs often is panicking, and every wasted swing is a recovery the boss can
+            // step into. The answer is pure commitment — press, close the gap, and string the punish —
+            // which also raises the boss's own commitment, so a swing that then misses because the
+            // player has stopped flailing overbalances it in turn. That reversal is the whole point.
+            CounterStrategy punishWhiffing = CreateStrategy(
+                "CounterWhiffPunish",
+                BehaviorFeature.WhiffRatio, FeatureComparison.AtOrAbove, threshold: 0.5f,
+                phase: 1, weight: 1.2f,
+                tell: "It punishes your wasted swings.",
+                (BossTuningParameter.Aggression, 0.8f),
+                (BossTuningParameter.GapCloserWeight, 0.7f),
+                (BossTuningParameter.ComboExtensionChance, 0.5f));
+
             return new[]
             {
                 delayAttacks, closeDistance, parryHeavy, predictDodge, areaDenial, punishPassivity,
-                punishHealing, baitRhythmicDodge
+                punishHealing, baitRhythmicDodge, punishWhiffing
             };
         }
 

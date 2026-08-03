@@ -30,6 +30,13 @@ namespace AdaptiveBossArena.Learning
     {
         private static readonly int ParameterCount = Enum.GetValues(typeof(BossTuningParameter)).Length;
 
+        /// <summary>
+        /// The combined above-baseline deviation of the committing parameters at which the boss counts
+        /// as having fully committed. Chosen so a boss that has adopted a pressing counter-strategy
+        /// reads near one, while a fight it learns nothing in stays at zero.
+        /// </summary>
+        private const float CommitmentReferenceSum = 1.6f;
+
         private readonly float[] _current;
         private readonly float[] _target;
         private readonly float[] _baseline;
@@ -52,6 +59,31 @@ namespace AdaptiveBossArena.Learning
             {
                 _current[i] = _baseline[i];
                 _target[i] = _baseline[i];
+            }
+        }
+
+        /// <summary>
+        /// How hard the boss has currently committed to pressing the player, on a 0..1 scale.
+        /// </summary>
+        /// <remarks>
+        /// The normalised sum of how far the three committing parameters — willingness to press
+        /// (<see cref="BossTuningParameter.Aggression"/>), gap-closing
+        /// (<see cref="BossTuningParameter.GapCloserWeight"/>) and combo extension
+        /// (<see cref="BossTuningParameter.ComboExtensionChance"/>) — have been eased above their
+        /// baselines. This is the quantity <see cref="OverbalanceEvaluator"/> reads: a boss that has
+        /// leaned hard into a read pays more for a swing that then misses. It is zero whenever nothing
+        /// has been adapted, which is what keeps the base fight untouched.
+        /// </remarks>
+        public float CommitmentIntensity
+        {
+            get
+            {
+                float committed =
+                    PositiveDeviation(BossTuningParameter.Aggression) +
+                    PositiveDeviation(BossTuningParameter.GapCloserWeight) +
+                    PositiveDeviation(BossTuningParameter.ComboExtensionChance);
+
+                return Mathf.Clamp01(committed / CommitmentReferenceSum);
             }
         }
 
@@ -124,5 +156,11 @@ namespace AdaptiveBossArena.Learning
         /// <returns>Absolute distance from baseline.</returns>
         public float DeviationFromBaseline(BossTuningParameter parameter) =>
             Mathf.Abs(_current[(int)parameter] - _baseline[(int)parameter]);
+
+        /// <summary>How far a parameter has been eased <em>above</em> its baseline, never negative.</summary>
+        /// <param name="parameter">The parameter to inspect.</param>
+        /// <returns>The positive distance from baseline, or zero if it sits at or below it.</returns>
+        private float PositiveDeviation(BossTuningParameter parameter) =>
+            Mathf.Max(0f, _current[(int)parameter] - _baseline[(int)parameter]);
     }
 }
