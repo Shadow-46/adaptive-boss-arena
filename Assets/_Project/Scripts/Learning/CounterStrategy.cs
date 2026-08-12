@@ -1,4 +1,5 @@
 using System;
+using AdaptiveBossArena.Core.Constants;
 using AdaptiveBossArena.Core.ScriptableObjects;
 using UnityEngine;
 
@@ -76,8 +77,9 @@ namespace AdaptiveBossArena.Learning
         private float _selectionWeight = 1f;
 
         [SerializeField]
-        [Range(1, 3)]
-        [Tooltip("Earliest boss phase in which this strategy may be adopted.")]
+        [Range(1, GameplayConstants.BossPhaseCount)]
+        [Tooltip("Earliest boss phase in which this strategy may be adopted. The ceiling is the " +
+                 "phase count, so a strategy may be reserved for Last Stand.")]
         private int _minimumPhase = 1;
 
         [SerializeField]

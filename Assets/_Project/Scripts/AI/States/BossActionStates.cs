@@ -37,8 +37,18 @@ namespace AdaptiveBossArena.AI.States
         /// </remarks>
         private const float FeintCancelFraction = 0.6f;
 
-        /// <summary>Chance each extra combo hit is taken, so longer chains grow rarer.</summary>
-        private const float ComboContinueChance = 0.6f;
+        /// <summary>
+        /// Chance each extra combo hit is taken before adaptation, so longer chains grow rarer.
+        /// </summary>
+        /// <remarks>
+        /// The untrained baseline. A boss that has learned to string blows together raises this
+        /// through <see cref="BossTuningParameter.ComboExtensionChance"/>; exposed so tests can state
+        /// the baseline rather than repeat the number.
+        /// </remarks>
+        public const float BaseComboContinueChance = 0.6f;
+
+        /// <summary>Share of a full cooldown a feint costs, since nothing was committed.</summary>
+        private const float FeintCooldownFraction = 0.45f;
 
         private bool _isFeinting;
         private int _comboRemaining;
@@ -70,8 +80,15 @@ namespace AdaptiveBossArena.AI.States
             _isFeinting = context.Random.NextBool(
                 Mathf.Clamp01(context.Tuning.Get(BossTuningParameter.FeintChance)));
 
-            // A feint is a single beat by definition; only a committed opener grows into a chain.
-            _comboRemaining = _isFeinting ? 0 : ComboLength(context.PhaseIndex, context.Random);
+            // A feint is a single beat by definition; only a committed opener grows into a chain. A
+            // boss that has learned to press its combos strings more of them together.
+            _comboRemaining = _isFeinting
+                ? 0
+                : ComboLength(
+                    context.PhaseIndex,
+                    context.Random,
+                    BaseComboContinueChance +
+                    context.Tuning.Get(BossTuningParameter.ComboExtensionChance));
 
             // A lunging or unblockable opener is a real commitment the boss can be made to regret if it
             // misses; a light poke is not. A feint is never a commitment — nothing was thrown.
@@ -121,15 +138,47 @@ namespace AdaptiveBossArena.AI.States
                 context.Attacks.Cancel();
             }
 
-            // A feint costs less than a committed swing, which is what makes it a threat rather than
-            // a gift. It still costs something, so a boss that feinted constantly would never
-            // actually pressure the player.
-            float cooldown = context.CurrentPhase.AttackCooldownSeconds;
-            context.AttackCooldownRemaining = _isFeinting ? cooldown * 0.45f : cooldown;
+            context.AttackCooldownRemaining = AttackCooldownFor(
+                context.CurrentPhase.AttackCooldownSeconds,
+                context.Tuning.Get(BossTuningParameter.AttackDelay),
+                _isFeinting);
 
             _isFeinting = false;
             _comboRemaining = 0;
             context.PendingAttack = null;
+        }
+
+        /// <summary>
+        /// Works out how long the boss waits before it may swing again.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// A feint costs less than a committed swing, which is what makes it a threat rather than a
+        /// gift. It still costs something, so a boss that feinted constantly would never actually
+        /// pressure the player.
+        /// </para>
+        /// <para>
+        /// The learned delay is what gives <c>CounterPostDodgeAggression</c> its teeth. Against a
+        /// player who strikes on reflex the instant a dodge ends, the boss holds back and lets that
+        /// reflex swing fall on empty air — which is precisely what its tell, "It waits for your
+        /// opening now.", claims it is doing. The delay is added rather than scaled so it reads as
+        /// patience layered on the phase's own rhythm instead of a different rhythm.
+        /// </para>
+        /// <para>
+        /// Pure and static so the behaviour behind that tell is verified by a test rather than by
+        /// watching the boss and forming an impression.
+        /// </para>
+        /// </remarks>
+        /// <param name="baseCooldownSeconds">The current phase's cooldown between attacks.</param>
+        /// <param name="learnedDelaySeconds">Extra patience the boss has learned, in seconds.</param>
+        /// <param name="isFeint">Whether the swing being recovered from was a feint.</param>
+        /// <returns>Seconds before the boss may attack again.</returns>
+        public static float AttackCooldownFor(
+            float baseCooldownSeconds, float learnedDelaySeconds, bool isFeint)
+        {
+            float cooldown = isFeint ? baseCooldownSeconds * FeintCooldownFraction : baseCooldownSeconds;
+
+            return cooldown + Mathf.Max(0f, learnedDelaySeconds);
         }
 
         /// <summary>
@@ -145,13 +194,19 @@ namespace AdaptiveBossArena.AI.States
         /// </remarks>
         /// <param name="phaseIndex">Zero-based phase; also the ceiling on extra hits.</param>
         /// <param name="random">Seeded source, so a chain is reproducible.</param>
+        /// <param name="continueChance">
+        /// Chance each further hit is taken. Passed in rather than fixed so a boss that has learned to
+        /// press its combos actually presses them — the behaviour
+        /// <see cref="BossTuningParameter.ComboExtensionChance"/> exists to change.
+        /// </param>
         /// <returns>Extra hits to chain, from zero to <paramref name="phaseIndex"/>.</returns>
-        public static int ComboLength(int phaseIndex, IRandomProvider random)
+        public static int ComboLength(int phaseIndex, IRandomProvider random, float continueChance)
         {
             int maxExtra = Mathf.Max(0, phaseIndex);
+            float chance = Mathf.Clamp01(continueChance);
             int extra = 0;
 
-            while (extra < maxExtra && random.NextBool(ComboContinueChance))
+            while (extra < maxExtra && random.NextBool(chance))
             {
                 extra++;
             }
