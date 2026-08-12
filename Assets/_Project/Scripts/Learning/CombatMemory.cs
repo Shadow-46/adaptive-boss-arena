@@ -56,6 +56,18 @@ namespace AdaptiveBossArena.Learning
         /// <summary>Heals the player has begun.</summary>
         public int PlayerHealsStarted { get; private set; }
 
+        /// <summary>Times the player raised their guard.</summary>
+        public int PlayerGuardsRaised { get; private set; }
+
+        /// <summary>Attacks the player turned aside on the exact beat.</summary>
+        public int PlayerDeflects { get; private set; }
+
+        /// <summary>Attacks the player caught late on the guard, taking chip and posture.</summary>
+        public int PlayerBlocks { get; private set; }
+
+        /// <summary>Broken guards the player punished with a riposte.</summary>
+        public int PlayerRipostes { get; private set; }
+
         /// <summary>Boss attacks that connected.</summary>
         public int BossAttacksLanded { get; private set; }
 
@@ -109,6 +121,25 @@ namespace AdaptiveBossArena.Learning
 
                 case CombatEventKind.HealStarted:
                     PlayerHealsStarted++;
+                    break;
+
+                // The defensive half of the fight. These four were published to the bus from the
+                // start and counted by nothing, which left the boss unable to learn anything about
+                // the deflect system the design calls its defining mechanic.
+                case CombatEventKind.GuardRaised:
+                    PlayerGuardsRaised++;
+                    break;
+
+                case CombatEventKind.Deflected:
+                    PlayerDeflects++;
+                    break;
+
+                case CombatEventKind.Blocked:
+                    PlayerBlocks++;
+                    break;
+
+                case CombatEventKind.Riposte:
+                    PlayerRipostes++;
                     break;
             }
         }
@@ -166,6 +197,10 @@ namespace AdaptiveBossArena.Learning
             PlayerDodges = 0;
             PlayerPerfectDodges = 0;
             PlayerHealsStarted = 0;
+            PlayerGuardsRaised = 0;
+            PlayerDeflects = 0;
+            PlayerBlocks = 0;
+            PlayerRipostes = 0;
             BossAttacksLanded = 0;
             BossAttacksEvaded = 0;
             BossAttacksWhiffed = 0;

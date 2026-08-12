@@ -51,7 +51,27 @@ namespace AdaptiveBossArena.Learning
         DodgeTimingConsistency = 8,
 
         /// <summary>Share of the boss's attacks the player avoids cleanly. The overall read on player skill.</summary>
-        EvasionSuccess = 9
+        EvasionSuccess = 9,
+
+        /// <summary>
+        /// How much the player answers attacks with the guard rather than by moving.
+        /// </summary>
+        /// <remarks>
+        /// A turtle stands their ground and lets the guard do the work. The honest answer is not a
+        /// harder attack but an unblockable one, which has to be dodged — a capability the boss
+        /// already has and merely reaches for more often.
+        /// </remarks>
+        GuardReliance = 10,
+
+        /// <summary>
+        /// Of the attacks the player meets with the guard, the share turned aside on the exact beat.
+        /// </summary>
+        /// <remarks>
+        /// The read on a parry master, as distinct from someone merely holding block:
+        /// <see cref="GuardReliance"/> says how often they guard, this says how well. It is the habit
+        /// feints exist to punish, since a player this precise is reading a rhythm.
+        /// </remarks>
+        DeflectSkill = 11
     }
 
     /// <summary>

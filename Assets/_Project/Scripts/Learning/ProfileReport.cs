@@ -87,6 +87,8 @@ namespace AdaptiveBossArena.Learning
             BehaviorFeature.HealFrequency => "You broke off to heal often.",
             BehaviorFeature.DodgeTimingConsistency => "Your perfect dodges fell on the same beat.",
             BehaviorFeature.EvasionSuccess => "You slipped almost everything it threw.",
+            BehaviorFeature.GuardReliance => "You met it behind the guard rather than moving.",
+            BehaviorFeature.DeflectSkill => "Your deflects landed on the beat, again and again.",
             _ => feature.ToString()
         };
     }

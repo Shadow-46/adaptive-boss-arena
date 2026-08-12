@@ -32,6 +32,16 @@ namespace AdaptiveBossArena.Learning
         private const int EvasionSamplesForConfidence = 6;
         private const int HealSamplesForConfidence = 2;
 
+        /// <summary>
+        /// Guarded exchanges before a defensive read is trusted.
+        /// </summary>
+        /// <remarks>
+        /// Higher than the evasion count because a guard answer is a deliberate, repeated choice
+        /// rather than a one-off reaction, and because the counters it invites — unblockables and
+        /// feints — are among the most punishing the boss has. It should be sure first.
+        /// </remarks>
+        private const int GuardSamplesForConfidence = 8;
+
         /// <summary>Heals in a fight above which healing is treated as a defining habit.</summary>
         private const float HealFrequencyCeiling = 4f;
 
@@ -51,6 +61,7 @@ namespace AdaptiveBossArena.Learning
             AnalyseOffence(tracker, memory, profile);
             AnalyseMovement(tracker, profile);
             AnalyseEvasion(tracker, memory, profile);
+            AnalyseDefence(memory, profile);
             AnalyseSustain(memory, profile);
 
             profile.MarkUpdated(timeNow);
@@ -136,6 +147,40 @@ namespace AdaptiveBossArena.Learning
                 Ratio(memory.PlayerPerfectDodges, tracker.DodgeOpportunities),
                 tracker.DodgeOpportunities,
                 DodgeSamplesForConfidence);
+        }
+
+        /// <summary>
+        /// Derives how the player defends: whether they hold ground behind the guard, and how
+        /// precisely they use it.
+        /// </summary>
+        /// <remarks>
+        /// The two are deliberately separate reads. Reliance is measured against everything the boss
+        /// threw, so it answers "do they stand and block?"; skill is measured only against the
+        /// attacks they actually met with the guard, so it answers "and are they good at it?". A
+        /// cautious novice scores high on the first and low on the second, and the two habits deserve
+        /// different answers — unblockables for the turtle, feints for the metronome.
+        /// </remarks>
+        private static void AnalyseDefence(CombatMemory memory, BehaviorProfile profile)
+        {
+            int guardedAnswers = memory.PlayerDeflects + memory.PlayerBlocks;
+
+            int bossAttacksResolved =
+                memory.BossAttacksLanded + memory.BossAttacksEvaded + memory.BossAttacksWhiffed +
+                guardedAnswers;
+
+            profile.Set(
+                BehaviorFeature.GuardReliance,
+                Ratio(guardedAnswers, bossAttacksResolved),
+                bossAttacksResolved,
+                GuardSamplesForConfidence);
+
+            // Rested on the guarded answers alone, so a player who blocks twice and deflects both
+            // does not read as a master until they have done it often enough to mean something.
+            profile.Set(
+                BehaviorFeature.DeflectSkill,
+                Ratio(memory.PlayerDeflects, guardedAnswers),
+                guardedAnswers,
+                GuardSamplesForConfidence);
         }
 
         /// <summary>Derives how readily the player disengages to recover.</summary>

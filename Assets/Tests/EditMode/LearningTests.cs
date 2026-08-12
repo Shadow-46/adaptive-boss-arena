@@ -257,6 +257,95 @@ namespace AdaptiveBossArena.Tests.EditMode
         }
 
         [Test]
+        public void ATurtle_IsRecognisedAsRelyingOnTheGuard()
+        {
+            // Twenty attacks all met behind the guard. These events were published from the start and
+            // counted by nothing, so this habit was invisible to the boss.
+            float time = 0f;
+            for (int i = 0; i < 20; i++)
+            {
+                Feed(CombatEventKind.Blocked, time);
+                time += 1f;
+            }
+
+            Analyse(time);
+
+            FeatureReading reading = _profile.Get(BehaviorFeature.GuardReliance);
+
+            Assert.Greater(reading.Value, 0.8f, "A player who blocks everything relies on the guard.");
+            Assert.Greater(reading.Confidence, 0.5f);
+        }
+
+        [Test]
+        public void APlayerWhoMovesInsteadOfBlocking_DoesNotReadAsATurtle()
+        {
+            float time = 0f;
+            for (int i = 0; i < 20; i++)
+            {
+                Feed(CombatEventKind.AttackEvaded, time, CombatantTeam.Boss);
+                time += 1f;
+            }
+
+            Analyse(time);
+
+            Assert.Less(_profile.Get(BehaviorFeature.GuardReliance).Value, 0.1f);
+        }
+
+        [Test]
+        public void AParryMaster_IsDistinguishedFromSomeoneMerelyHoldingBlock()
+        {
+            // Both players guard everything, so both are equally reliant. Only one is precise, and
+            // the two habits invite different answers: unblockables for the turtle, feints for the
+            // metronome.
+            float time = 0f;
+            for (int i = 0; i < 16; i++)
+            {
+                Feed(CombatEventKind.Deflected, time);
+                time += 1f;
+            }
+
+            Analyse(time);
+
+            FeatureReading skill = _profile.Get(BehaviorFeature.DeflectSkill);
+
+            Assert.Greater(skill.Value, 0.9f, "Every guarded answer was a clean deflect.");
+            Assert.Greater(skill.Confidence, 0.5f);
+            Assert.Greater(_profile.Get(BehaviorFeature.GuardReliance).Value, 0.8f);
+        }
+
+        [Test]
+        public void ALatePlayerWhoBlocksRatherThanDeflects_ReadsAsUnskilled()
+        {
+            float time = 0f;
+            for (int i = 0; i < 16; i++)
+            {
+                Feed(CombatEventKind.Blocked, time);
+                time += 1f;
+            }
+
+            Analyse(time);
+
+            // Reliant on the guard, but not good with it — so feinting them would be answering a
+            // rhythm they do not have.
+            Assert.Greater(_profile.Get(BehaviorFeature.GuardReliance).Value, 0.8f);
+            Assert.Less(_profile.Get(BehaviorFeature.DeflectSkill).Value, 0.1f);
+        }
+
+        [Test]
+        public void DeflectSkill_RestsOnlyOnGuardedExchanges()
+        {
+            // Two deflects out of two guarded answers is a perfect ratio on almost no evidence. The
+            // value may be high; the confidence must not be, or the boss would start feinting at a
+            // player who has simply not been tested yet.
+            Feed(CombatEventKind.Deflected, 0f);
+            Feed(CombatEventKind.Deflected, 1f);
+
+            Analyse(2f);
+
+            Assert.Less(_profile.Get(BehaviorFeature.DeflectSkill).Confidence, 0.5f);
+        }
+
+        [Test]
         public void PreferredDistance_ReflectsWhereThePlayerActuallyStands()
         {
             float time = 0f;
