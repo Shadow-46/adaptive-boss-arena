@@ -23,6 +23,22 @@ namespace AdaptiveBossArena.Core.Perception
         /// <summary>Roughly four seconds of history at a sixty hertz sampling rate.</summary>
         public const int DefaultHistoryCapacity = 256;
 
+        /// <summary>
+        /// Sampling rate the capacity is guaranteed to cover, in samples per second.
+        /// </summary>
+        /// <remarks>
+        /// The buffer is counted in samples but queried in seconds, so a high enough frame rate can
+        /// leave it spanning less wall-clock time than the perception latency. When that happens the
+        /// boss can never see far enough back, <c>TryGetPerceived</c> fails on every call, and it
+        /// stands still for the whole fight — silently, because going blind is the safe failure here
+        /// and nothing treats it as an error. Sizing the capacity against this rate keeps the window
+        /// wide enough for any plausible frame rate; the fixed cost is a few kilobytes.
+        /// </remarks>
+        private const float GuaranteedSamplesPerSecond = 2000f;
+
+        /// <summary>Extra history beyond the latency itself, so the lookup is never at the boundary.</summary>
+        private const float HistoryMarginSeconds = 0.5f;
+
         private readonly CircularBuffer<PlayerObservation> _history;
         private readonly IObservablePlayer _player;
 
@@ -32,17 +48,31 @@ namespace AdaptiveBossArena.Core.Perception
         /// <summary>Creates a perception source that watches the supplied player.</summary>
         /// <param name="player">The observable player to sample.</param>
         /// <param name="latencySeconds">How far behind the present perceived data should lag.</param>
-        /// <param name="historyCapacity">Number of samples retained.</param>
+        /// <param name="historyCapacity">
+        /// Number of samples retained. Leave at zero to size the buffer from the latency, which is
+        /// what production should do; pass a value only to pin the capacity, as the bounding test
+        /// does.
+        /// </param>
         /// <exception cref="ArgumentNullException">Thrown when no player is supplied.</exception>
         public DelayedPerceptionSource(
             IObservablePlayer player,
             float latencySeconds,
-            int historyCapacity = DefaultHistoryCapacity)
+            int historyCapacity = 0)
         {
             _player = player ?? throw new ArgumentNullException(nameof(player));
             _latencySeconds = Mathf.Max(0f, latencySeconds);
-            _history = new CircularBuffer<PlayerObservation>(historyCapacity);
+            _history = new CircularBuffer<PlayerObservation>(
+                historyCapacity > 0 ? historyCapacity : CapacityFor(_latencySeconds));
         }
+
+        /// <summary>
+        /// Samples needed to cover a latency at the guaranteed sampling rate.
+        /// </summary>
+        /// <param name="latencySeconds">How far back the boss must be able to look.</param>
+        /// <returns>A capacity that spans the latency plus a margin.</returns>
+        public static int CapacityFor(float latencySeconds) =>
+            Mathf.CeilToInt(
+                (Mathf.Max(0f, latencySeconds) + HistoryMarginSeconds) * GuaranteedSamplesPerSecond);
 
         /// <inheritdoc />
         public float LatencySeconds => _latencySeconds;

@@ -9,9 +9,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 0}
+  m_Script: {fileID: 11500000, guid: 559779a770976ab4d9a9b994d421bb6f, type: 3}
   m_Name: OnAdaptationAdopted
-  m_EditorClassIdentifier: AdaptiveBossArena.Core:AdaptiveBossArena.Core.Events:StringEventChannel
+  m_EditorClassIdentifier: AdaptiveBossArena.Core::AdaptiveBossArena.Core.Events.StringEventChannel
   _description: Carries the tell message for a newly adopted counter-strategy. Listened
     to by the heads-up display so the player can perceive that the boss has changed.
   _logRaises: 0

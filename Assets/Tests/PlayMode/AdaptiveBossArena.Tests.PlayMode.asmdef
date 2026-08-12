@@ -10,6 +10,7 @@
     "AdaptiveBossArena.Player",
     "AdaptiveBossArena.Learning",
     "AdaptiveBossArena.AI",
+    "AdaptiveBossArena.UI",
     "AdaptiveBossArena.Game"
   ],
   "includePlatforms": [],

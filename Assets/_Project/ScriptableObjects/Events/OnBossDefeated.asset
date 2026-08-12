@@ -9,8 +9,8 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 0}
+  m_Script: {fileID: 11500000, guid: 5cbf8af28ab03c9499e07e11466067e9, type: 3}
   m_Name: OnBossDefeated
-  m_EditorClassIdentifier: AdaptiveBossArena.Core:AdaptiveBossArena.Core.Events:VoidEventChannel
+  m_EditorClassIdentifier: AdaptiveBossArena.Core::AdaptiveBossArena.Core.Events.VoidEventChannel
   _description: Raised once when the boss is defeated.
   _logRaises: 0

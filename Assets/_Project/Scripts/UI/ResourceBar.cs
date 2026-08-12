@@ -54,6 +54,19 @@ namespace AdaptiveBossArena.UI
 
         private float _current = 1f;
         private float _trailing = 1f;
+
+        /// <summary>
+        /// The fraction this bar is currently showing.
+        /// </summary>
+        /// <remarks>
+        /// Exposed so an automated test can assert that a change in the underlying pool actually
+        /// reaches the interface. A bar that was never wired and a bar with nothing to report look
+        /// identical on screen, which is exactly the confusion this makes testable.
+        /// </remarks>
+        public float DisplayedFraction => _current;
+
+        /// <summary>Whether this bar has a channel to listen to at all. For diagnostics.</summary>
+        public bool HasChannel => _channel != null;
         private float _trailHoldRemaining;
 
         private void OnEnable()

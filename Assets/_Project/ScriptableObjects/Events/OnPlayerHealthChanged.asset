@@ -9,8 +9,8 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 0}
+  m_Script: {fileID: 11500000, guid: ac292a02425561c429ca41ae33eb5322, type: 3}
   m_Name: OnPlayerHealthChanged
-  m_EditorClassIdentifier: AdaptiveBossArena.Core:AdaptiveBossArena.Core.Events:FloatEventChannel
+  m_EditorClassIdentifier: AdaptiveBossArena.Core::AdaptiveBossArena.Core.Events.FloatEventChannel
   _description: Carries normalised player health.
   _logRaises: 0

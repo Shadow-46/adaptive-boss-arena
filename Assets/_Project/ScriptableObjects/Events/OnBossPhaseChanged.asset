@@ -9,8 +9,8 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 0}
+  m_Script: {fileID: 11500000, guid: 09e0e4523ff0f424bbdb7c7052d116d5, type: 3}
   m_Name: OnBossPhaseChanged
-  m_EditorClassIdentifier: AdaptiveBossArena.Core:AdaptiveBossArena.Core.Events:IntEventChannel
+  m_EditorClassIdentifier: AdaptiveBossArena.Core::AdaptiveBossArena.Core.Events.IntEventChannel
   _description: Carries the new zero-based phase index.
   _logRaises: 0

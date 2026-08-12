@@ -35,40 +35,4 @@ namespace AdaptiveBossArena.Core.Events
         /// <summary>Drops all listeners when the asset unloads, preventing cross-session leaks.</summary>
         private void OnDisable() => Raised = null;
     }
-
-    /// <summary>Event channel carrying a floating-point value, such as a normalised health fraction.</summary>
-    [CreateAssetMenu(
-        fileName = "FloatEventChannel",
-        menuName = "Adaptive Boss Arena/Events/Float Event Channel",
-        order = 1)]
-    public sealed class FloatEventChannel : EventChannel<float>
-    {
-    }
-
-    /// <summary>Event channel carrying an integer, such as a boss phase index.</summary>
-    [CreateAssetMenu(
-        fileName = "IntEventChannel",
-        menuName = "Adaptive Boss Arena/Events/Int Event Channel",
-        order = 2)]
-    public sealed class IntEventChannel : EventChannel<int>
-    {
-    }
-
-    /// <summary>Event channel carrying a flag, such as whether the game is paused.</summary>
-    [CreateAssetMenu(
-        fileName = "BoolEventChannel",
-        menuName = "Adaptive Boss Arena/Events/Bool Event Channel",
-        order = 3)]
-    public sealed class BoolEventChannel : EventChannel<bool>
-    {
-    }
-
-    /// <summary>Event channel carrying a string, such as an identifier for a triggered adaptation.</summary>
-    [CreateAssetMenu(
-        fileName = "StringEventChannel",
-        menuName = "Adaptive Boss Arena/Events/String Event Channel",
-        order = 4)]
-    public sealed class StringEventChannel : EventChannel<string>
-    {
-    }
 }
