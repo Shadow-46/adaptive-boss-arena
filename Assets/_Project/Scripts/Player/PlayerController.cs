@@ -178,6 +178,25 @@ namespace AdaptiveBossArena.Player
         /// <summary>Name of the state the character currently occupies. For debug tooling.</summary>
         public string CurrentStateName => _machine?.CurrentState?.Name ?? "Uninitialised";
 
+        /// <summary>
+        /// Whether construction finished. Exposed because the failure is otherwise silent.
+        /// </summary>
+        /// <remarks>
+        /// A controller that bailed during setup still answers <see cref="TakeDamage"/> — it simply
+        /// ignores every hit — so from the outside it is indistinguishable from a player who is
+        /// dodging everything. The diagnostic overlay has to be able to tell those two apart.
+        /// </remarks>
+        public bool IsInitialised => _isInitialised;
+
+        /// <summary>True while dash invincibility frames are active. For debug tooling.</summary>
+        public bool IsInvulnerable => _context != null && _context.IsInvulnerable;
+
+        /// <summary>True while the guard is up. For debug tooling.</summary>
+        public bool IsGuarding => _context != null && _context.IsGuarding;
+
+        /// <summary>True when Training mode is holding the player above death. For debug tooling.</summary>
+        public bool IsImmortal => _immortal;
+
         private void Awake()
         {
             _characterController = GetComponent<CharacterController>();
@@ -839,6 +858,11 @@ namespace AdaptiveBossArena.Player
             _healthChannel?.Raise(_health.Normalized);
             _staminaChannel?.Raise(_stamina.Normalized);
             _focusChannel?.Raise(_focus.Normalized);
+
+            // Posture was missing here, so its bar was never given a starting value. It only ever
+            // moves when a late block lands, which makes a bar that was never initialised and a bar
+            // that simply has nothing to report indistinguishable.
+            _postureChannel?.Raise(_posture.Normalized);
         }
 
         /// <summary>Resolves the camera to interpret input against.</summary>

@@ -101,6 +101,9 @@ namespace AdaptiveBossArena.AI
         /// <summary>Set when a phase escalation should erupt into the set-piece shockwave, once free.</summary>
         private bool _phaseAttackQueued;
 
+        /// <summary>Set once an outcome has been decided, standing the boss down.</summary>
+        private bool _fightConcluded;
+
         /// <summary>Run-modifier multiplier on the adaptation rate. One is the ordinary fight.</summary>
         private float _adaptationRateScale = 1f;
 
@@ -150,6 +153,19 @@ namespace AdaptiveBossArena.AI
 
         /// <summary>Name of the state the boss currently occupies. For debug tooling.</summary>
         public string CurrentStateName => _machine?.CurrentState?.Name ?? "Uninitialised";
+
+        /// <summary>
+        /// Whether construction finished. Exposed because the failure is otherwise silent.
+        /// </summary>
+        /// <remarks>
+        /// The last three checks in <c>ValidateSetup</c> return false without logging, so a missing
+        /// service disables the boss quietly: it stops attacking and ignores every hit, which reads
+        /// from the outside like a passive boss rather than a broken one.
+        /// </remarks>
+        public bool IsInitialised => _isInitialised;
+
+        /// <summary>Seconds of phase-transition invulnerability remaining. For debug tooling.</summary>
+        public float PhaseTransitionInvulnRemaining => _phaseTransitionInvulnRemaining;
 
         private void Awake()
         {
@@ -325,6 +341,18 @@ namespace AdaptiveBossArena.AI
             _phaseAura?.Pulse();
         }
 
+        /// <summary>
+        /// Stands the boss down once the fight has been decided.
+        /// </summary>
+        /// <remarks>
+        /// Without this the boss keeps swinging at a corpse. Its own death routes through the dead
+        /// state, but the player's death is invisible to it — the firewall means the boss is never
+        /// told anything about the player directly — so the director has to call it off. Animation
+        /// keeps running, so the outcome beat and the loser's topple still play out.
+        /// </remarks>
+        /// <param name="concluded">True once an outcome has been decided.</param>
+        public void SetFightConcluded(bool concluded) => _fightConcluded = concluded;
+
         private void Update()
         {
             if (!_isInitialised || _time.IsPaused)
@@ -333,6 +361,17 @@ namespace AdaptiveBossArena.AI
             }
 
             float deltaTime = _time.DeltaTime;
+
+            // The fight is over: stop swinging, stop deciding, and coast to a halt. Animation still
+            // runs below so the boss settles visibly instead of freezing mid-pose.
+            if (_fightConcluded)
+            {
+                _context.Attacks.Cancel();
+                _context.Motor.Decelerate(deltaTime);
+                _context.Motor.Tick(deltaTime);
+                DriveAnimation();
+                return;
+            }
 
             _phaseTransitionInvulnRemaining = Mathf.Max(0f, _phaseTransitionInvulnRemaining - deltaTime);
             _context.OverbalanceSeconds = Mathf.Max(0f, _context.OverbalanceSeconds - deltaTime);
@@ -487,6 +526,7 @@ namespace AdaptiveBossArena.AI
             _context.AttackCooldownRemaining = 0f;
             _phaseTransitionInvulnRemaining = 0f;
             _phaseAttackQueued = false;
+            _fightConcluded = false;
             _context.OverbalanceSeconds = 0f;
             _context.OverbalancePoiseMultiplier = 1f;
             _context.LastAttackWasCommitted = false;

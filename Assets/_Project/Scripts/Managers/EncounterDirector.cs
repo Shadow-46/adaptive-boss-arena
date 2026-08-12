@@ -330,6 +330,11 @@ namespace AdaptiveBossArena.Game
             _isDecided = true;
             _pauseMenu?.SetSuppressed(true);
 
+            // The boss cannot see that the player has died — the firewall means it is never told
+            // anything about them directly — so it has to be called off from here. Without this it
+            // keeps swinging at a corpse behind the outcome screen.
+            _boss?.SetFightConcluded(true);
+
             // An execution — the boss killed while its guard is broken — earns a distinct, deeper
             // cinematic beat than an ordinary kill: the whole point of the finisher is that it feels
             // earned, so the world crawls further and the camera lands the blow.
