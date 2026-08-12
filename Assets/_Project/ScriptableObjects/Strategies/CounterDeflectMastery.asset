@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08912429313b6b04b854987a056f0393, type: 3}
+  m_Name: CounterDeflectMastery
+  m_EditorClassIdentifier: AdaptiveBossArena.Learning::AdaptiveBossArena.Learning.CounterStrategy
+  _id: strategy.counterdeflectmastery
+  _designerNotes: 
+  _triggerFeature: 11
+  _comparison: 0
+  _threshold: 0.6
+  _minimumConfidence: 0.5
+  _selectionWeight: 1.45
+  _minimumPhase: 2
+  _repeatable: 0
+  _adjustments:
+  - _parameter: 7
+    _targetValue: 0.55
+  - _parameter: 9
+    _targetValue: 0.6
+  _easeInSeconds: 6
+  _tellMessage: It will not give you a clean beat.
+  _tellAudioCueId: 

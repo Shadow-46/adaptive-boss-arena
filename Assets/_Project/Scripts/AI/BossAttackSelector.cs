@@ -77,6 +77,7 @@ namespace AdaptiveBossArena.AI
             float distance = context.DistanceToPlayer;
             float gapCloserBias = context.Tuning.Get(BossTuningParameter.GapCloserWeight);
             float areaDenialBias = context.Tuning.Get(BossTuningParameter.AreaDenialWeight);
+            float unblockableBias = context.Tuning.Get(BossTuningParameter.UnblockableWeight);
             AttackDefinition signature = context.CurrentPhase.SignatureAttack;
 
             float total = 0f;
@@ -94,6 +95,7 @@ namespace AdaptiveBossArena.AI
                 float weight = RangeSuitability(attack, distance);
                 weight += gapCloserBias * GapCloserAffinity(attack);
                 weight += areaDenialBias * AreaCoverageAffinity(attack);
+                weight += unblockableBias * UnblockableAffinity(attack);
 
                 if (signature != null && attack == signature)
                 {
@@ -125,6 +127,18 @@ namespace AdaptiveBossArena.AI
         /// <summary>How much an attack behaves like a gap-closer.</summary>
         private static float GapCloserAffinity(AttackDefinition attack) =>
             attack.LungeSpeed > 0f ? 1f : 0f;
+
+        /// <summary>
+        /// Whether an attack goes straight through a raised guard.
+        /// </summary>
+        /// <remarks>
+        /// Binary, like the gap-closer affinity: an attack either has to be dodged or it does not.
+        /// Against a player who answers everything with the guard, this is what turns their habit
+        /// into a liability — and it stays fair, because a perilous attack is the most heavily
+        /// telegraphed thing the boss throws.
+        /// </remarks>
+        private static float UnblockableAffinity(AttackDefinition attack) =>
+            attack.Unblockable ? 1f : 0f;
 
         /// <summary>How much ground an attack covers, favouring wide arcs and long reach.</summary>
         private static float AreaCoverageAffinity(AttackDefinition attack)

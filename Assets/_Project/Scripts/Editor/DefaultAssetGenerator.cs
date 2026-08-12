@@ -507,10 +507,33 @@ namespace AdaptiveBossArena.Editor
                 (BossTuningParameter.GapCloserWeight, 0.7f),
                 (BossTuningParameter.ComboExtensionChance, 0.5f));
 
+            // A player who answers everything with the guard has told the boss something it can act
+            // on honestly: the guard only works on attacks that respect it. Reaching more often for
+            // the perilous attacks it already owns turns that habit into a liability, and because a
+            // perilous wind-up is the most heavily telegraphed thing in the fight, the answer stays
+            // fair — the player is being asked to dodge, not being denied a defence.
+            CounterStrategy punishTurtling = CreateStrategy(
+                "CounterGuardReliance",
+                BehaviorFeature.GuardReliance, FeatureComparison.AtOrAbove, threshold: 0.55f,
+                phase: 1, weight: 1.3f,
+                tell: "It stops respecting your guard.",
+                (BossTuningParameter.UnblockableWeight, 0.9f));
+
+            // The parry master is a different problem from the turtle. Their timing is the thing to
+            // attack, so the boss shows blows it never throws and mixes in attacks the guard cannot
+            // answer at all — punishing the precision itself rather than the reliance.
+            CounterStrategy punishDeflectMastery = CreateStrategy(
+                "CounterDeflectMastery",
+                BehaviorFeature.DeflectSkill, FeatureComparison.AtOrAbove, threshold: 0.6f,
+                phase: 2, weight: 1.45f,
+                tell: "It will not give you a clean beat.",
+                (BossTuningParameter.FeintChance, 0.55f),
+                (BossTuningParameter.UnblockableWeight, 0.6f));
+
             return new[]
             {
                 delayAttacks, closeDistance, parryHeavy, predictDodge, areaDenial, punishPassivity,
-                punishHealing, baitRhythmicDodge, punishWhiffing
+                punishHealing, baitRhythmicDodge, punishWhiffing, punishTurtling, punishDeflectMastery
             };
         }
 

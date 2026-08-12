@@ -110,7 +110,18 @@ namespace AdaptiveBossArena.Learning
         FeintChance = 7,
 
         /// <summary>Weighting applied to attacks that cover a wide area, against evasive players.</summary>
-        AreaDenialWeight = 8
+        AreaDenialWeight = 8,
+
+        /// <summary>
+        /// Weighting applied to perilous, unblockable attacks, against players who hide behind the
+        /// guard.
+        /// </summary>
+        /// <remarks>
+        /// The honest answer to a turtle: an attack that has to be dodged rather than met. It is a
+        /// capability the boss already had and merely reaches for more often, which is the line every
+        /// adaptation here stays on — numbers, never new rules.
+        /// </remarks>
+        UnblockableWeight = 9
     }
 
     /// <summary>How a feature's value is compared against a strategy's threshold.</summary>

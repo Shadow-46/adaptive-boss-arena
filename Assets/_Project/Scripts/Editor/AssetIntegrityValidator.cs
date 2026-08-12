@@ -170,8 +170,74 @@ namespace AdaptiveBossArena.Editor
                     problems.Add(
                         $"{strategies[i].name}: has no tell message, so its adaptation would be invisible.");
                 }
+
+                AdjustmentsAreConsumed(strategies[i], problems);
             }
         }
+
+        /// <summary>
+        /// Every parameter a strategy adjusts must be one the AI actually reads.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// This encodes a bug that hid for a long time behind a green suite. Two parameters —
+        /// <c>AttackDelay</c> and <c>ComboExtensionChance</c> — were written by strategies, eased
+        /// every frame and drawn in the debug overlay, but never read by any state. The boss raised
+        /// the tell "It waits for your opening now." and then did not wait.
+        /// </para>
+        /// <para>
+        /// An adaptation the player cannot perceive is indistinguishable from cheating; one that is
+        /// <em>announced</em> and then does nothing is worse, because the tell makes a promise the
+        /// fight does not keep. Nothing else catches it: the code compiles, the asset resolves, and
+        /// the number moves. So the consumed set is listed explicitly and checked here.
+        /// </para>
+        /// <para>
+        /// When wiring a new parameter into the AI, add it to this list. If a parameter is listed but
+        /// its consumer is later deleted, this check will not notice — so the list is a floor, not a
+        /// proof.
+        /// </para>
+        /// </remarks>
+        private static void AdjustmentsAreConsumed(
+            Learning.CounterStrategy strategy, ICollection<string> problems)
+        {
+            if (strategy.Adjustments == null)
+            {
+                return;
+            }
+
+            foreach (Learning.TuningAdjustment adjustment in strategy.Adjustments)
+            {
+                if (!ConsumedTuningParameters.Contains(adjustment.Parameter))
+                {
+                    problems.Add(
+                        $"{strategy.name}: adjusts {adjustment.Parameter}, which no AI code reads. " +
+                        "Its tell would promise a behaviour change that never happens.");
+                }
+            }
+        }
+
+        /// <summary>
+        /// The tuning parameters some part of the AI genuinely acts on.
+        /// </summary>
+        /// <remarks>
+        /// Each entry corresponds to a real <c>Tuning.Get</c> call: attack cadence and combo length in
+        /// <c>BossAttackState</c>, attack weighting in <c>BossAttackSelector</c>, held range in
+        /// <c>BossContext</c>, parrying in <c>BossController</c>, dodge leading in the attack state,
+        /// and pressure in <c>BossPositioningStates</c>.
+        /// </remarks>
+        private static readonly HashSet<Learning.BossTuningParameter> ConsumedTuningParameters = new()
+        {
+            Learning.BossTuningParameter.AttackDelay,
+            Learning.BossTuningParameter.PreferredRange,
+            Learning.BossTuningParameter.ParryChance,
+            Learning.BossTuningParameter.GapCloserWeight,
+            Learning.BossTuningParameter.DodgePredictionStrength,
+            Learning.BossTuningParameter.Aggression,
+            Learning.BossTuningParameter.ComboExtensionChance,
+            Learning.BossTuningParameter.FeintChance,
+            Learning.BossTuningParameter.AreaDenialWeight,
+            Learning.BossTuningParameter.UnblockableWeight
+        };
 
         /// <summary>Loads every asset of a type in the project.</summary>
         private static IEnumerable<TAsset> LoadAll<TAsset>() where TAsset : Object
