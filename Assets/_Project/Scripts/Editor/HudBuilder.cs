@@ -27,6 +27,22 @@ namespace AdaptiveBossArena.Editor
         private const int ReferenceHeight = 1080;
 
         /// <summary>
+        /// Vertical centres of the end screen's four bands, top to bottom.
+        /// </summary>
+        /// <remarks>
+        /// Kept together so the gaps between them can be checked at a glance. With the sizes assigned
+        /// in <c>BuildEndScreen</c> the occupied ranges are headline [330, 430], summary [80, 310],
+        /// dossier [-255, 45] and the buttons [-328, -272] — every band clear of its neighbour.
+        /// </remarks>
+        private const float HeadlineCentreY = 380f;
+
+        private const float SummaryCentreY = 195f;
+
+        private const float DossierCentreY = -105f;
+
+        private const float OutcomeButtonY = -300f;
+
+        /// <summary>
         /// Title scene the pause menu returns to.
         /// </summary>
         /// <remarks>
@@ -274,28 +290,40 @@ namespace AdaptiveBossArena.Editor
             GameObject panel = CreateFullScreenPanel(root, "EndPanel");
             var group = panel.AddComponent<CanvasGroup>();
 
+            // Laid out as explicit non-overlapping bands, because every text created by UiBuilder has
+            // a centre pivot: a rect at y spans [y - height/2, y + height/2], and a top-anchored
+            // block therefore starts drawing at its rect's TOP edge, not at y. Missing that put the
+            // summary's first line exactly on the headline's centre line and drew them over
+            // each other. Each band below leaves a visible gap to the next.
             Text headline = CreateText(panel.transform, "Headline", string.Empty, 72, TextAnchor.MiddleCenter);
-            headline.rectTransform.anchoredPosition = new Vector2(0f, 300f);
+            headline.rectTransform.anchoredPosition = new Vector2(0f, HeadlineCentreY);
 
+            // Tall enough to contain 72pt glyphs. The default 80 was shorter than the line itself, so
+            // it only rendered at all because overflow is permitted.
+            headline.rectTransform.sizeDelta = new Vector2(1000f, 100f);
+
+            // Sized for the longest summary the end screen can produce — seven lines on a run that
+            // sets a personal best — so it cannot spill into the dossier below it.
             Text summary = CreateText(panel.transform, "Summary", string.Empty, 28, TextAnchor.UpperCenter);
-            summary.rectTransform.anchoredPosition = new Vector2(0f, 210f);
-            summary.rectTransform.sizeDelta = new Vector2(900f, 180f);
+            summary.rectTransform.anchoredPosition = new Vector2(0f, SummaryCentreY);
+            summary.rectTransform.sizeDelta = new Vector2(900f, 230f);
 
             // The dossier: the boss's read on the player. Left-aligned and roomy because it is a list
             // of sentences, and it is the payoff of the whole "it studied you" mechanic.
             Text dossier = CreateText(panel.transform, "Dossier", string.Empty, 24, TextAnchor.UpperLeft);
-            dossier.rectTransform.anchoredPosition = new Vector2(0f, -60f);
-            dossier.rectTransform.sizeDelta = new Vector2(760f, 320f);
+            dossier.rectTransform.anchoredPosition = new Vector2(0f, DossierCentreY);
+            dossier.rectTransform.sizeDelta = new Vector2(760f, 300f);
             dossier.color = new Color(0.82f, 0.86f, 0.94f);
 
             var screen = root.gameObject.AddComponent<EndScreen>();
-            CreateButton(panel.transform, "Retry", "Try Again", new Vector2(-170f, -300f), screen.Restart);
+            CreateButton(
+                panel.transform, "Retry", "Try Again", new Vector2(-170f, OutcomeButtonY), screen.Restart);
 
             // The fight is over, so this is the natural moment to change the challenge modifiers —
             // which live on the title screen and were previously unreachable from here.
             if (references.PauseMenu != null)
             {
-                CreateButton(panel.transform, "EndMainMenu", "Main Menu", new Vector2(170f, -300f),
+                CreateButton(panel.transform, "EndMainMenu", "Main Menu", new Vector2(170f, OutcomeButtonY),
                     references.PauseMenu.ReturnToMenu);
             }
 

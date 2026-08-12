@@ -222,6 +222,55 @@ namespace AdaptiveBossArena.Tests.PlayMode
                 "The channel has a listener, but raising it did not move the bar.");
         }
 
+        [UnityTest]
+        public IEnumerator TheEndScreenTextDoesNotOverlapItself()
+        {
+            // The play-tester's screenshot showed the summary drawn straight through the headline.
+            // Every UiBuilder text has a centre pivot, so a rect at y spans y +/- height/2 and a
+            // top-anchored block starts at the rect's top edge — easy to get wrong by eye, and
+            // invisible to every other test.
+            RectTransform headline = FindText("Headline");
+            RectTransform summary = FindText("Summary");
+            RectTransform dossier = FindText("Dossier");
+
+            Assert.IsNotNull(headline, "No end-screen headline.");
+            Assert.IsNotNull(summary, "No end-screen summary.");
+            Assert.IsNotNull(dossier, "No end-screen dossier.");
+
+            Assert.GreaterOrEqual(
+                BottomOf(headline), TopOf(summary),
+                "The end-screen summary overlaps the headline.");
+
+            Assert.GreaterOrEqual(
+                BottomOf(summary), TopOf(dossier),
+                "The end-screen dossier overlaps the summary.");
+
+            yield return null;
+        }
+
+        private static float TopOf(RectTransform rect) =>
+            rect.anchoredPosition.y + (rect.sizeDelta.y * 0.5f);
+
+        private static float BottomOf(RectTransform rect) =>
+            rect.anchoredPosition.y - (rect.sizeDelta.y * 0.5f);
+
+        /// <summary>Finds a named text element anywhere in the interface, including inactive panels.</summary>
+        private static RectTransform FindText(string objectName)
+        {
+            foreach (UnityEngine.UI.Text text in
+                     Resources.FindObjectsOfTypeAll<UnityEngine.UI.Text>())
+            {
+                // Inactive because the end panel is hidden until the fight resolves; scene-only
+                // because FindObjectsOfTypeAll also returns the prefab assets behind them.
+                if (text.name == objectName && text.gameObject.scene.IsValid())
+                {
+                    return text.rectTransform;
+                }
+            }
+
+            return null;
+        }
+
         /// <summary>Finds a loaded channel asset by name.</summary>
         private static FloatEventChannel FindChannel(string assetName)
         {
