@@ -59,6 +59,18 @@ namespace AdaptiveBossArena.Core.Services
         /// <summary>True when any modifier departs from the ordinary fight.</summary>
         public bool AnyActive => FastLearner || NoHealing || FragilePlayer || TrainingMode;
 
+        /// <summary>
+        /// Whether an attempt under these rules may be written to the permanent records.
+        /// </summary>
+        /// <remarks>
+        /// Training makes the player unkillable, so a "victory" there is not a victory — recording it
+        /// would permanently set the fastest time and the fewest adaptations allowed with a run that
+        /// could not be lost, and there is no way to take that back. The other three modifiers all
+        /// make the fight <em>harder</em>, so a win under them is worth at least as much as an
+        /// ordinary one and counts normally.
+        /// </remarks>
+        public bool CountsTowardRecords => !TrainingMode;
+
         /// <summary>Short names of the active modifiers, for the post-fight report.</summary>
         /// <returns>One label per active modifier, empty for an unmodified run.</returns>
         public IReadOnlyList<string> ActiveLabels()

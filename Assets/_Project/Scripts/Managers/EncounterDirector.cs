@@ -353,10 +353,16 @@ namespace AdaptiveBossArena.Game
             int adaptations = adaptation?.AdoptedStrategies.Count ?? 0;
             float remainingHealth = _player?.Health?.Normalized ?? 0f;
 
-            bool isNewRecord = won && IsImprovement(duration, adaptations);
+            // An unkillable Training player would otherwise set the fastest victory and the fewest
+            // adaptations allowed permanently, with no way to undo it.
+            bool countsTowardRecords = RunSettings.Current?.CountsTowardRecords ?? true;
+            bool isNewRecord = won && countsTowardRecords && IsImprovement(duration, adaptations);
 
-            _records.RecordAttempt(won, duration, remainingHealth, adaptations);
-            _saveService?.Save(SaveKeys.Records, _records);
+            if (countsTowardRecords)
+            {
+                _records.RecordAttempt(won, duration, remainingHealth, adaptations);
+                _saveService?.Save(SaveKeys.Records, _records);
+            }
 
             string dossier = BuildDossier(adaptation, remainingHealth);
             _endScreen?.Show(won, duration, adaptations, isNewRecord, dossier);

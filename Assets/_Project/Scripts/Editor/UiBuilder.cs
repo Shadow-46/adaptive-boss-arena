@@ -62,7 +62,8 @@ namespace AdaptiveBossArena.Editor
         /// <param name="label">Button caption.</param>
         /// <param name="anchoredPosition">Centre-relative position.</param>
         /// <param name="onClick">Method invoked on click. Must be a public method on a serialised object.</param>
-        public static void CreateButton(
+        /// <returns>The created button, for callers that need to reference it afterwards.</returns>
+        public static Button CreateButton(
             Transform parent,
             string name,
             string label,
@@ -89,7 +90,10 @@ namespace AdaptiveBossArena.Editor
             // serialised — so on reload every generated button would have an empty onClick and do
             // nothing, however correct the wiring looked in code. Persistent listeners are the ones
             // stored in the scene, exactly as if the method had been dragged into the inspector.
-            UnityEventTools.AddPersistentListener(buttonObject.GetComponent<Button>().onClick, onClick);
+            var button = buttonObject.GetComponent<Button>();
+            UnityEventTools.AddPersistentListener(button.onClick, onClick);
+
+            return button;
         }
 
         /// <summary>

@@ -177,7 +177,11 @@ namespace AdaptiveBossArena.Combat
                 hurtbox.Receive(new DamageInfo
                 {
                     Amount = _damagePerTick,
-                    Type = DamageType.Light,
+
+                    // Ground fire is not a light swing. Typing it honestly keeps anything that later
+                    // branches on the incoming type — audio, hit reactions, the learning system —
+                    // from mistaking a hazard tick for an attack the boss threw.
+                    Type = DamageType.Hazard,
                     SourceTeam = CombatantTeam.Boss,
                     SourceInstanceId = GetInstanceID(),
                     HitPoint = hurtbox.transform.position,

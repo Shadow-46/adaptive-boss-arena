@@ -63,5 +63,30 @@ namespace AdaptiveBossArena.Tests.EditMode
             Assert.AreEqual(4, modifiers.ActiveLabels().Count);
             CollectionAssert.Contains(modifiers.ActiveLabels(), "Training");
         }
+
+        [Test]
+        public void AnOrdinaryRunCountsTowardRecords()
+        {
+            Assert.IsTrue(new RunModifiers().CountsTowardRecords);
+        }
+
+        [Test]
+        public void TrainingRunsNeverCountTowardRecords()
+        {
+            // Training makes the player unkillable, so a "win" there is not one. Recording it would
+            // permanently set the fastest victory and the fewest adaptations allowed, with no way to
+            // take it back.
+            Assert.IsFalse(new RunModifiers { TrainingMode = true }.CountsTowardRecords);
+        }
+
+        [Test]
+        public void HarderModifiersStillCountTowardRecords()
+        {
+            // These three only make the fight harder, so a win under them is worth at least as much
+            // as an ordinary one.
+            Assert.IsTrue(new RunModifiers { FastLearner = true }.CountsTowardRecords);
+            Assert.IsTrue(new RunModifiers { NoHealing = true }.CountsTowardRecords);
+            Assert.IsTrue(new RunModifiers { FragilePlayer = true }.CountsTowardRecords);
+        }
     }
 }

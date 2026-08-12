@@ -26,6 +26,16 @@ namespace AdaptiveBossArena.Editor
         private const int ReferenceWidth = 1920;
         private const int ReferenceHeight = 1080;
 
+        /// <summary>
+        /// Title scene the pause menu returns to.
+        /// </summary>
+        /// <remarks>
+        /// Derived from the generated scene path rather than typed again, so renaming the scene in
+        /// one place cannot leave the Main Menu button pointing at a scene that no longer exists.
+        /// </remarks>
+        private static readonly string MainMenuSceneName =
+            System.IO.Path.GetFileNameWithoutExtension(EditorMenus.MainMenuScenePath);
+
         private static readonly Color PlayerHealthColor = new Color(0.45f, 0.85f, 0.5f);
         private static readonly Color StaminaColor = new Color(0.95f, 0.8f, 0.35f);
         private static readonly Color BossHealthColor = new Color(0.9f, 0.3f, 0.32f);
@@ -228,18 +238,31 @@ namespace AdaptiveBossArena.Editor
 
             var menu = root.gameObject.AddComponent<PauseMenu>();
 
-            CreateButton(panel.transform, "Resume", "Resume", new Vector2(0f, 60f), menu.Resume);
-            CreateButton(panel.transform, "Restart", "Restart Fight", new Vector2(0f, -10f), menu.Restart);
+            CreateButton(panel.transform, "Resume", "Resume", new Vector2(0f, 90f), menu.Resume);
+            CreateButton(panel.transform, "Restart", "Restart Fight", new Vector2(0f, 20f), menu.Restart);
 
             if (references.SettingsMenu != null)
             {
-                CreateButton(panel.transform, "Settings", "Settings", new Vector2(0f, -80f),
+                CreateButton(panel.transform, "Settings", "Settings", new Vector2(0f, -50f),
                     references.SettingsMenu.Open);
             }
 
-            CreateButton(panel.transform, "Quit", "Quit", new Vector2(0f, -150f), menu.Quit);
+            // Without this the title screen — and so the challenge modifiers — is unreachable for the
+            // rest of the session once the first fight starts.
+            CreateButton(panel.transform, "MainMenu", "Main Menu", new Vector2(0f, -120f),
+                menu.ReturnToMenu);
 
-            menu.Bind(actionsAsset, panel, channels.PauseState);
+            // Built unconditionally and hidden at runtime where quitting is meaningless: this
+            // generator has no idea which platform the build will target.
+            Button quit = CreateButton(panel.transform, "Quit", "Quit", new Vector2(0f, -190f), menu.Quit);
+
+            menu.Bind(
+                actionsAsset,
+                panel,
+                channels.PauseState,
+                references.SettingsMenu,
+                quit != null ? quit.gameObject : null,
+                MainMenuSceneName);
 
             panel.SetActive(false);
             references.PauseMenu = menu;
@@ -266,7 +289,15 @@ namespace AdaptiveBossArena.Editor
             dossier.color = new Color(0.82f, 0.86f, 0.94f);
 
             var screen = root.gameObject.AddComponent<EndScreen>();
-            CreateButton(panel.transform, "Retry", "Try Again", new Vector2(0f, -300f), screen.Restart);
+            CreateButton(panel.transform, "Retry", "Try Again", new Vector2(-170f, -300f), screen.Restart);
+
+            // The fight is over, so this is the natural moment to change the challenge modifiers —
+            // which live on the title screen and were previously unreachable from here.
+            if (references.PauseMenu != null)
+            {
+                CreateButton(panel.transform, "EndMainMenu", "Main Menu", new Vector2(170f, -300f),
+                    references.PauseMenu.ReturnToMenu);
+            }
 
             screen.Bind(panel, group, headline, summary, dossier);
             panel.SetActive(false);
@@ -408,7 +439,8 @@ namespace AdaptiveBossArena.Editor
             UiBuilder.CreateText(parent, name, content, fontSize, alignment);
 
         /// <summary>Creates a labelled button wired to a callback.</summary>
-        private static void CreateButton(
+        /// <returns>The created button, for callers that need to reference it afterwards.</returns>
+        private static Button CreateButton(
             Transform parent,
             string name,
             string label,

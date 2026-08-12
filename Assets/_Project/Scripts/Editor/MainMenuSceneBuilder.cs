@@ -104,7 +104,6 @@ namespace AdaptiveBossArena.Editor
             // The component must exist before the buttons are wired, because the persistent listeners
             // baked into them serialise a reference to it.
             var titleScreen = canvasObject.AddComponent<TitleScreen>();
-            titleScreen.Bind(Path.GetFileNameWithoutExtension(EditorMenus.ArenaScenePath));
 
             // The same settings panel the fight uses, so preferences set here carry straight in.
             var actions = AssetDatabase.LoadAssetAtPath<InputActionAsset>(InputActionsGenerator.AssetPath);
@@ -112,7 +111,15 @@ namespace AdaptiveBossArena.Editor
 
             UiBuilder.CreateButton(root, "Start", "Fight", new Vector2(0f, -20f), titleScreen.StartGame);
             UiBuilder.CreateButton(root, "Settings", "Settings", new Vector2(0f, -90f), settings.Open);
-            UiBuilder.CreateButton(root, "Quit", "Quit", new Vector2(0f, -160f), titleScreen.Quit);
+
+            // Built unconditionally and hidden at runtime in a browser, where a page cannot close its
+            // own tab and the button would otherwise sit on the front door doing nothing.
+            Button quit = UiBuilder.CreateButton(
+                root, "Quit", "Quit", new Vector2(0f, -160f), titleScreen.Quit);
+
+            titleScreen.Bind(
+                Path.GetFileNameWithoutExtension(EditorMenus.ArenaScenePath),
+                quit != null ? quit.gameObject : null);
 
             BuildModifiers(root, canvasObject);
 

@@ -26,21 +26,44 @@ namespace AdaptiveBossArena.UI
         [Tooltip("Name of the arena scene to load. Must be in the build settings.")]
         private string _arenaSceneName = "Arena";
 
+        [SerializeField]
+        [Tooltip("The quit button, hidden on platforms where quitting does nothing.")]
+        private GameObject _quitButton;
+
         /// <summary>Loads the fight. Bound to the start button.</summary>
         public void StartGame() => SceneManager.LoadScene(_arenaSceneName);
 
-        /// <summary>Quits the application, or leaves play mode in the editor. Bound to the quit button.</summary>
+        /// <summary>
+        /// Quits the application, or leaves play mode in the editor. Bound to the quit button.
+        /// </summary>
+        /// <remarks>
+        /// Does nothing in a browser, where a page cannot close its own tab. The button is hidden
+        /// there instead of sitting on the front door doing nothing — see <see cref="Start"/>.
+        /// </remarks>
         public void Quit()
         {
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;
-#else
+#elif !UNITY_WEBGL
             Application.Quit();
 #endif
         }
 
+        private void Start()
+        {
+            if (_quitButton != null && !PauseMenu.CanQuit)
+            {
+                _quitButton.SetActive(false);
+            }
+        }
+
         /// <summary>Assigns the scene to load. Used by the scene generator.</summary>
         /// <param name="arenaSceneName">Name of the arena scene.</param>
-        public void Bind(string arenaSceneName) => _arenaSceneName = arenaSceneName;
+        /// <param name="quitButton">Quit button, hidden where quitting is meaningless.</param>
+        public void Bind(string arenaSceneName, GameObject quitButton = null)
+        {
+            _arenaSceneName = arenaSceneName;
+            _quitButton = quitButton;
+        }
     }
 }
