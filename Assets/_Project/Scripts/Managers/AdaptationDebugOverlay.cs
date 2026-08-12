@@ -52,6 +52,7 @@ namespace AdaptiveBossArena.Game
         private BossController _boss;
 
         private readonly StringBuilder _builder = new StringBuilder(1024);
+        private readonly StringBuilder _countsBuilder = new StringBuilder(256);
         private bool _isVisible;
         private bool _forced;
         private GUIStyle _style;
@@ -63,6 +64,28 @@ namespace AdaptiveBossArena.Game
         /// <summary>The most recent occurrences, oldest first, for the tail.</summary>
         private readonly CombatEvent[] _recentEvents = new CombatEvent[EventTailLength];
         private int _recentCount;
+
+        /// <summary>Running tally of every occurrence seen, indexed by <see cref="CombatEventKind"/>.</summary>
+        private readonly int[] _eventCounts =
+            new int[Enum.GetValues(typeof(CombatEventKind)).Length];
+
+        [Header("Console Diagnostics")]
+        [SerializeField]
+        [Tooltip("Writes a periodic vitals line to the log. In a browser this reaches the developer " +
+                 "console, which is the only way to read a shipped build's state remotely.")]
+        private bool _logHeartbeat = true;
+
+        [SerializeField]
+        [Range(1f, 10f)]
+        [Tooltip("Seconds between heartbeat lines.")]
+        private float _heartbeatSeconds = 2f;
+
+        [SerializeField]
+        [Range(10f, 600f)]
+        [Tooltip("Stops the heartbeat after this long, so a left-open tab does not fill the console.")]
+        private float _heartbeatStopsAfterSeconds = 180f;
+
+        private float _nextHeartbeatAt;
 
         /// <summary>
         /// Forces the panel on regardless of the toggle key, for Training mode.
@@ -108,6 +131,13 @@ namespace AdaptiveBossArena.Game
         /// <summary>Keeps the most recent occurrences, shuffling the oldest out.</summary>
         private void OnCombatEvent(CombatEvent combatEvent)
         {
+            var kind = (int)combatEvent.Kind;
+
+            if (kind >= 0 && kind < _eventCounts.Length)
+            {
+                _eventCounts[kind]++;
+            }
+
             if (_recentCount < _recentEvents.Length)
             {
                 _recentEvents[_recentCount++] = combatEvent;
@@ -134,6 +164,82 @@ namespace AdaptiveBossArena.Game
             {
                 _isVisible = !_isVisible;
             }
+
+            TickHeartbeat();
+        }
+
+        /// <summary>
+        /// Writes the fight's vital signs to the log at a slow interval.
+        /// </summary>
+        /// <remarks>
+        /// The on-screen panel needs someone sitting in front of it. This does not: in a browser it
+        /// lands in the developer console, so a deployed build can be diagnosed remotely from a tab
+        /// nobody is playing. That matters here because the boss attacks a stationary player, which
+        /// is enough to prove whether damage lands at all — no input required.
+        /// </remarks>
+        private void TickHeartbeat()
+        {
+            if (!_logHeartbeat || Time.unscaledTime > _heartbeatStopsAfterSeconds)
+            {
+                return;
+            }
+
+            if (Time.unscaledTime < _nextHeartbeatAt)
+            {
+                return;
+            }
+
+            _nextHeartbeatAt = Time.unscaledTime + _heartbeatSeconds;
+
+            string clock = _time == null
+                ? "no-time-service"
+                : $"{(_time.IsPaused ? "PAUSED" : "run")} scale={_time.TimeScale:0.00} t={_time.CombatTime:0.0}";
+
+            string player = _player == null
+                ? "player=MISSING"
+                : $"player[{_player.CurrentStateName}] hp={Amount(_player.Health)} " +
+                  $"sta={Amount(_player.Stamina)} post={Amount(_player.Posture)} " +
+                  $"init={_player.IsInitialised} invuln={_player.IsInvulnerable} " +
+                  $"guard={_player.IsGuarding} immortal={_player.IsImmortal}";
+
+            string boss = _boss == null
+                ? "boss=MISSING"
+                : $"boss[{_boss.CurrentStateName}] hp={Amount(_boss.Health)} " +
+                  $"poise={Amount(_boss.Poise)} init={_boss.IsInitialised}";
+
+            Debug.Log($"[DIAG] {clock} | {player} | {boss} | {CountsSummary()}");
+        }
+
+        /// <summary>Summarises the tallies, listing only kinds that have actually occurred.</summary>
+        /// <remarks>
+        /// Uses its own builder rather than the panel's. The two run in different callbacks and would
+        /// not currently collide, but sharing a scratch buffer between them is the kind of coupling
+        /// that breaks silently the first time one of them moves.
+        /// </remarks>
+        private string CountsSummary()
+        {
+            _countsBuilder.Clear();
+            _countsBuilder.Append("events: ");
+
+            bool any = false;
+
+            for (int i = 0; i < _eventCounts.Length; i++)
+            {
+                if (_eventCounts[i] == 0)
+                {
+                    continue;
+                }
+
+                any = true;
+                _countsBuilder.Append((CombatEventKind)i).Append('=').Append(_eventCounts[i]).Append(' ');
+            }
+
+            if (!any)
+            {
+                _countsBuilder.Append("NONE");
+            }
+
+            return _countsBuilder.ToString();
         }
 
         private void OnGUI()
