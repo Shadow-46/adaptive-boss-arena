@@ -24,14 +24,31 @@ namespace AdaptiveBossArena.Core.Services
         /// <summary>Version the current code writes and understands.</summary>
         public const int CurrentSchemaVersion = 1;
 
+        /// <summary>
+        /// Starting levels, shared with the audio service.
+        /// </summary>
+        /// <remarks>
+        /// Named constants rather than literals in two places. The service used to hard-code its own
+        /// defaults, and one of them disagreed with the value here, so music played at the wrong
+        /// level until the settings menu was opened for the first time and pushed the saved value
+        /// down.
+        /// </remarks>
+        public const float DefaultMasterVolume = 0.8f;
+
+        /// <summary>Starting music level.</summary>
+        public const float DefaultMusicVolume = 0.7f;
+
+        /// <summary>Starting sound-effects level.</summary>
+        public const float DefaultEffectsVolume = 0.9f;
+
         /// <summary>Overall output level, zero to one.</summary>
-        public float MasterVolume = 0.8f;
+        public float MasterVolume = DefaultMasterVolume;
 
         /// <summary>Music level, zero to one.</summary>
-        public float MusicVolume = 0.7f;
+        public float MusicVolume = DefaultMusicVolume;
 
         /// <summary>Sound effects level, zero to one.</summary>
-        public float EffectsVolume = 0.9f;
+        public float EffectsVolume = DefaultEffectsVolume;
 
         /// <summary>
         /// Camera shake intensity, zero to one.

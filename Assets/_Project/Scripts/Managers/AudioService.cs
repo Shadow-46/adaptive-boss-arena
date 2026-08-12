@@ -58,6 +58,15 @@ namespace AdaptiveBossArena.Game
         /// <summary>How fast a music layer fades toward its target volume, per second.</summary>
         private const float MusicFadePerSecond = 0.8f;
 
+        /// <summary>Fade rate used when a caller asks for no fade at all.</summary>
+        private const float ImmediateMusicFade = 100f;
+
+        /// <summary>Current fade rate, set by the fade length the caller asked for.</summary>
+        private float _musicFadePerSecond = MusicFadePerSecond;
+
+        /// <summary>Whether the score has been started, so intensity is only seeded once.</summary>
+        private bool _hasMusicStarted;
+
         private readonly Dictionary<string, AudioClip> _clips = new Dictionary<string, AudioClip>();
         private readonly Dictionary<string, float> _lastPlayedAt = new Dictionary<string, float>();
         private readonly Dictionary<AudioBus, float> _busVolumes = new Dictionary<AudioBus, float>();
@@ -136,10 +145,12 @@ namespace AdaptiveBossArena.Game
             BuildVoices();
             GenerateClips();
 
-            _busVolumes[AudioBus.Master] = 0.8f;
-            _busVolumes[AudioBus.Music] = 0.5f;
-            _busVolumes[AudioBus.Effects] = 0.9f;
-            _busVolumes[AudioBus.Interface] = 0.8f;
+            // These must match SettingsData's defaults, or the game plays at one volume until the
+            // settings menu is opened for the first time and pushes the saved values down.
+            _busVolumes[AudioBus.Master] = SettingsData.DefaultMasterVolume;
+            _busVolumes[AudioBus.Music] = SettingsData.DefaultMusicVolume;
+            _busVolumes[AudioBus.Effects] = SettingsData.DefaultEffectsVolume;
+            _busVolumes[AudioBus.Interface] = SettingsData.DefaultEffectsVolume;
 
             ServiceRegistry.Current.RegisterOrReplace<IAudioService>(this);
         }
@@ -182,7 +193,17 @@ namespace AdaptiveBossArena.Game
                 }
             }
 
-            SetMusicIntensity(0);
+            // The requested fade is honoured rather than ignored, and the bed is only introduced when
+            // nothing is playing yet. Resetting unconditionally meant any later call — a restart, say
+            // — silently dropped the score back to the opening layer while the boss was still in a
+            // late phase.
+            _musicFadePerSecond = fadeSeconds > 0f ? 1f / fadeSeconds : ImmediateMusicFade;
+
+            if (!_hasMusicStarted)
+            {
+                _hasMusicStarted = true;
+                SetMusicIntensity(0);
+            }
         }
 
         /// <inheritdoc />
@@ -214,7 +235,7 @@ namespace AdaptiveBossArena.Game
             }
 
             float effectiveMusic = EffectiveVolume(AudioBus.Music);
-            float step = MusicFadePerSecond * Time.unscaledDeltaTime;
+            float step = _musicFadePerSecond * Time.unscaledDeltaTime;
 
             for (int i = 0; i < _musicLayers.Length; i++)
             {

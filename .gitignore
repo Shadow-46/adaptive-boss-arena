@@ -70,3 +70,8 @@ desktop.ini
 # ---------------------------------------------------------------------------
 /unity-*.log
 /test-results.xml
+
+# The test framework writes a throwaway bootstrap scene into Assets/ for every
+# play-mode run and does not always clean it up again.
+/Assets/InitTestScene*.unity
+/Assets/InitTestScene*.unity.meta
