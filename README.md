@@ -5,7 +5,7 @@ a statistical profile of your habits — how you attack, dodge, space and panic 
 punish them, *without ever reading your input*. Winning means noticing it has adapted, and adapting back.
 
 ![Unity](https://img.shields.io/badge/Unity-6000.3%20LTS-222c37?logo=unity&logoColor=white)
-![Edit-mode tests](https://img.shields.io/badge/edit--mode%20tests-213%20passing-3fb950)
+![Edit-mode tests](https://img.shields.io/badge/edit--mode%20tests-237%20passing-3fb950)
 ![License](https://img.shields.io/badge/license-MIT-3b82f6)
 ![Assets](https://img.shields.io/badge/assets-generated%20from%20code-8957e5)
 [![Play in browser](https://img.shields.io/badge/▶%20play-in%20your%20browser-3fb950?logo=unity&logoColor=white)](https://shadow-46.github.io/adaptive-boss-arena/)
@@ -47,6 +47,22 @@ The **AI** and **Learning** assemblies have **no arrow to Player or the Input Sy
 edge is the firewall. All the player state the boss is allowed to know reaches it through a delayed,
 perception-limited channel, so feints genuinely work and the fight stays fair.
 
+### Adapting back
+
+The boss reading you is only half of it. Every counter it adopts announces itself with a **tell**, and
+each one is an over-commitment you can turn around:
+
+1. It reads a habit — how you attack, where you stand, whether you answer with the guard or with your
+   feet — and presses it. *"It stops respecting your guard."*
+2. You change the habit. Its committed swings start finding empty air.
+3. **It overbalances.** A swing it leaned into and missed leaves the boss stumbling, unable to attack
+   and taking amplified posture damage — the harder it had committed, the worse the stumble.
+4. You punish the opening into a posture break and the execution.
+
+So the counter that was beating you becomes the thing that opens it up. Adaptation only ever changes
+**numbers, never rules** — the boss gains no move it did not already have — and it is dormant until it
+has genuinely learned something, so an opening fight plays clean.
+
 ---
 
 ## Status
@@ -57,9 +73,11 @@ title screen through a framed, animated fight.**
 There is a fight. You can move, dash, combo, heal, deflect, build focus, and be staggered. The boss
 watches you, escalates through four phases (ending in a desperation **Last Stand**) with dramatic
 transitions, strings its attacks into combos, throws unblockable "perilous" attacks and arena-scarring
-set-pieces, and gradually develops answers to whatever you keep doing. It is wrapped in a title screen,
-a "ready — fight" intro, slow-motion outcome beats, a post-fight dossier on how it read you, challenge
-modifiers, and a working settings menu.
+set-pieces, and gradually develops answers to whatever you keep doing — including how you *defend*,
+reading whether you hide behind the guard and how precisely you deflect. Out-read a counter and the
+boss overbalances, handing you the opening. It is wrapped in a title screen, a "ready — fight" intro,
+slow-motion outcome beats, a post-fight dossier on how it read you, challenge modifiers, and a working
+settings menu.
 
 | Phase | Scope | Status |
 |-------|-------|--------|
