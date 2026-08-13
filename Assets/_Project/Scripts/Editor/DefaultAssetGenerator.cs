@@ -653,7 +653,8 @@ namespace AdaptiveBossArena.Editor
                 bladeAttacks, CreateBladeEmpoweredSpecial(), DefenceStyle.Deflect,
                 deflectWindow: 0.2f, deflectPosture: 28f,
                 moveMultiplier: 1f, staminaMultiplier: 1f,
-                swingCueId: "swing.blade");
+                swingCueId: "swing.blade",
+                bladeLength: 0.95f, bladeWidth: 0.1f, bladeGlows: false);
 
             // No parry at all. It wins the exchanges it commits to and loses badly when the
             // commitment was wrong, which is a different kind of decision rather than a worse one.
@@ -662,14 +663,16 @@ namespace AdaptiveBossArena.Editor
                 greatswordAttacks, CreateGreatswordEmpoweredSpecial(), DefenceStyle.HyperArmour,
                 deflectWindow: 0.2f, deflectPosture: 0f,
                 moveMultiplier: 0.82f, staminaMultiplier: 1.35f,
-                swingCueId: "swing.greatsword");
+                swingCueId: "swing.greatsword",
+                bladeLength: 1.45f, bladeWidth: 0.19f, bladeGlows: false);
 
             WeaponDefinition energyBlade = CreateWeapon(
                 "WeaponEnergyBlade", "Energy Blade", new Color(0.7f, 1f, 0.8f, 0.6f),
                 energyAttacks, CreateEnergyEmpoweredSpecial(), DefenceStyle.SustainedGuard,
                 deflectWindow: 0.28f, deflectPosture: 16f,
                 moveMultiplier: 1.12f, staminaMultiplier: 0.85f,
-                swingCueId: "swing.energy");
+                swingCueId: "swing.energy",
+                bladeLength: 0.8f, bladeWidth: 0.065f, bladeGlows: true);
 
             return new[] { blade, greatsword, energyBlade };
         }
@@ -801,10 +804,19 @@ namespace AdaptiveBossArena.Editor
             float deflectPosture,
             float moveMultiplier,
             float staminaMultiplier,
-            string swingCueId)
+            string swingCueId,
+            float bladeLength,
+            float bladeWidth,
+            bool bladeGlows)
         {
             var weapon = AssetAuthoring.CreateOrLoad<WeaponDefinition>(
                 $"{WeaponFolder}/{assetName}.asset", out bool created);
+
+            // Generated from the weapon's own signature colour and proportions, and assigned below
+            // with the references rather than the tuning: a missing model is a broken asset that
+            // should heal itself on the next run, not a value someone may have adjusted by hand.
+            GameObject model = WeaponModelBuilder.GetOrCreate(
+                assetName, signature, bladeLength, bladeWidth, bladeGlows);
 
             using (AssetAuthoring.AssetWriter writer = AssetAuthoring.Edit(weapon))
             {
@@ -813,7 +825,8 @@ namespace AdaptiveBossArena.Editor
                     .Reference("_heavyAttack", attacks.Heavy)
                     .Reference("_specialAttack", attacks.Special)
                     .Reference("_empoweredSpecialAttack", empoweredSpecial)
-                    .Reference("_riposteAttack", attacks.Heavy);
+                    .Reference("_riposteAttack", attacks.Heavy)
+                    .Reference("_modelPrefab", model);
 
                 if (ShouldWriteTuning(created))
                 {

@@ -248,6 +248,53 @@ namespace AdaptiveBossArena.Tests.PlayMode
             yield return null;
         }
 
+        [UnityTest]
+        public IEnumerator ThePlayerHoldsAVisibleWeapon()
+        {
+            // The socket, the equip call and the model field all existed from the start with nothing
+            // to put in them, so a weapon swap changed a label and a swing colour and nothing the
+            // player could see. This asserts the hand is no longer empty.
+            var socket = Object.FindAnyObjectByType<Combat.Feel.WeaponSocket>();
+            Assert.IsNotNull(socket, "The player has no weapon socket.");
+
+            MeshRenderer[] held = socket.GetComponentsInChildren<MeshRenderer>(includeInactive: true);
+
+            Assert.Greater(held.Length, 0, "The weapon socket is empty; no model was equipped.");
+
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator NothingDecorativeCanBeCollidedWith()
+        {
+            // The bodies and the arena dressing are made of primitives, and a Unity primitive ships
+            // with a collider. Any that survived would sit inside the character controller or out on
+            // the floor changing the fight, so every one of them has to have been stripped.
+            foreach (string rootName in new[] { "Dressing" })
+            {
+                GameObject root = GameObject.Find(rootName);
+
+                if (root == null)
+                {
+                    continue;
+                }
+
+                Assert.IsEmpty(
+                    root.GetComponentsInChildren<Collider>(true),
+                    $"{rootName} carries colliders and can interfere with the fight.");
+            }
+
+            var player = Object.FindAnyObjectByType<PlayerController>();
+            Transform visual = player.transform.Find("Visual");
+
+            Assert.IsNotNull(visual, "The player has no visual root.");
+            Assert.IsEmpty(
+                visual.GetComponentsInChildren<Collider>(true),
+                "The player's body carries colliders, which would fight the character controller.");
+
+            yield return null;
+        }
+
         private static float TopOf(RectTransform rect) =>
             rect.anchoredPosition.y + (rect.sizeDelta.y * 0.5f);
 

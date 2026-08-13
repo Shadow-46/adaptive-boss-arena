@@ -17,7 +17,7 @@ MonoBehaviour:
   _displayName: Blade
   _signatureColor: {r: 0.55, g: 0.85, b: 1, a: 0.6}
   _swingCueId: swing.blade
-  _modelPrefab: {fileID: 0}
+  _modelPrefab: {fileID: 6189925430406822319, guid: 58c1996e39f38eb469dcb2368878e655, type: 3}
   _lightComboChain:
   - {fileID: 11400000, guid: b612f7e88df49f04e9a415fa54141bd4, type: 2}
   - {fileID: 11400000, guid: 1400dc5f7369ad747a87d9cb94217ca0, type: 2}
