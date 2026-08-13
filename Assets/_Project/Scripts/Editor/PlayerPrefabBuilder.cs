@@ -102,26 +102,11 @@ namespace AdaptiveBossArena.Editor
             var visualRoot = new GameObject("Visual");
             visualRoot.transform.SetParent(parent, false);
 
-            GameObject body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            body.name = "Body";
-            body.transform.SetParent(visualRoot.transform, false);
-            body.transform.localPosition = new Vector3(0f, CapsuleHeight * 0.5f, 0f);
-            body.transform.localScale = new Vector3(CapsuleRadius * 2f, CapsuleHeight * 0.5f, CapsuleRadius * 2f);
-
-            // The visual must never take part in physics; the character controller owns collision.
-            Object.DestroyImmediate(body.GetComponent<Collider>());
-            ApplyColor(body, PlayerColor);
-
-            // A capsule is rotationally symmetric, so without this marker there is no way to tell
-            // which way the character is facing, and facing is what dash direction is read from.
-            GameObject facingMarker = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            facingMarker.name = "FacingMarker";
-            facingMarker.transform.SetParent(visualRoot.transform, false);
-            facingMarker.transform.localPosition = new Vector3(0f, CapsuleHeight * 0.6f, CapsuleRadius);
-            facingMarker.transform.localScale = new Vector3(0.18f, 0.18f, 0.35f);
-
-            Object.DestroyImmediate(facingMarker.GetComponent<Collider>());
-            ApplyColor(facingMarker, Color.white);
+            // A helmed, upright silhouette rather than a capsule. Every part is collider-free: the
+            // character controller on the root above owns collision and the hurtbox owns damage, so
+            // the body is purely something to look at and combat timing is unaffected. The lit visor
+            // replaces the white cube that used to show which way the character faces.
+            SilhouetteBuilder.BuildKnight(visualRoot.transform, CapsuleHeight, CapsuleRadius);
 
             // Attached to the visual root so it tints every renderer beneath it, including any art
             // that replaces these primitives later.

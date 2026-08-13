@@ -82,25 +82,11 @@ namespace AdaptiveBossArena.Editor
             var visualRoot = new GameObject("Visual");
             visualRoot.transform.SetParent(parent, false);
 
-            GameObject body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            body.name = "Body";
-            body.transform.SetParent(visualRoot.transform, false);
-            body.transform.localPosition = new Vector3(0f, BodyHeight * 0.5f, 0f);
-            body.transform.localScale = new Vector3(BodyRadius * 2f, BodyHeight * 0.5f, BodyRadius * 2f);
-
-            Object.DestroyImmediate(body.GetComponent<Collider>());
-            MaterialLibrary.Apply(body, "BossBody", BossColor);
-
-            // Facing has to be readable from across the arena, because reading the boss's facing is
-            // how the player judges whether an attack is aimed at them.
-            GameObject facingMarker = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            facingMarker.name = "FacingMarker";
-            facingMarker.transform.SetParent(visualRoot.transform, false);
-            facingMarker.transform.localPosition = new Vector3(0f, BodyHeight * 0.65f, BodyRadius);
-            facingMarker.transform.localScale = new Vector3(0.4f, 0.4f, 0.7f);
-
-            Object.DestroyImmediate(facingMarker.GetComponent<Collider>());
-            MaterialLibrary.Apply(facingMarker, "BossWeakPoint", WeakPointColor);
+            // A wide, low, horned silhouette. Facing has to be readable from across the arena,
+            // because reading the boss's facing is how the player judges whether an attack is aimed
+            // at them — the glowing forward core does that job, and doubles as a visible source for
+            // the phase aura that previously seemed to come from nowhere.
+            SilhouetteBuilder.BuildBrute(visualRoot.transform, BodyHeight, BodyRadius);
 
             visualRoot.AddComponent<HitFlash>();
 

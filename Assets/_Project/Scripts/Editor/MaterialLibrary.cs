@@ -53,6 +53,75 @@ namespace AdaptiveBossArena.Editor
         }
 
         /// <summary>
+        /// Loads or creates a surface material with metal, roughness and optional glow.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Everything generated so far has been flat, default-rough plastic — a single base colour and
+        /// nothing else — which is why one directional light had nothing to catch and the whole scene
+        /// read as untextured primitives. Metal and smoothness give the light something to do; the
+        /// silhouette stops being a flat shape.
+        /// </para>
+        /// <para>
+        /// Emission is the cheapest drama available here. The bloom threshold is 0.9, so any emission
+        /// colour brighter than that blooms without further work — which is what makes braziers, rune
+        /// inlays and a boss's weak point glow rather than merely being pale.
+        /// </para>
+        /// </remarks>
+        /// <param name="materialName">File name, without extension.</param>
+        /// <param name="color">Base colour.</param>
+        /// <param name="metallic">Zero for cloth or stone, near one for armour and blades.</param>
+        /// <param name="smoothness">Zero for rough, one for polished.</param>
+        /// <param name="emission">Glow colour; pass black for a surface that does not emit.</param>
+        /// <returns>The material, or null when no lit shader could be resolved.</returns>
+        public static Material GetOrCreateSurface(
+            string materialName,
+            Color color,
+            float metallic = 0f,
+            float smoothness = 0.35f,
+            Color emission = default)
+        {
+            string path = $"{EditorMenus.GeneratedMaterialFolder}/{materialName}.mat";
+            var existing = AssetDatabase.LoadAssetAtPath<Material>(path);
+
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            Shader shader = ResolveLitShader();
+
+            if (shader == null)
+            {
+                Debug.LogWarning(
+                    "[Adaptive Boss Arena] No lit shader could be resolved, so generated surfaces will " +
+                    "use the default material. This usually means package import has not finished.");
+                return null;
+            }
+
+            var material = new Material(shader) { name = materialName };
+            material.SetColor(ColorPropertyFor(shader), color);
+
+            // Named through property strings because the pipeline and built-in shaders disagree about
+            // which exist; setting one that is absent is a no-op rather than an error.
+            material.SetFloat("_Metallic", Mathf.Clamp01(metallic));
+            material.SetFloat("_Smoothness", Mathf.Clamp01(smoothness));
+            material.SetFloat("_Glossiness", Mathf.Clamp01(smoothness));
+
+            if (emission.maxColorComponent > 0f)
+            {
+                material.EnableKeyword("_EMISSION");
+                material.SetColor("_EmissionColor", emission);
+                material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+            }
+
+            AssetAuthoring.EnsureFolderExists(EditorMenus.GeneratedMaterialFolder);
+            AssetDatabase.CreateAsset(material, path);
+
+            return material;
+        }
+
+        /// <summary>
         /// Loads or creates the shared transparent material used for attack overlays.
         /// </summary>
         /// <remarks>
