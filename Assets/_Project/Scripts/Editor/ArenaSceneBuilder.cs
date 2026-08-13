@@ -40,6 +40,14 @@ namespace AdaptiveBossArena.Editor
         /// <summary>Weathered stone for the pillars and rubble.</summary>
         private static readonly Color StoneColor = new Color(0.20f, 0.19f, 0.21f);
 
+        /// <summary>A bruised, overcast sky for the arena to sit under.</summary>
+        private static readonly Color SkyTint = new Color(0.32f, 0.20f, 0.24f);
+
+        private static readonly Color SkyGroundColor = new Color(0.05f, 0.04f, 0.06f);
+
+        /// <summary>Kept low, so the sky frames the fight rather than competing with it.</summary>
+        private const float SkyExposure = 0.55f;
+
         /// <summary>
         /// Brazier fire, above one so it blooms.
         /// </summary>
@@ -414,6 +422,12 @@ namespace AdaptiveBossArena.Editor
 
             lightObject.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
 
+            // The sky is a backdrop only: ambient light stays on the three-band Trilight the
+            // atmosphere controller drives per phase, so the sky can be dressed without the arena's
+            // lighting mood being handed over to it.
+            RenderSettings.skybox = MaterialLibrary.GetOrCreateSkybox(
+                "ArenaSky", SkyTint, SkyGroundColor, SkyExposure);
+
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
             RenderSettings.ambientSkyColor = new Color(0.22f, 0.24f, 0.30f);
             RenderSettings.ambientEquatorColor = new Color(0.14f, 0.14f, 0.17f);
@@ -449,7 +463,11 @@ namespace AdaptiveBossArena.Editor
             cameraObject.transform.SetParent(rigObject.transform, false);
 
             Camera camera = cameraObject.AddComponent<Camera>();
-            camera.clearFlags = CameraClearFlags.SolidColor;
+
+            // Cleared to a flat colour before, so the world stopped at the wall tops with nothing
+            // beyond them. The background colour is kept as the fallback for the case where the sky
+            // shader cannot be resolved.
+            camera.clearFlags = CameraClearFlags.Skybox;
             camera.backgroundColor = new Color(0.04f, 0.04f, 0.06f);
             camera.fieldOfView = 50f;
             camera.nearClipPlane = 0.3f;

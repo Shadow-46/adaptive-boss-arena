@@ -53,6 +53,62 @@ namespace AdaptiveBossArena.Editor
         }
 
         /// <summary>
+        /// Loads or creates the arena's sky.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The camera cleared to a flat dark colour before this, so the world simply stopped at the
+        /// wall tops with nothing beyond them. A sky costs one material and gives the arena a horizon
+        /// to sit under.
+        /// </para>
+        /// <para>
+        /// Unity's procedural sky is used rather than a cubemap because there is no image to ship and
+        /// none needs generating: it is driven entirely by numbers, and its tint can therefore be
+        /// pushed toward the boss's current mood at runtime.
+        /// </para>
+        /// </remarks>
+        /// <param name="materialName">File name, without extension.</param>
+        /// <param name="skyTint">Overall colour of the sky.</param>
+        /// <param name="groundColor">Colour below the horizon.</param>
+        /// <param name="exposure">Overall brightness. Low values keep the mood dark.</param>
+        /// <returns>The material, or null when the sky shader could not be resolved.</returns>
+        public static Material GetOrCreateSkybox(
+            string materialName, Color skyTint, Color groundColor, float exposure)
+        {
+            string path = $"{EditorMenus.GeneratedMaterialFolder}/{materialName}.mat";
+            var existing = AssetDatabase.LoadAssetAtPath<Material>(path);
+
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            Shader shader = Shader.Find("Skybox/Procedural");
+
+            if (shader == null)
+            {
+                Debug.LogWarning(
+                    "[Adaptive Boss Arena] The procedural sky shader could not be resolved, so the " +
+                    "camera will keep clearing to a flat colour.");
+                return null;
+            }
+
+            var material = new Material(shader) { name = materialName };
+            material.SetColor("_SkyTint", skyTint);
+            material.SetColor("_GroundColor", groundColor);
+            material.SetFloat("_Exposure", exposure);
+
+            // Thicker than default, which reddens the horizon and suits a sky the arena is meant to
+            // feel oppressed by.
+            material.SetFloat("_AtmosphereThickness", 1.7f);
+
+            AssetAuthoring.EnsureFolderExists(EditorMenus.GeneratedMaterialFolder);
+            AssetDatabase.CreateAsset(material, path);
+
+            return material;
+        }
+
+        /// <summary>
         /// Loads or creates a surface material with metal, roughness and optional glow.
         /// </summary>
         /// <remarks>
