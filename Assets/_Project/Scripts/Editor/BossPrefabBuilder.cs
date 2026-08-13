@@ -82,11 +82,19 @@ namespace AdaptiveBossArena.Editor
             var visualRoot = new GameObject("Visual");
             visualRoot.transform.SetParent(parent, false);
 
-            // A wide, low, horned silhouette. Facing has to be readable from across the arena,
-            // because reading the boss's facing is how the player judges whether an attack is aimed
-            // at them — the glowing forward core does that job, and doubles as a visible source for
-            // the phase aura that previously seemed to come from nowhere.
-            SilhouetteBuilder.BuildBrute(visualRoot.transform, BodyHeight, BodyRadius);
+            // A rigged model wins when one has been supplied; otherwise a wide, low, horned
+            // silhouette. Facing has to be readable from across the arena, because reading the
+            // boss's facing is how the player judges whether an attack is aimed at them — the
+            // glowing forward core does that job, and doubles as a visible source for the phase
+            // aura that previously seemed to come from nowhere.
+            var animationConfig =
+                GeneratedAssets.Config<CharacterAnimationConfig>("DefaultBossAnimation");
+
+            if (!SilhouetteBuilder.TryBuildRig(
+                    visualRoot.transform, animationConfig != null ? animationConfig.RigPrefab : null))
+            {
+                SilhouetteBuilder.BuildBrute(visualRoot.transform, BodyHeight, BodyRadius);
+            }
 
             visualRoot.AddComponent<HitFlash>();
 

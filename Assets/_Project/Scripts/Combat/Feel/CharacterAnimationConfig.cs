@@ -25,6 +25,13 @@ namespace AdaptiveBossArena.Combat.Feel
         order = 10)]
     public sealed class CharacterAnimationConfig : IdentifiableSO
     {
+        [Header("Art")]
+        [SerializeField]
+        [Tooltip("Optional rigged model. Assign one and the prefab generator builds the character " +
+                 "around it instead of the generated body, and the skeletal animation bridge takes " +
+                 "over the pose. Left empty, the generated body is used.")]
+        private GameObject _rigPrefab;
+
         [Header("Idle")]
         [SerializeField]
         [Tooltip("Vertical breathing amplitude while standing, in world units.")]
@@ -159,6 +166,17 @@ namespace AdaptiveBossArena.Combat.Feel
         private float _scaleHalfLife = 0.06f;
 
         /// <summary>Vertical breathing amplitude while idle.</summary>
+        /// <summary>
+        /// Rigged model to build this character around, or null to use the generated body.
+        /// </summary>
+        /// <remarks>
+        /// Lives on an asset rather than being added to the prefab by hand, because the prefab
+        /// builders rewrite the whole hierarchy every run: anything dropped into the prefab directly
+        /// is destroyed the next time the project is set up. Referencing it from here means the
+        /// builder puts it back each time, so a downloaded character survives regeneration.
+        /// </remarks>
+        public GameObject RigPrefab => _rigPrefab;
+
         public float IdleBobAmplitude => _idleBobAmplitude;
 
         /// <summary>Breaths per second while idle.</summary>

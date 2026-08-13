@@ -26,6 +26,43 @@ namespace AdaptiveBossArena.Editor
     /// </remarks>
     internal static class SilhouetteBuilder
     {
+        /// <summary>
+        /// Instantiates a rigged model under the visual root, if one has been supplied.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The route for real downloaded art. It is driven from a configuration asset rather than by
+        /// adding the model to the prefab by hand, because these builders rewrite the entire
+        /// hierarchy on every run — anything added directly is destroyed the next time the project is
+        /// set up, which is precisely the trap the integration guide used to walk people into.
+        /// </para>
+        /// <para>
+        /// Colliders are stripped from whatever arrives. A downloaded character routinely ships with
+        /// them, and one inside the character controller would fight it.
+        /// </para>
+        /// </remarks>
+        /// <param name="visualRoot">Visual root to parent the model under.</param>
+        /// <param name="rigPrefab">The model, or null to build the generated body instead.</param>
+        /// <returns>True when a rig was instantiated and the generated body should be skipped.</returns>
+        public static bool TryBuildRig(Transform visualRoot, GameObject rigPrefab)
+        {
+            if (rigPrefab == null)
+            {
+                return false;
+            }
+
+            var instance = (GameObject)UnityEditor.PrefabUtility.InstantiatePrefab(rigPrefab, visualRoot);
+            instance.transform.localPosition = Vector3.zero;
+            instance.transform.localRotation = Quaternion.identity;
+
+            foreach (Collider collider in instance.GetComponentsInChildren<Collider>(true))
+            {
+                Object.DestroyImmediate(collider);
+            }
+
+            return true;
+        }
+
         /// <summary>Steel plate. Metallic enough for the single light to catch an edge.</summary>
         private static readonly Color ArmourColor = new Color(0.30f, 0.33f, 0.40f);
 

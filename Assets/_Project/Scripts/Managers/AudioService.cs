@@ -224,10 +224,35 @@ namespace AdaptiveBossArena.Game
             public const string UiHover = "ui.hover";
         }
 
+        /// <summary>
+        /// One recorded clip standing in for a synthesised cue.
+        /// </summary>
+        /// <remarks>
+        /// The route for real audio. Everything here is generated at startup from code, which ships
+        /// nothing and costs nothing, but it will never beat a recorded sound. Naming a cue and
+        /// dropping a file beside it replaces that one sound and leaves every caller untouched, so
+        /// the bank can be replaced a cue at a time rather than all at once.
+        /// </remarks>
+        [System.Serializable]
+        private struct CueOverride
+        {
+            [Tooltip("Cue identifier to replace, as listed in AudioService.Cues.")]
+            public string CueId;
+
+            [Tooltip("Clip to play instead of the synthesised one.")]
+            public AudioClip Clip;
+        }
+
+        [SerializeField]
+        [Tooltip("Recorded clips that replace individual synthesised cues. Leave empty to use the " +
+                 "generated bank.")]
+        private CueOverride[] _cueOverrides = new CueOverride[0];
+
         private void Awake()
         {
             BuildVoices();
             GenerateClips();
+            ApplyCueOverrides();
 
             // These must match SettingsData's defaults, or the game plays at one volume until the
             // settings menu is opened for the first time and pushes the saved values down.
@@ -424,6 +449,42 @@ namespace AdaptiveBossArena.Game
 
             _nextVoice = (bestIndex + 1) % _voices.Length;
             return _voices[bestIndex];
+        }
+
+        /// <summary>
+        /// Swaps recorded clips in over the synthesised ones.
+        /// </summary>
+        /// <remarks>
+        /// Runs after generation so an override always wins, and warns rather than failing on a cue
+        /// id that matches nothing — a typo in an identifier would otherwise be a sound that silently
+        /// never plays, which is the hardest kind of audio bug to notice.
+        /// </remarks>
+        private void ApplyCueOverrides()
+        {
+            if (_cueOverrides == null)
+            {
+                return;
+            }
+
+            foreach (CueOverride replacement in _cueOverrides)
+            {
+                if (replacement.Clip == null || string.IsNullOrWhiteSpace(replacement.CueId))
+                {
+                    continue;
+                }
+
+                if (!_clips.ContainsKey(replacement.CueId))
+                {
+                    Debug.LogWarning(
+                        $"[Adaptive Boss Arena] Audio override names '{replacement.CueId}', which is " +
+                        "not a known cue. It will never play. Check the identifiers in " +
+                        "AudioService.Cues.",
+                        this);
+                    continue;
+                }
+
+                _clips[replacement.CueId] = replacement.Clip;
+            }
         }
 
         /// <summary>Relative loudness for a cue, defaulting to unity when none is listed.</summary>

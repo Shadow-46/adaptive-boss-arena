@@ -102,11 +102,19 @@ namespace AdaptiveBossArena.Editor
             var visualRoot = new GameObject("Visual");
             visualRoot.transform.SetParent(parent, false);
 
-            // A helmed, upright silhouette rather than a capsule. Every part is collider-free: the
-            // character controller on the root above owns collision and the hurtbox owns damage, so
-            // the body is purely something to look at and combat timing is unaffected. The lit visor
-            // replaces the white cube that used to show which way the character faces.
-            SilhouetteBuilder.BuildKnight(visualRoot.transform, CapsuleHeight, CapsuleRadius);
+            // A rigged model wins when one has been supplied; otherwise a helmed, upright silhouette
+            // rather than a capsule. Every generated part is collider-free: the character controller
+            // on the root above owns collision and the hurtbox owns damage, so the body is purely
+            // something to look at and combat timing is unaffected. The lit visor replaces the white
+            // cube that used to show which way the character faces.
+            var animationConfig =
+                GeneratedAssets.Config<CharacterAnimationConfig>("DefaultPlayerAnimation");
+
+            if (!SilhouetteBuilder.TryBuildRig(
+                    visualRoot.transform, animationConfig != null ? animationConfig.RigPrefab : null))
+            {
+                SilhouetteBuilder.BuildKnight(visualRoot.transform, CapsuleHeight, CapsuleRadius);
+            }
 
             // Attached to the visual root so it tints every renderer beneath it, including any art
             // that replaces these primitives later.
