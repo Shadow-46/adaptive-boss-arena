@@ -61,6 +61,63 @@ namespace AdaptiveBossArena.Game
         /// <summary>Fade rate used when a caller asks for no fade at all.</summary>
         private const float ImmediateMusicFade = 100f;
 
+        /// <summary>Distance within which a world sound plays at full volume, in metres.</summary>
+        /// <remarks>
+        /// Roughly the range the fight is actually conducted at, so ordinary combat is not quietened
+        /// by its own distance falloff — the falloff exists to place a sound, not to hide it.
+        /// </remarks>
+        private const float NearFieldMetres = 4f;
+
+        /// <summary>Distance beyond which a world sound is effectively inaudible, in metres.</summary>
+        private const float ArenaAudibleMetres = 22f;
+
+        /// <summary>How far the score is pulled down under a loud effect.</summary>
+        private const float DuckDepth = 0.45f;
+
+        /// <summary>How long a duck lasts before the score returns.</summary>
+        private const float DuckSeconds = 0.35f;
+
+        /// <summary>Cue gain above which a sound is loud enough to duck the score.</summary>
+        private const float DuckThresholdGain = 0.9f;
+
+        /// <summary>Seconds remaining in the current duck.</summary>
+        private float _duckRemaining;
+
+        /// <summary>
+        /// Relative loudness per cue, on top of the peak each clip was generated at.
+        /// </summary>
+        /// <remarks>
+        /// The clip peak decides how a sound is shaped; this decides how much of it belongs in the
+        /// mix. Keeping the two separate means the balance can be adjusted without regenerating any
+        /// audio, and it is the only place the relative importance of the cues is written down.
+        /// Anything absent plays at unity.
+        /// </remarks>
+        private static readonly Dictionary<string, float> CueGains = new Dictionary<string, float>
+        {
+            // Constant background. Loud footsteps are the fastest way to make a mix tiring.
+            { Cues.FootstepPlayer, 0.5f },
+            { Cues.FootstepBoss, 0.7f },
+            { Cues.Whoosh, 0.7f },
+            { Cues.SwingBlade, 0.7f },
+            { Cues.SwingGreatsword, 0.8f },
+            { Cues.SwingEnergy, 0.65f },
+            { Cues.Whiff, 0.55f },
+            { Cues.GuardRaise, 0.6f },
+
+            // The moments the fight turns on.
+            { Cues.Deflect, 1f },
+            { Cues.PostureBreak, 1f },
+            { Cues.Execution, 1f },
+            { Cues.Peril, 1f },
+            { Cues.BossRoar, 1f },
+            { Cues.PlayerDeath, 1f },
+            { Cues.BossDeath, 1f },
+
+            // Interface, deliberately quiet enough to sit under a fight in progress.
+            { Cues.UiClick, 0.45f },
+            { Cues.UiHover, 0.3f }
+        };
+
         /// <summary>Current fade rate, set by the fade length the caller asked for.</summary>
         private float _musicFadePerSecond = MusicFadePerSecond;
 
@@ -261,7 +318,12 @@ namespace AdaptiveBossArena.Game
                 return;
             }
 
-            float effectiveMusic = EffectiveVolume(AudioBus.Music);
+            _duckRemaining = Mathf.Max(0f, _duckRemaining - Time.unscaledDeltaTime);
+
+            // Recovers over the whole duck rather than snapping back, so a run of impacts holds the
+            // score down and it rises again only once the exchange is over.
+            float duck = Mathf.Lerp(1f, 1f - DuckDepth, _duckRemaining / DuckSeconds);
+            float effectiveMusic = EffectiveVolume(AudioBus.Music) * duck;
             float step = _musicFadePerSecond * Time.unscaledDeltaTime;
 
             for (int i = 0; i < _musicLayers.Length; i++)
@@ -303,16 +365,80 @@ namespace AdaptiveBossArena.Game
 
             _lastPlayedAt[cueId] = now;
 
-            AudioSource voice = _voices[_nextVoice];
-            _nextVoice = (_nextVoice + 1) % _voices.Length;
+            AudioSource voice = ClaimVoice();
 
             voice.transform.position = worldPosition;
-            voice.spatialBlend = spatial ? 0.65f : 0f;
+
+            // Fully spatialised, not the previous two-thirds. Leaving a third of every world sound
+            // unpanned meant even a correctly-placed impact leaked out of the centre of the mix.
+            voice.spatialBlend = spatial ? 1f : 0f;
             voice.clip = clip;
-            voice.volume = EffectiveVolume(AudioBus.Effects);
+            voice.volume = EffectiveVolume(AudioBus.Effects) * GainFor(cueId);
             voice.pitch = 1f + Random.Range(-PitchJitter, PitchJitter);
 
             voice.Play();
+
+            // A loud moment ducks the score rather than fighting it. Nothing else in the game
+            // arbitrates between the two, so without this the music simply adds to the pile.
+            RequestDuck(GainFor(cueId));
+        }
+
+        /// <summary>
+        /// Picks the voice least costly to interrupt.
+        /// </summary>
+        /// <remarks>
+        /// The previous strict round-robin stole the next voice in sequence whether or not it was
+        /// still playing, so anything long was cut off mid-tail by whatever came next: the roar runs
+        /// 1.4 seconds and a posture break 0.9, while footsteps from two characters alone can turn
+        /// the pool over in far less than that. An idle voice is always taken first; when they are
+        /// all busy the one nearest its end loses the least.
+        /// </remarks>
+        private AudioSource ClaimVoice()
+        {
+            for (int i = 0; i < _voices.Length; i++)
+            {
+                int index = (_nextVoice + i) % _voices.Length;
+
+                if (!_voices[index].isPlaying)
+                {
+                    _nextVoice = (index + 1) % _voices.Length;
+                    return _voices[index];
+                }
+            }
+
+            int bestIndex = 0;
+            float leastRemaining = float.MaxValue;
+
+            for (int i = 0; i < _voices.Length; i++)
+            {
+                AudioSource candidate = _voices[i];
+                float length = candidate.clip != null ? candidate.clip.length : 0f;
+                float remaining = length - candidate.time;
+
+                if (remaining < leastRemaining)
+                {
+                    leastRemaining = remaining;
+                    bestIndex = i;
+                }
+            }
+
+            _nextVoice = (bestIndex + 1) % _voices.Length;
+            return _voices[bestIndex];
+        }
+
+        /// <summary>Relative loudness for a cue, defaulting to unity when none is listed.</summary>
+        private float GainFor(string cueId) =>
+            CueGains.TryGetValue(cueId, out float gain) ? gain : 1f;
+
+        /// <summary>Deepens the current duck if this sound is loud enough to warrant one.</summary>
+        private void RequestDuck(float gain)
+        {
+            if (gain < DuckThresholdGain)
+            {
+                return;
+            }
+
+            _duckRemaining = DuckSeconds;
         }
 
         /// <summary>Creates the pooled voices and the music source.</summary>
@@ -327,8 +453,22 @@ namespace AdaptiveBossArena.Game
 
                 AudioSource source = voiceObject.AddComponent<AudioSource>();
                 source.playOnAwake = false;
-                source.rolloffMode = AudioRolloffMode.Linear;
-                source.maxDistance = 40f;
+
+                // Logarithmic, and scaled to the arena. The previous setup rolled off linearly from
+                // one metre to forty across a sixteen-metre floor, so a sound five metres away was at
+                // ninety per cent and one across the arena at seventy-five: nothing ever read as near
+                // or far. Full volume out to the usual fighting distance, then a real falloff.
+                source.rolloffMode = AudioRolloffMode.Logarithmic;
+                source.minDistance = NearFieldMetres;
+                source.maxDistance = ArenaAudibleMetres;
+
+                // Nothing here moves fast enough for Doppler to be anything but an unwanted pitch
+                // wobble on footsteps and swings, layered on top of the deliberate jitter.
+                source.dopplerLevel = 0f;
+
+                // Effects deliberately ignore the time scale, so impacts still sound during the
+                // hit-stop they cause rather than being pitched down into a groan.
+                source.ignoreListenerPause = true;
 
                 // Effects deliberately ignore the time scale, so impacts still sound during the
                 // hit-stop they cause rather than being pitched down into a groan.

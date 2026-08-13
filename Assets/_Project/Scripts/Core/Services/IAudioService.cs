@@ -61,9 +61,17 @@ namespace AdaptiveBossArena.Core.Services
         /// <param name="level">Intensity level, clamped to the number of layers available.</param>
         void SetMusicIntensity(int level);
 
-        /// <summary>Sets the level of a mixer bus.</summary>
+        /// <summary>
+        /// Sets the level of a bus.
+        /// </summary>
+        /// <remarks>
+        /// Applied linearly, which is not how loudness is perceived — halfway on the slider sounds
+        /// louder than half. A perceptual curve would be the improvement, but it is a change that has
+        /// to be made by ear rather than by reasoning, so the honest description is this one. This
+        /// comment previously claimed a decibel conversion that the implementation never performed.
+        /// </remarks>
         /// <param name="bus">Bus to adjust.</param>
-        /// <param name="linearVolume">Volume from zero to one, converted to decibels internally.</param>
+        /// <param name="linearVolume">Volume from zero to one.</param>
         void SetBusVolume(AudioBus bus, float linearVolume);
 
         /// <summary>Gets the current level of a mixer bus.</summary>
