@@ -652,7 +652,8 @@ namespace AdaptiveBossArena.Editor
                 "WeaponBlade", "Blade", new Color(0.55f, 0.85f, 1f, 0.6f),
                 bladeAttacks, CreateBladeEmpoweredSpecial(), DefenceStyle.Deflect,
                 deflectWindow: 0.2f, deflectPosture: 28f,
-                moveMultiplier: 1f, staminaMultiplier: 1f);
+                moveMultiplier: 1f, staminaMultiplier: 1f,
+                swingCueId: "swing.blade");
 
             // No parry at all. It wins the exchanges it commits to and loses badly when the
             // commitment was wrong, which is a different kind of decision rather than a worse one.
@@ -660,13 +661,15 @@ namespace AdaptiveBossArena.Editor
                 "WeaponGreatsword", "Greatsword", new Color(1f, 0.75f, 0.35f, 0.6f),
                 greatswordAttacks, CreateGreatswordEmpoweredSpecial(), DefenceStyle.HyperArmour,
                 deflectWindow: 0.2f, deflectPosture: 0f,
-                moveMultiplier: 0.82f, staminaMultiplier: 1.35f);
+                moveMultiplier: 0.82f, staminaMultiplier: 1.35f,
+                swingCueId: "swing.greatsword");
 
             WeaponDefinition energyBlade = CreateWeapon(
                 "WeaponEnergyBlade", "Energy Blade", new Color(0.7f, 1f, 0.8f, 0.6f),
                 energyAttacks, CreateEnergyEmpoweredSpecial(), DefenceStyle.SustainedGuard,
                 deflectWindow: 0.28f, deflectPosture: 16f,
-                moveMultiplier: 1.12f, staminaMultiplier: 0.85f);
+                moveMultiplier: 1.12f, staminaMultiplier: 0.85f,
+                swingCueId: "swing.energy");
 
             return new[] { blade, greatsword, energyBlade };
         }
@@ -797,7 +800,8 @@ namespace AdaptiveBossArena.Editor
             float deflectWindow,
             float deflectPosture,
             float moveMultiplier,
-            float staminaMultiplier)
+            float staminaMultiplier,
+            string swingCueId)
         {
             var weapon = AssetAuthoring.CreateOrLoad<WeaponDefinition>(
                 $"{WeaponFolder}/{assetName}.asset", out bool created);
@@ -816,6 +820,7 @@ namespace AdaptiveBossArena.Editor
                     writer.String("_id", $"weapon.{assetName.ToLowerInvariant()}")
                         .String("_displayName", displayName)
                         .Color("_signatureColor", signature)
+                        .String("_swingCueId", swingCueId)
                         .Enum("_defence", defence)
                         .Float("_deflectWindowSeconds", deflectWindow)
                         .Float("_deflectPostureDamage", deflectPosture)
@@ -967,6 +972,11 @@ namespace AdaptiveBossArena.Editor
             CreateChannel<StringEventChannel>(
                 "OnWeaponDrawn",
                 "Carries the name of a newly drawn weapon.");
+            CreateChannel<StringEventChannel>(
+                "OnWeaponSwingCue",
+                "Carries the audio cue the drawn weapon swings with, so three weapons sharing one " +
+                "moveset can still be told apart by ear. Separate from the display name because " +
+                "matching on a name shown to the player would break the moment it were reworded.");
             CreateChannel<VoidEventChannel>(
                 "OnDeflect",
                 "Raised on a clean deflect. Drives the metallic ring, spark and freeze that make the " +

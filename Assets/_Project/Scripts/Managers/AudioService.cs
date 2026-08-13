@@ -138,6 +138,33 @@ namespace AdaptiveBossArena.Game
 
             /// <summary>The unsteady stagger when a committed boss swing overbalances it.</summary>
             public const string Overbalance = "boss.overbalance";
+
+            /// <summary>The player falling. The fight's ending had no sound of its own.</summary>
+            public const string PlayerDeath = "player.death";
+
+            /// <summary>The boss falling: lower and longer, because it is the larger thing.</summary>
+            public const string BossDeath = "boss.death";
+
+            /// <summary>A swing that touched nothing.</summary>
+            public const string Whiff = "swing.whiff";
+
+            /// <summary>A heal that ran to completion rather than being interrupted.</summary>
+            public const string HealComplete = "player.healed";
+
+            /// <summary>Swing of the standard blade.</summary>
+            public const string SwingBlade = "swing.blade";
+
+            /// <summary>Swing of the greatsword: slow, low and airy.</summary>
+            public const string SwingGreatsword = "swing.greatsword";
+
+            /// <summary>Swing of the energy blade: thin and quick.</summary>
+            public const string SwingEnergy = "swing.energy";
+
+            /// <summary>A menu button being pressed.</summary>
+            public const string UiClick = "ui.click";
+
+            /// <summary>A menu button being highlighted.</summary>
+            public const string UiHover = "ui.hover";
         }
 
         private void Awake()
@@ -331,50 +358,93 @@ namespace AdaptiveBossArena.Game
         /// <summary>Synthesises every clip the game uses.</summary>
         private void GenerateClips()
         {
-            _clips[Cues.HitLight] = ToneGenerator.CreateImpact("hit.light", 0.14f, 2200f, seed: 3);
-            _clips[Cues.HitHeavy] = ToneGenerator.CreateImpact("hit.heavy", 0.26f, 900f, seed: 5);
-            _clips[Cues.Block] = ToneGenerator.CreateImpact("guard.block", 0.2f, 600f, seed: 11);
+            // Impacts are layered rather than filtered noise: a crack for the contact and a
+            // pitch-dropping body for the mass behind it. The peaks are the mix — a heavy blow is
+            // louder than a light one because it is told to be, not because of its filter.
+            _clips[Cues.HitLight] =
+                ToneGenerator.CreateWeightedImpact("hit.light", 150f, 2400f, 0.22f, 0.62f, 0.4f, seed: 3);
+
+            _clips[Cues.HitHeavy] =
+                ToneGenerator.CreateWeightedImpact("hit.heavy", 68f, 1000f, 0.42f, 0.92f, 0.6f, seed: 5);
+
+            _clips[Cues.Block] =
+                ToneGenerator.CreateWeightedImpact("guard.block", 115f, 700f, 0.26f, 0.58f, 0.35f, seed: 11);
+
+            // Per-weapon swings. One moveset, three silhouettes of sound: the greatsword is slow and
+            // airy, the blade neutral, the energy blade thin and quick.
             _clips[Cues.Whoosh] = ToneGenerator.CreateWhoosh("swing.whoosh");
+            _clips[Cues.SwingBlade] = ToneGenerator.CreateWhoosh("swing.blade", 0.28f, 7, 0.42f, 1f);
+            _clips[Cues.SwingGreatsword] =
+                ToneGenerator.CreateWhoosh("swing.greatsword", 0.46f, 13, 0.5f, 0.45f);
+            _clips[Cues.SwingEnergy] =
+                ToneGenerator.CreateWhoosh("swing.energy", 0.2f, 17, 0.38f, 2.1f);
 
             // The deflect is the highest, brightest sound in the game on purpose: it is the moment
             // the player most needs to know they got it exactly right.
-            _clips[Cues.Deflect] = ToneGenerator.CreateMetallicRing("guard.deflect", 1180f, 0.45f);
-            _clips[Cues.PostureBreak] = ToneGenerator.CreateMetallicRing("guard.break", 320f, 0.9f);
-            _clips[Cues.PerfectDodge] = ToneGenerator.CreateMetallicRing("dodge.perfect", 1560f, 0.3f);
+            _clips[Cues.Deflect] = ToneGenerator.CreateMetallicRing("guard.deflect", 1180f, 0.45f, 0.85f);
+            _clips[Cues.PostureBreak] = ToneGenerator.CreateMetallicRing("guard.break", 320f, 0.9f, 0.9f);
+            _clips[Cues.PerfectDodge] = ToneGenerator.CreateMetallicRing("dodge.perfect", 1560f, 0.3f, 0.72f);
 
-            _clips[Cues.BossRoar] = ToneGenerator.CreateRoar("boss.roar");
+            _clips[Cues.BossRoar] = ToneGenerator.CreateRoar("boss.roar", peak: 1f);
+
+            // The fight's two endings. Neither had a sound at all, so the single most important
+            // moment in the encounter passed in silence. The boss's knell is lower and longer,
+            // because it is the larger thing falling.
+            _clips[Cues.PlayerDeath] = ToneGenerator.CreateDeathKnell("player.death", 104f, 1.9f, 0.95f);
+            _clips[Cues.BossDeath] = ToneGenerator.CreateDeathKnell("boss.death", 68f, 2.6f, 1f);
 
             // A shorter, breathier whoosh than a swing, so a dash reads as the player moving rather
             // than attacking.
             _clips[Cues.Dash] = ToneGenerator.CreateWhoosh("dodge.whoosh", 0.2f, seed: 21);
 
-            // Warm and rising for the heal; a bright, short chime the instant focus fills.
-            _clips[Cues.Heal] = ToneGenerator.CreateShimmer("player.heal", 520f, 0.7f);
-            _clips[Cues.FocusFull] = ToneGenerator.CreateShimmer("focus.full", 1040f, 0.4f);
+            // Warm and rising for the heal; a bright, short chime the instant focus fills, and a
+            // softer one when the heal actually completes rather than being interrupted.
+            _clips[Cues.Heal] = ToneGenerator.CreateShimmer("player.heal", 520f, 0.7f, 0.55f);
+            _clips[Cues.HealComplete] = ToneGenerator.CreateShimmer("player.healed", 700f, 0.5f, 0.5f);
+            _clips[Cues.FocusFull] = ToneGenerator.CreateShimmer("focus.full", 1040f, 0.4f, 0.68f);
 
             // A short high metallic 'shing' for drawing a weapon.
-            _clips[Cues.WeaponDraw] = ToneGenerator.CreateMetallicRing("weapon.draw", 1500f, 0.2f);
+            _clips[Cues.WeaponDraw] = ToneGenerator.CreateMetallicRing("weapon.draw", 1500f, 0.2f, 0.5f);
 
-            // The execution is the heaviest, lowest impact the player can make — the payoff of a
-            // broken guard, so it hits harder than any ordinary blow.
-            _clips[Cues.Execution] = ToneGenerator.CreateImpact("player.execution", 0.38f, 520f, seed: 29);
+            // The execution is the heaviest, lowest blow the player can land — the payoff of a
+            // broken guard, so it hits harder than anything else they have.
+            _clips[Cues.Execution] =
+                ToneGenerator.CreateWeightedImpact("player.execution", 52f, 620f, 0.6f, 1f, 0.8f, seed: 29);
 
-            // Footsteps: a soft tap for the player, a heavier and much lower thud for the boss.
-            _clips[Cues.FootstepPlayer] = ToneGenerator.CreateImpact("step.player", 0.08f, 520f, seed: 31);
-            _clips[Cues.FootstepBoss] = ToneGenerator.CreateImpact("step.boss", 0.16f, 220f, seed: 37);
+            // Footsteps: a soft tap for the player, a heavier and much lower thud for the boss. Both
+            // sit well back in the mix — they play constantly and must never compete with a hit.
+            _clips[Cues.FootstepPlayer] =
+                ToneGenerator.CreateImpact("step.player", 0.08f, 520f, seed: 31, peak: 0.26f);
+
+            _clips[Cues.FootstepBoss] =
+                ToneGenerator.CreateWeightedImpact("step.boss", 58f, 300f, 0.22f, 0.44f, 0.3f, seed: 37);
 
             // A low, broadband rumble for a hazard erupting from the ground.
-            _clips[Cues.Hazard] = ToneGenerator.CreateImpact("hazard.erupt", 0.5f, 340f, seed: 41);
+            _clips[Cues.Hazard] =
+                ToneGenerator.CreateWeightedImpact("hazard.erupt", 44f, 380f, 0.62f, 0.8f, 0.75f, seed: 41);
 
-            // A short, soft shift for raising a guard, and a low resonant thud for the heartbeat.
-            _clips[Cues.GuardRaise] = ToneGenerator.CreateImpact("guard.raise", 0.09f, 900f, seed: 47);
-            _clips[Cues.Heartbeat] = ToneGenerator.CreateImpact("player.heartbeat", 0.2f, 85f, seed: 43);
+            // A short, soft shift for raising a guard.
+            _clips[Cues.GuardRaise] =
+                ToneGenerator.CreateImpact("guard.raise", 0.09f, 900f, seed: 47, peak: 0.34f);
+
+            // The heartbeat is the clearest case of the old bug: at 85 Hz the filter left it at four
+            // per cent of full scale, so the game's low-health warning was effectively silent.
+            _clips[Cues.Heartbeat] =
+                ToneGenerator.CreateWeightedImpact("player.heartbeat", 46f, 140f, 0.3f, 0.7f, 0.25f, seed: 43);
 
             // The perilous-attack warning: a tense tritone sting under a fast tremolo.
-            _clips[Cues.Peril] = ToneGenerator.CreatePerilWarning("peril.warning");
+            _clips[Cues.Peril] = ToneGenerator.CreatePerilWarning("peril.warning", peak: 0.9f);
 
             // The boss overbalancing: an unsteady low lurch whose pitch sags as it tips.
-            _clips[Cues.Overbalance] = ToneGenerator.CreateStumble("boss.overbalance");
+            _clips[Cues.Overbalance] = ToneGenerator.CreateStumble("boss.overbalance", peak: 0.78f);
+
+            // A swing that hits nothing: air, and no contact at all. Quiet, but its absence made a
+            // whiffed attack feel like the game had missed the input rather than the target.
+            _clips[Cues.Whiff] = ToneGenerator.CreateWhoosh("swing.whiff", 0.34f, 53, 0.3f, 0.7f);
+
+            // Menu feedback, on the interface bus that existed and was never used by anything.
+            _clips[Cues.UiClick] = ToneGenerator.CreateMetallicRing("ui.click", 1320f, 0.12f, 0.4f);
+            _clips[Cues.UiHover] = ToneGenerator.CreateMetallicRing("ui.hover", 1760f, 0.07f, 0.22f);
 
             // Three stacked loops, harmonically related so they layer without dissonance: a low bed,
             // a fifth above it for tension, and a rhythmic pulse an octave up for the final phase.

@@ -439,6 +439,7 @@ MonoBehaviour:
   _postureChannel: {fileID: 11400000, guid: ab7b26d4fac6b6e4d9cd4867a6be5ac5, type: 2}
   _focusChannel: {fileID: 11400000, guid: cdbca16f66d3b6142b95b1de325580af, type: 2}
   _weaponChannel: {fileID: 11400000, guid: bf47e1c2534db1b47ae252301e3fb7a2, type: 2}
+  _weaponSwingCueChannel: {fileID: 11400000, guid: 62655067a21c6154c8910b5a3a344421, type: 2}
 --- !u!114 &852768330243084299
 MonoBehaviour:
   m_ObjectHideFlags: 0

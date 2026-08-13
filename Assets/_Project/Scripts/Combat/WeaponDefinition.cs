@@ -59,6 +59,11 @@ namespace AdaptiveBossArena.Combat
         private Color _signatureColor = new Color(0.55f, 0.85f, 1f, 0.6f);
 
         [SerializeField]
+        [Tooltip("Audio cue played when this weapon swings. Leaving it empty falls back to the " +
+                 "generic swing, so a weapon without one still makes a sound.")]
+        private string _swingCueId = string.Empty;
+
+        [SerializeField]
         [Tooltip("Optional model shown in the character's hand while this weapon is drawn. Left empty " +
                  "the weapon reads as its colour and trail only; drop a mesh prefab in to make it " +
                  "appear, with no other change.")]
@@ -116,6 +121,16 @@ namespace AdaptiveBossArena.Combat
 
         /// <summary>Colour used for this weapon's attack overlays.</summary>
         public Color SignatureColor => _signatureColor;
+
+        /// <summary>
+        /// Cue played when this weapon swings, or empty to use the generic one.
+        /// </summary>
+        /// <remarks>
+        /// A plain string rather than a clip reference, because Combat sits below the audio service
+        /// in the assembly graph and must not depend on it. It is the same arrangement the hazard
+        /// zone uses for its own cue.
+        /// </remarks>
+        public string SwingCueId => _swingCueId;
 
         /// <summary>Optional model shown in hand while drawn, or null to show none.</summary>
         public GameObject ModelPrefab => _modelPrefab;

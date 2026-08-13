@@ -115,6 +115,7 @@ namespace AdaptiveBossArena.Editor
             BossPhase = GeneratedAssets.EventChannel<IntEventChannel>("OnBossPhaseChanged"),
             AdaptationAdopted = GeneratedAssets.EventChannel<StringEventChannel>("OnAdaptationAdopted"),
             WeaponDrawn = GeneratedAssets.EventChannel<StringEventChannel>("OnWeaponDrawn"),
+            WeaponSwingCue = GeneratedAssets.EventChannel<StringEventChannel>("OnWeaponSwingCue"),
             PauseState = GeneratedAssets.EventChannel<BoolEventChannel>("OnPauseStateChanged"),
             PlayerDied = GeneratedAssets.EventChannel<VoidEventChannel>("OnPlayerDied"),
             BossDefeated = GeneratedAssets.EventChannel<VoidEventChannel>("OnBossDefeated"),
@@ -523,6 +524,9 @@ namespace AdaptiveBossArena.Editor
 
         /// <summary>Name of a newly drawn weapon.</summary>
         public StringEventChannel WeaponDrawn { get; set; }
+
+        /// <summary>Carries the drawn weapon's swing cue, so weapons sound distinct.</summary>
+        public StringEventChannel WeaponSwingCue { get; set; }
 
         /// <summary>Whether the game is paused.</summary>
         public BoolEventChannel PauseState { get; set; }

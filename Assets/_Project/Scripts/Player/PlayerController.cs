@@ -114,6 +114,10 @@ namespace AdaptiveBossArena.Player
         [Tooltip("Carries the name of a newly drawn weapon, shown briefly on screen.")]
         private StringEventChannel _weaponChannel;
 
+        [SerializeField]
+        [Tooltip("Carries the drawn weapon's swing cue, so each weapon sounds like itself.")]
+        private StringEventChannel _weaponSwingCueChannel;
+
         /// <summary>Health a Training-mode player is never allowed to fall below.</summary>
         private const float TrainingHealthFloor = 1f;
 
@@ -687,6 +691,14 @@ namespace AdaptiveBossArena.Player
             _weaponSocket?.Equip(weapon.ModelPrefab);
 
             _weaponChannel?.Raise(weapon.DisplayName);
+
+            // Announced separately from the name so the audio director can pick this weapon's swing
+            // without matching on a display string, which would break the moment one were reworded.
+            if (!string.IsNullOrEmpty(weapon.SwingCueId))
+            {
+                _weaponSwingCueChannel?.Raise(weapon.SwingCueId);
+            }
+
             _context.PublishCombatEvent(CombatEventKind.WeaponDrawn);
         }
 
@@ -984,8 +996,11 @@ namespace AdaptiveBossArena.Player
             VoidEventChannel deflect,
             FloatEventChannel posture,
             StringEventChannel weapon,
-            FloatEventChannel focus)
+            FloatEventChannel focus,
+            StringEventChannel weaponSwingCue = null)
         {
+            _weaponSwingCueChannel = weaponSwingCue;
+
             _healthChannel = health;
             _staminaChannel = stamina;
             _deathChannel = death;

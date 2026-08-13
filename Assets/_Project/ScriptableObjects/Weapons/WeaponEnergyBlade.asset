@@ -16,6 +16,7 @@ MonoBehaviour:
   _designerNotes: 
   _displayName: Energy Blade
   _signatureColor: {r: 0.7, g: 1, b: 0.8, a: 0.6}
+  _swingCueId: swing.energy
   _modelPrefab: {fileID: 0}
   _lightComboChain:
   - {fileID: 11400000, guid: 161e8470f16946b4da1bc4c746fed900, type: 2}

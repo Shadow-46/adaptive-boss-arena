@@ -227,7 +227,8 @@ namespace AdaptiveBossArena.Editor
                 GeneratedAssets.EventChannel<VoidEventChannel>("OnDeflect"),
                 GeneratedAssets.EventChannel<FloatEventChannel>("OnPlayerPostureChanged"),
                 GeneratedAssets.EventChannel<StringEventChannel>("OnWeaponDrawn"),
-                GeneratedAssets.EventChannel<FloatEventChannel>("OnPlayerFocusChanged"));
+                GeneratedAssets.EventChannel<FloatEventChannel>("OnPlayerFocusChanged"),
+                GeneratedAssets.EventChannel<StringEventChannel>("OnWeaponSwingCue"));
         }
 
         /// <summary>Applies a colour to a primitive using a shared generated material.</summary>

@@ -40,6 +40,18 @@ namespace AdaptiveBossArena.Game
         private FloatEventChannel _focusChannel;
 
         [SerializeField]
+        [Tooltip("Carries the drawn weapon's swing cue, so each weapon sounds like itself.")]
+        private StringEventChannel _weaponSwingCueChannel;
+
+        /// <summary>The cue the player's current weapon swings with.</summary>
+        /// <remarks>
+        /// Latched rather than looked up, because the combat event that announces a swing carries no
+        /// weapon: the event struct is deliberately blittable so a fight's worth of them can sit in a
+        /// ring buffer without allocating, and a reference would defeat that.
+        /// </remarks>
+        private string _playerSwingCue = AudioService.Cues.Whoosh;
+
+        [SerializeField]
         [Tooltip("Raised when the boss overbalances, used to sound the unsteady stagger.")]
         private VoidEventChannel _overbalanceChannel;
 
@@ -78,6 +90,11 @@ namespace AdaptiveBossArena.Game
                 _focusChannel.Raised += OnFocusChanged;
             }
 
+            if (_weaponSwingCueChannel != null)
+            {
+                _weaponSwingCueChannel.Raised += OnWeaponSwingCueChanged;
+            }
+
             if (_overbalanceChannel != null)
             {
                 _overbalanceChannel.Raised += OnOverbalance;
@@ -111,6 +128,11 @@ namespace AdaptiveBossArena.Game
             if (_focusChannel != null)
             {
                 _focusChannel.Raised -= OnFocusChanged;
+            }
+
+            if (_weaponSwingCueChannel != null)
+            {
+                _weaponSwingCueChannel.Raised -= OnWeaponSwingCueChanged;
             }
 
             if (_overbalanceChannel != null)
@@ -149,9 +171,9 @@ namespace AdaptiveBossArena.Game
                     // Played on the wind-up rather than the strike, so it functions as an audible
                     // telegraph as well as a flourish. A perilous, unblockable wind-up gets an
                     // unmistakable warning sting instead — the audible half of "do not block this".
-                    _audio.PlayCue(
-                        combatEvent.Unblockable ? AudioService.Cues.Peril : AudioService.Cues.Whoosh,
-                        combatEvent.Position);
+                    // The player's swing uses whichever weapon they are holding; the boss keeps the
+                    // generic one, since it has no weapons to tell apart.
+                    _audio.PlayCue(SwingCueFor(combatEvent), combatEvent.Position);
                     break;
 
                 case CombatEventKind.AttackLanded:
@@ -186,6 +208,57 @@ namespace AdaptiveBossArena.Game
                     // The execution's own emphatic beat, on top of the impact it lands.
                     _audio.PlayCue2D(AudioService.Cues.Execution);
                     break;
+
+                // The four occurrences below were published from the start and heard by nobody.
+                case CombatEventKind.AttackWhiffed:
+                    // Air and no contact. Without it a missed swing was indistinguishable from an
+                    // input the game had ignored.
+                    _audio.PlayCue(AudioService.Cues.Whiff, combatEvent.Position);
+                    break;
+
+                case CombatEventKind.AttackEvaded:
+                    // Slipping a blow is a small victory and deserves to be audible as one.
+                    _audio.PlayCue(AudioService.Cues.PerfectDodge, combatEvent.Position);
+                    break;
+
+                case CombatEventKind.HealCompleted:
+                    _audio.PlayCue2D(AudioService.Cues.HealComplete);
+                    break;
+
+                case CombatEventKind.Defeated:
+                    // The most important moment in the fight, and it used to happen in silence.
+                    _audio.PlayCue(
+                        combatEvent.Actor == CombatantTeam.Player
+                            ? AudioService.Cues.PlayerDeath
+                            : AudioService.Cues.BossDeath,
+                        combatEvent.Position);
+                    break;
+            }
+        }
+
+        /// <summary>Chooses the sound a wind-up makes.</summary>
+        /// <remarks>
+        /// Peril outranks weapon identity: an unblockable attack has to read as danger before it
+        /// reads as anything else.
+        /// </remarks>
+        private string SwingCueFor(in CombatEvent combatEvent)
+        {
+            if (combatEvent.Unblockable)
+            {
+                return AudioService.Cues.Peril;
+            }
+
+            return combatEvent.Actor == CombatantTeam.Player
+                ? _playerSwingCue
+                : AudioService.Cues.Whoosh;
+        }
+
+        /// <summary>Remembers which weapon the player is now holding.</summary>
+        private void OnWeaponSwingCueChanged(string cueId)
+        {
+            if (!string.IsNullOrEmpty(cueId))
+            {
+                _playerSwingCue = cueId;
             }
         }
 
@@ -230,13 +303,15 @@ namespace AdaptiveBossArena.Game
             VoidEventChannel perfectDodge,
             IntEventChannel phase,
             FloatEventChannel focus,
-            VoidEventChannel overbalance)
+            VoidEventChannel overbalance,
+            StringEventChannel weaponSwingCue = null)
         {
             _deflectChannel = deflect;
             _perfectDodgeChannel = perfectDodge;
             _phaseChannel = phase;
             _focusChannel = focus;
             _overbalanceChannel = overbalance;
+            _weaponSwingCueChannel = weaponSwingCue;
         }
     }
 }

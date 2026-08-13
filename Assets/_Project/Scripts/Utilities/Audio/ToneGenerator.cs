@@ -98,6 +98,122 @@ namespace AdaptiveBossArena.Utilities.Audio
         }
 
         /// <summary>
+        /// Builds an impact with actual weight: a crack, a body, and a room behind them.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// A single filtered noise burst is a hiss with an envelope on it — which is what every
+        /// impact in this game used to be, and why they all sounded the same and none of them landed.
+        /// A hit that reads as heavy is layered: a bright transient for the contact, a low body that
+        /// drops in pitch as it decays for the mass behind it, and reflections for the space it
+        /// happened in.
+        /// </para>
+        /// <para>
+        /// The pitch drop on the body is the part that does the work. A fixed low tone reads as a
+        /// hum; one that falls as it fades reads as something heavy being struck. It is the oldest
+        /// trick in drum synthesis and it is the difference between a click and a blow.
+        /// </para>
+        /// </remarks>
+        /// <param name="name">Clip name.</param>
+        /// <param name="bodyHz">Pitch the body settles to. Lower reads as heavier.</param>
+        /// <param name="lowPassHz">Cutoff of the transient. Lower is duller.</param>
+        /// <param name="durationSeconds">Total length, including the room tail.</param>
+        /// <param name="peak">How loud this impact should be.</param>
+        /// <param name="roomAmount">How much of the arena is heard behind it.</param>
+        /// <param name="seed">Seed, so the clip is identical every run.</param>
+        /// <returns>The generated clip.</returns>
+        public static AudioClip CreateWeightedImpact(
+            string name,
+            float bodyHz = 90f,
+            float lowPassHz = 1400f,
+            float durationSeconds = 0.32f,
+            float peak = 0.85f,
+            float roomAmount = 0.5f,
+            int seed = 3)
+        {
+            int sampleCount = Mathf.Max(1, Mathf.RoundToInt(SampleRate * durationSeconds));
+            var samples = new float[sampleCount];
+
+            var random = new System.Random(seed);
+            float previous = 0f;
+            float smoothing = Mathf.Clamp01(lowPassHz / (SampleRate * 0.5f));
+            float phase = 0f;
+
+            for (int i = 0; i < sampleCount; i++)
+            {
+                float progress = i / (float)sampleCount;
+
+                // The contact: a short, bright noise crack that is gone almost immediately.
+                float noise = (float)(random.NextDouble() * 2d - 1d);
+                previous += (noise - previous) * smoothing;
+                float crack = previous * FastDecay(progress, sharpness: 26f);
+
+                // The mass: a sine starting well above its resting pitch and falling onto it.
+                float sweep = Mathf.Lerp(2.2f, 1f, Mathf.Clamp01(progress * 5f));
+                phase += 2f * Mathf.PI * bodyHz * sweep / SampleRate;
+                float body = Mathf.Sin(phase) * FastDecay(progress, sharpness: 7f);
+
+                samples[i] = Saturate((crack * 0.7f) + (body * 0.9f));
+            }
+
+            ApplyRoomTail(samples, roomAmount);
+
+            return BuildClip(name, samples, peak);
+        }
+
+        /// <summary>
+        /// Builds a long, sinking knell for a death.
+        /// </summary>
+        /// <remarks>
+        /// The game had no death sound at all, for either combatant — the most significant moment in
+        /// the fight passed in silence. This is deliberately the slowest thing in the bank: a low
+        /// cluster that sags in pitch and takes its time, so it reads as an ending rather than
+        /// another impact.
+        /// </remarks>
+        /// <param name="name">Clip name.</param>
+        /// <param name="rootHz">Lowest partial.</param>
+        /// <param name="durationSeconds">Total length.</param>
+        /// <param name="peak">How loud the knell should be.</param>
+        /// <returns>The generated clip.</returns>
+        public static AudioClip CreateDeathKnell(
+            string name,
+            float rootHz = 110f,
+            float durationSeconds = 1.8f,
+            float peak = 0.9f)
+        {
+            int sampleCount = Mathf.Max(1, Mathf.RoundToInt(SampleRate * durationSeconds));
+            var samples = new float[sampleCount];
+
+            // A minor third and an octave below the root: heavy, and unmistakably not a victory.
+            float[] partials = { 0.5f, 1f, 1.19f };
+            float[] gains = { 1f, 0.7f, 0.45f };
+            var phases = new float[partials.Length];
+
+            for (int i = 0; i < sampleCount; i++)
+            {
+                float progress = i / (float)sampleCount;
+
+                // Sags a whole tone across the clip, which is what makes it read as collapsing.
+                float sag = Mathf.Lerp(1f, 0.89f, progress);
+                float value = 0f;
+
+                for (int p = 0; p < partials.Length; p++)
+                {
+                    phases[p] += 2f * Mathf.PI * rootHz * partials[p] * sag / SampleRate;
+                    value += Mathf.Sin(phases[p]) * gains[p];
+                }
+
+                // Slow attack so it swells rather than strikes, then a long decay.
+                float attack = Mathf.Clamp01(progress * 12f);
+                samples[i] = Saturate(value * 0.4f) * attack * FastDecay(progress, sharpness: 2.6f);
+            }
+
+            ApplyRoomTail(samples, 0.7f);
+
+            return BuildClip(name, samples, peak);
+        }
+
+        /// <summary>
         /// Builds a metallic ring for a successful deflect.
         /// </summary>
         /// <remarks>
@@ -198,14 +314,24 @@ namespace AdaptiveBossArena.Utilities.Audio
         /// <param name="durationSeconds">Total length.</param>
         /// <param name="seed">Seed for reproducibility.</param>
         /// <returns>The generated clip.</returns>
+        /// <param name="brightness">
+        /// Scales how high the cutoff sweeps. Below one the swing is heavy and airy, above one it is
+        /// thin and fast — which is how three weapons that share one moveset can still be told apart
+        /// by ear.
+        /// </param>
         public static AudioClip CreateWhoosh(
-            string name, float durationSeconds = 0.3f, int seed = 7, float peak = 0.45f)
+            string name,
+            float durationSeconds = 0.3f,
+            int seed = 7,
+            float peak = 0.45f,
+            float brightness = 1f)
         {
             int sampleCount = Mathf.Max(1, Mathf.RoundToInt(SampleRate * durationSeconds));
             var samples = new float[sampleCount];
 
             var random = new System.Random(seed);
             float previous = 0f;
+            float ceiling = Mathf.Clamp(0.35f * brightness, 0.02f, 0.95f);
 
             for (int i = 0; i < sampleCount; i++)
             {
@@ -214,7 +340,7 @@ namespace AdaptiveBossArena.Utilities.Audio
                 // Cutoff sweeps up and back down, which is what makes it sound like something
                 // passing rather than simply starting and stopping.
                 float sweep = Mathf.Sin(progress * Mathf.PI);
-                float smoothing = Mathf.Lerp(0.02f, 0.35f, sweep);
+                float smoothing = Mathf.Lerp(0.02f, ceiling, sweep);
 
                 float noise = (float)(random.NextDouble() * 2d - 1d);
                 previous += (noise - previous) * smoothing;
@@ -440,6 +566,66 @@ namespace AdaptiveBossArena.Utilities.Audio
         /// <summary>Exponential decay envelope, normalised to the clip's progress.</summary>
         private static float FastDecay(float progress, float sharpness) =>
             Mathf.Exp(-progress * sharpness);
+
+        /// <summary>Delays of the early reflections, in seconds.</summary>
+        /// <remarks>
+        /// Deliberately not multiples of one another. Evenly spaced taps reinforce a single frequency
+        /// and colour the sound like a comb filter instead of suggesting a space.
+        /// </remarks>
+        private static readonly float[] ReflectionSeconds = { 0.011f, 0.023f, 0.037f };
+
+        /// <summary>How loud each reflection is relative to the dry signal.</summary>
+        private static readonly float[] ReflectionGains = { 0.5f, 0.32f, 0.2f };
+
+        /// <summary>
+        /// Adds a handful of early reflections, so a sound has somewhere to happen.
+        /// </summary>
+        /// <remarks>
+        /// Every clip in this game was bone dry, which is most of why nothing had size: a real impact
+        /// in a stone arena arrives with the room immediately behind it. A few short taps are enough
+        /// to imply that space and cost a single pass over the buffer — far cheaper than a reverb,
+        /// and it survives being played twelve at a time.
+        /// </remarks>
+        /// <param name="samples">Buffer to add reflections into, in place.</param>
+        /// <param name="amount">How present the room is, from zero to about one.</param>
+        private static void ApplyRoomTail(float[] samples, float amount)
+        {
+            if (amount <= 0f)
+            {
+                return;
+            }
+
+            // Reflections are taken from the dry signal rather than the running result, so the taps
+            // do not feed each other into an ever-growing wash.
+            var dry = (float[])samples.Clone();
+
+            for (int tap = 0; tap < ReflectionSeconds.Length; tap++)
+            {
+                int delay = Mathf.RoundToInt(SampleRate * ReflectionSeconds[tap]);
+
+                if (delay <= 0 || delay >= samples.Length)
+                {
+                    continue;
+                }
+
+                float gain = ReflectionGains[tap] * amount;
+
+                for (int i = delay; i < samples.Length; i++)
+                {
+                    samples[i] += dry[i - delay] * gain;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Rounds off peaks instead of letting them clip.
+        /// </summary>
+        /// <remarks>
+        /// Layered sounds add up, and summing a thump onto a crack routinely overshoots. Hard
+        /// clipping that overshoot is heard as a harsh crackle; bending it is heard as loudness,
+        /// which is what an impact wants anyway.
+        /// </remarks>
+        private static float Saturate(float sample) => (float)System.Math.Tanh(sample);
 
         /// <summary>
         /// Scales a buffer so its loudest sample sits at a chosen peak.
