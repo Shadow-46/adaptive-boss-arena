@@ -46,6 +46,9 @@ namespace AdaptiveBossArena.Editor
             ConfigureColorAdjustments(profile);
             ConfigureTonemapping(profile);
             ConfigureChromaticAberration(profile);
+            ConfigureFilmGrain(profile);
+            ConfigureSplitToning(profile);
+            ConfigureWhiteBalance(profile);
 
             EditorUtility.SetDirty(profile);
             AssetDatabase.SaveAssets();
@@ -117,6 +120,60 @@ namespace AdaptiveBossArena.Editor
         {
             ChromaticAberration aberration = GetOrAdd<ChromaticAberration>(profile);
             aberration.intensity.Override(0.08f);
+        }
+
+        /// <summary>
+        /// A fine layer of grain over everything.
+        /// </summary>
+        /// <remarks>
+        /// Cheap, and unusually valuable in this project specifically. Untextured generated surfaces
+        /// produce perfectly smooth gradients, which is one of the strongest signals that what you
+        /// are looking at was not photographed or painted. Grain breaks those gradients up and reads
+        /// as film rather than as noise, provided it stays quiet enough not to be noticed directly.
+        /// </remarks>
+        private static void ConfigureFilmGrain(VolumeProfile profile)
+        {
+            FilmGrain grain = GetOrAdd<FilmGrain>(profile);
+
+            grain.type.Override(FilmGrainLookup.Medium1);
+            grain.intensity.Override(0.22f);
+
+            // Lets the grain fade out of bright areas, which is how it behaves on real stock.
+            grain.response.Override(0.8f);
+        }
+
+        /// <summary>
+        /// Cools the shadows and warms the highlights.
+        /// </summary>
+        /// <remarks>
+        /// The difference between a graded image and one that has had a contrast slider pushed.
+        /// Cool shadows against warm light is the oldest trick there is for making a dark scene feel
+        /// deliberate, and it suits an arena lit by one cold key and four fires.
+        /// </remarks>
+        private static void ConfigureSplitToning(VolumeProfile profile)
+        {
+            ShadowsMidtonesHighlights grading = GetOrAdd<ShadowsMidtonesHighlights>(profile);
+
+            // The fourth channel of each is the overall weight of that band, not alpha.
+            grading.shadows.Override(new Vector4(0.86f, 0.93f, 1.12f, 0f));
+            grading.midtones.Override(new Vector4(1f, 0.99f, 0.97f, 0f));
+            grading.highlights.Override(new Vector4(1.1f, 1.02f, 0.88f, 0f));
+        }
+
+        /// <summary>
+        /// Shifts the whole image cold.
+        /// </summary>
+        /// <remarks>
+        /// A genuine chromatic adaptation rather than the colour filter previously used to fake one.
+        /// A filter multiplies every channel and dims as it tints; white balance shifts what counts
+        /// as white and keeps the exposure.
+        /// </remarks>
+        private static void ConfigureWhiteBalance(VolumeProfile profile)
+        {
+            WhiteBalance balance = GetOrAdd<WhiteBalance>(profile);
+
+            balance.temperature.Override(-14f);
+            balance.tint.Override(4f);
         }
 
         /// <summary>Returns an override from the profile, adding it when absent.</summary>

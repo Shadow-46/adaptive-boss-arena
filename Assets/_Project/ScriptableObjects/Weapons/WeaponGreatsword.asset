@@ -17,7 +17,7 @@ MonoBehaviour:
   _displayName: Greatsword
   _signatureColor: {r: 1, g: 0.75, b: 0.35, a: 0.6}
   _swingCueId: swing.greatsword
-  _modelPrefab: {fileID: 6620136080198032094, guid: ba251532e4be7b149905b821912bfc04, type: 3}
+  _modelPrefab: {fileID: 2112929037221467861, guid: ba251532e4be7b149905b821912bfc04, type: 3}
   _lightComboChain:
   - {fileID: 11400000, guid: 0c22a197c1fffde48aa418bd7ca172b7, type: 2}
   - {fileID: 11400000, guid: 1192b8c9e0f85e24c9c375597c20e802, type: 2}

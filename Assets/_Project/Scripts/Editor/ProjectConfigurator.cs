@@ -39,6 +39,7 @@ namespace AdaptiveBossArena.Editor
             ConfigureTags();
             ConfigureTimeSettings();
             ConfigureInputHandling();
+            ConfigureColorSpace();
 
             // Layer indices are cached at runtime, and they have just moved.
             Layers.InvalidateCache();
@@ -48,6 +49,43 @@ namespace AdaptiveBossArena.Editor
             AssetDatabase.SaveAssets();
             Debug.Log(
                 "[Adaptive Boss Arena] Project configured: layers, tags, collision matrix and physics rate applied.");
+        }
+
+        /// <summary>
+        /// Puts the project in linear colour space.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// A project made from Unity's URP template is linear from the first day. This one generates
+        /// its own settings and nothing ever set it, so it had been rendering in gamma throughout —
+        /// which is the single largest reason the game looked cheap, and it is invisible as a bug
+        /// because nothing errors and everything still draws.
+        /// </para>
+        /// <para>
+        /// In gamma, light accumulates and falls off with the wrong curve: the terminator between lit
+        /// and unlit is too abrupt and too saturated, physically-based metal and smoothness come out
+        /// chalky, the ACES tonemapper is handed values it was never designed to receive, and
+        /// emission above one blooms at a threshold other than the intended one. Every one of those
+        /// reads to a player as "this looks like a prototype" without suggesting a cause.
+        /// </para>
+        /// <para>
+        /// Switching also makes the scene noticeably darker, because colours that were being
+        /// double-brightened no longer are. The palette constants in the generators were re-balanced
+        /// against linear afterwards; anything tuned by eye against the old space would need the same.
+        /// </para>
+        /// </remarks>
+        private static void ConfigureColorSpace()
+        {
+            if (PlayerSettings.colorSpace == ColorSpace.Linear)
+            {
+                return;
+            }
+
+            PlayerSettings.colorSpace = ColorSpace.Linear;
+
+            Debug.Log(
+                "[Adaptive Boss Arena] Switched to linear colour space. Unity will reimport shaders " +
+                "and textures, which takes a moment.");
         }
 
         /// <summary>Ensures every layer named in <see cref="LayerNames"/> exists.</summary>

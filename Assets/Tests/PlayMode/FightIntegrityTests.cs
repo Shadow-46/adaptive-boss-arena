@@ -295,6 +295,34 @@ namespace AdaptiveBossArena.Tests.PlayMode
             yield return null;
         }
 
+        [UnityTest]
+        public IEnumerator EveryVisibleSurfaceHasAMaterial()
+        {
+            // Deleting the generated materials to re-tune them left the weapon models pointing at
+            // assets that no longer existed, and the whole suite stayed green because nothing
+            // asserted that a renderer's material actually resolves. A missing material renders as
+            // Unity's magenta error shader, which is unmissable when playing and invisible to tests.
+            foreach (Renderer renderer in
+                     Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None))
+            {
+                // Trails and particles bring their own materials and are allowed to differ.
+                if (renderer is TrailRenderer || renderer is ParticleSystemRenderer)
+                {
+                    continue;
+                }
+
+                Assert.IsNotNull(
+                    renderer.sharedMaterial,
+                    $"'{renderer.name}' has no material and will render as the magenta error shader.");
+
+                Assert.IsNotNull(
+                    renderer.sharedMaterial.shader,
+                    $"'{renderer.name}' has a material with no shader.");
+            }
+
+            yield return null;
+        }
+
         private static float TopOf(RectTransform rect) =>
             rect.anchoredPosition.y + (rect.sizeDelta.y * 0.5f);
 

@@ -64,10 +64,10 @@ namespace AdaptiveBossArena.Editor
         }
 
         /// <summary>Steel plate. Metallic enough for the single light to catch an edge.</summary>
-        private static readonly Color ArmourColor = new Color(0.30f, 0.33f, 0.40f);
+        private static readonly Color ArmourColor = new Color(0.46f, 0.50f, 0.58f);
 
         /// <summary>Cloth and cloak, deliberately matte so it reads as a different material.</summary>
-        private static readonly Color ClothColor = new Color(0.16f, 0.21f, 0.33f);
+        private static readonly Color ClothColor = new Color(0.26f, 0.32f, 0.47f);
 
         /// <summary>
         /// Visor glow, above one so it blooms.
@@ -79,13 +79,13 @@ namespace AdaptiveBossArena.Editor
         private static readonly Color VisorGlow = new Color(1.7f, 1.15f, 0.45f);
 
         /// <summary>Dark, bloodied hide for the brute's mass.</summary>
-        private static readonly Color HideColor = new Color(0.40f, 0.15f, 0.17f);
+        private static readonly Color HideColor = new Color(0.56f, 0.24f, 0.26f);
 
         /// <summary>Blackened iron for the brute's plating.</summary>
-        private static readonly Color IronColor = new Color(0.20f, 0.18f, 0.20f);
+        private static readonly Color IronColor = new Color(0.33f, 0.30f, 0.33f);
 
         /// <summary>Old bone, for horns.</summary>
-        private static readonly Color BoneColor = new Color(0.76f, 0.72f, 0.63f);
+        private static readonly Color BoneColor = new Color(0.86f, 0.83f, 0.76f);
 
         /// <summary>The brute's core, hot enough to bloom and to explain the aura around it.</summary>
         private static readonly Color CoreGlow = new Color(2.3f, 0.55f, 0.30f);

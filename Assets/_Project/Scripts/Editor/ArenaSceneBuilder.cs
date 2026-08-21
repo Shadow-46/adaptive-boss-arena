@@ -34,14 +34,14 @@ namespace AdaptiveBossArena.Editor
         private const float FloorThickness = 0.1f;
         private const float WallThickness = 0.5f;
 
-        private static readonly Color FloorColor = new Color(0.16f, 0.16f, 0.19f);
-        private static readonly Color WallColor = new Color(0.09f, 0.09f, 0.11f);
+        private static readonly Color FloorColor = new Color(0.26f, 0.26f, 0.30f);
+        private static readonly Color WallColor = new Color(0.17f, 0.17f, 0.20f);
 
         /// <summary>Weathered stone for the pillars and rubble.</summary>
-        private static readonly Color StoneColor = new Color(0.20f, 0.19f, 0.21f);
+        private static readonly Color StoneColor = new Color(0.32f, 0.30f, 0.33f);
 
         /// <summary>A bruised, overcast sky for the arena to sit under.</summary>
-        private static readonly Color SkyTint = new Color(0.32f, 0.20f, 0.24f);
+        private static readonly Color SkyTint = new Color(0.47f, 0.31f, 0.36f);
 
         private static readonly Color SkyGroundColor = new Color(0.05f, 0.04f, 0.06f);
 
@@ -103,7 +103,7 @@ namespace AdaptiveBossArena.Editor
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
             BuildArenaGeometry(config);
-            Light directionalLight = BuildLighting();
+            Light directionalLight = BuildLighting(config);
             BuildSpawnMarkers(config);
             BuildManagers();
 
@@ -244,6 +244,32 @@ namespace AdaptiveBossArena.Editor
         }
 
         /// <summary>Approximates the circular boundary with a ring of box segments.</summary>
+        /// <summary>
+        /// Places a single probe at the centre of the arena.
+        /// </summary>
+        /// <remarks>
+        /// The knight's plate is at metallic 0.85 and the brute's shoulders at 0.9, and with no probe
+        /// in the scene both were reflecting nothing but the flat sky. Metal that does not reflect
+        /// its surroundings reads as grey plastic — which, on a character built to be read by its
+        /// silhouette, undoes much of the point of making it metal at all. One probe covering the
+        /// fighting floor gives them the walls, the pillars and the firelight to catch.
+        /// </remarks>
+        private static void BuildReflectionProbe(ArenaConfig config)
+        {
+            var probeObject = new GameObject("Reflection Probe");
+            probeObject.transform.position = new Vector3(0f, config.WallHeight * 0.6f, 0f);
+
+            ReflectionProbe probe = probeObject.AddComponent<ReflectionProbe>();
+
+            // Baked rather than realtime: nothing in the arena moves that a reflection needs to
+            // track, and a realtime probe would cost six camera renders for no visible gain.
+            probe.mode = UnityEngine.Rendering.ReflectionProbeMode.Baked;
+            probe.size = new Vector3(config.Radius * 2.4f, config.WallHeight * 4f, config.Radius * 2.4f);
+            probe.resolution = 256;
+            probe.hdr = true;
+            probe.shadowDistance = 0f;
+        }
+
         /// <summary>
         /// Adds pillars, braziers and rubble around the fighting floor.
         /// </summary>
@@ -409,8 +435,9 @@ namespace AdaptiveBossArena.Editor
         }
 
         /// <summary>Adds a single directional light angled to give the primitives readable form.</summary>
+        /// <param name="config">Arena configuration, for sizing the reflection probe.</param>
         /// <returns>The directional light, so the atmosphere system can recolour it per phase.</returns>
-        private static Light BuildLighting()
+        private static Light BuildLighting(ArenaConfig config)
         {
             var lightObject = new GameObject("Directional Light");
             Light light = lightObject.AddComponent<Light>();
@@ -421,6 +448,8 @@ namespace AdaptiveBossArena.Editor
             light.shadows = LightShadows.Soft;
 
             lightObject.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
+
+            BuildReflectionProbe(config);
 
             // The sky is a backdrop only: ambient light stays on the three-band Trilight the
             // atmosphere controller drives per phase, so the sky can be dressed without the arena's
