@@ -39,6 +39,29 @@ namespace AdaptiveBossArena.Editor
         /// <summary>Cascades across that range. One was giving the fighters very few texels.</summary>
         private const int ShadowCascades = 4;
 
+        /// <summary>
+        /// Whether screen-space ambient occlusion is added to the renderer.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Off, because adding it broke the WebGL build outright: the page died on load with
+        /// "InternalError: too much recursion" and a stack that repeated the same handful of wasm
+        /// frames in a cycle — infinite recursion rather than merely deep recursion, so a larger
+        /// stack would not have helped. The same build ran perfectly as a Windows player with
+        /// graphics, a full fight through to a riposte and a posture break, which places the fault in
+        /// the browser's render path rather than in the game.
+        /// </para>
+        /// <para>
+        /// Ambient occlusion is a real loss — contact darkening is what stops objects looking like
+        /// they float — so this is a deliberately reversible switch rather than a deletion. Turning it
+        /// back on should be paired with running the SSAO pass after opaque geometry instead of
+        /// before it, which removes its dependency on the depth-normals prepass and is the most
+        /// likely source of a cycle in the render graph. It must be verified in a browser before
+        /// being shipped again; the desktop player will not reproduce it.
+        /// </para>
+        /// </remarks>
+        private const bool EnableAmbientOcclusion = false;
+
         /// <summary>Creates the pipeline assets if absent and assigns them globally.</summary>
         [MenuItem(EditorMenus.Setup + "Configure Render Pipeline",
             priority = EditorMenus.SetupPriorityConfigureProject + 1)]
@@ -150,12 +173,33 @@ namespace AdaptiveBossArena.Editor
                 return;
             }
 
+            bool alreadyPresent = false;
+
             foreach (ScriptableRendererFeature existing in rendererData.rendererFeatures)
             {
                 if (existing is ScreenSpaceAmbientOcclusion)
                 {
-                    return;
+                    alreadyPresent = true;
+                    break;
                 }
+            }
+
+            // Removal has to be handled as well as addition. The renderer asset is loaded rather than
+            // recreated, so simply skipping the add would leave a feature added by an earlier run in
+            // place for ever.
+            if (!EnableAmbientOcclusion)
+            {
+                if (alreadyPresent)
+                {
+                    RemoveAmbientOcclusion(rendererData);
+                }
+
+                return;
+            }
+
+            if (alreadyPresent)
+            {
+                return;
             }
 
             var ambientOcclusion = ScriptableObject.CreateInstance<ScreenSpaceAmbientOcclusion>();
@@ -190,6 +234,54 @@ namespace AdaptiveBossArena.Editor
             TuneAmbientOcclusion(ambientOcclusion);
 
             EditorUtility.SetDirty(rendererData);
+        }
+
+        /// <summary>
+        /// Strips ambient occlusion back out of the renderer.
+        /// </summary>
+        /// <remarks>
+        /// Both the feature list and the id map have to be cleared together, and the sub-asset itself
+        /// deleted — leaving an orphaned feature object inside the renderer asset would keep it in
+        /// the build even with nothing referencing it.
+        /// </remarks>
+        private static void RemoveAmbientOcclusion(UniversalRendererData rendererData)
+        {
+            var serialized = new SerializedObject(rendererData);
+            SerializedProperty features = serialized.FindProperty("m_RendererFeatures");
+            SerializedProperty featureMap = serialized.FindProperty("m_RendererFeatureMap");
+
+            if (features == null || featureMap == null)
+            {
+                return;
+            }
+
+            for (int i = features.arraySize - 1; i >= 0; i--)
+            {
+                var feature =
+                    features.GetArrayElementAtIndex(i).objectReferenceValue as ScreenSpaceAmbientOcclusion;
+
+                if (feature == null)
+                {
+                    continue;
+                }
+
+                features.DeleteArrayElementAtIndex(i);
+
+                if (i < featureMap.arraySize)
+                {
+                    featureMap.DeleteArrayElementAtIndex(i);
+                }
+
+                AssetDatabase.RemoveObjectFromAsset(feature);
+                Object.DestroyImmediate(feature, allowDestroyingAssets: true);
+            }
+
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(rendererData);
+
+            Debug.Log(
+                "[Adaptive Boss Arena] Ambient occlusion removed from the renderer. It breaks the " +
+                "WebGL build; see EnableAmbientOcclusion for the detail.");
         }
 
         /// <summary>Sets the occlusion strength, kept subtle enough to read as contact, not grime.</summary>
