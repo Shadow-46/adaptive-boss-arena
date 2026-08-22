@@ -97,6 +97,40 @@ namespace AdaptiveBossArena.Combat
             }
         }
 
+        /// <summary>
+        /// Draws an arc exactly where it is tested.
+        /// </summary>
+        /// <remarks>
+        /// Arcs used to fall through to the sphere branch, which draws at the attack's offset — a
+        /// metre in front of the character — while the query centres on the character itself. The
+        /// picture and the hitbox disagreed by that whole metre, so anyone tuning reach against the
+        /// gizmo was tuning against a fiction. The wedge lines are drawn too, since an arc's width
+        /// is most of what decides whether it connects.
+        /// </remarks>
+        private static void DrawArcGizmo(AttackDefinition attack, Transform origin)
+        {
+            Vector3 centre = origin.position + Vector3.up * attack.Offset.y;
+            Gizmos.DrawWireSphere(centre, attack.Range);
+
+            float halfArc = attack.ArcDegrees * 0.5f;
+
+            Vector3 forward = origin.forward;
+            forward.y = 0f;
+
+            if (forward.sqrMagnitude < Mathf.Epsilon)
+            {
+                return;
+            }
+
+            forward.Normalize();
+
+            Vector3 leftEdge = Quaternion.Euler(0f, -halfArc, 0f) * forward;
+            Vector3 rightEdge = Quaternion.Euler(0f, halfArc, 0f) * forward;
+
+            Gizmos.DrawRay(centre, leftEdge * attack.Range);
+            Gizmos.DrawRay(centre, rightEdge * attack.Range);
+        }
+
         /// <summary>Tests whether a collider falls within an arc's angular width.</summary>
         /// <remarks>
         /// Measured on the horizontal plane only. Including height would make a swing miss a target
@@ -195,6 +229,10 @@ namespace AdaptiveBossArena.Combat
                         origin.TransformPoint(attack.Offset), origin.rotation, Vector3.one);
                     Gizmos.DrawWireCube(Vector3.zero, attack.BoxHalfExtents * 2f);
                     Gizmos.matrix = Matrix4x4.identity;
+                    break;
+
+                case AttackShape.Arc:
+                    DrawArcGizmo(attack, origin);
                     break;
 
                 default:
