@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Reflection;
 using AdaptiveBossArena.AI;
 using AdaptiveBossArena.Combat;
 using AdaptiveBossArena.Core.Combat;
@@ -68,6 +69,38 @@ namespace AdaptiveBossArena.Tests.PlayMode
 
             Assert.Greater(_player.Health.Maximum, 0f);
             Assert.Greater(_boss.Health.Maximum, 0f);
+
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator TheDrawnWeaponDecidesWhatADeflectIsWorth()
+        {
+            Assert.IsNotNull(_player, "No player in the arena scene.");
+
+            // Found rather than injected: they are loaded precisely because the player config
+            // references them, so this also fails if the weapon list itself came up empty.
+            WeaponDefinition[] weapons = Resources.FindObjectsOfTypeAll<WeaponDefinition>();
+            Assert.AreEqual(3, weapons.Length, "The three generated weapons are not all loaded.");
+
+            // Equipping is private, and deliberately so - nothing outside the controller should be
+            // choosing the player's weapon. Reflection is the honest way to drive it from a test
+            // rather than widening the API for one assertion.
+            MethodInfo equip = typeof(PlayerController).GetMethod(
+                "EquipWeapon", BindingFlags.Instance | BindingFlags.NonPublic);
+
+            Assert.IsNotNull(equip, "PlayerController has no EquipWeapon method.");
+
+            foreach (WeaponDefinition weapon in weapons)
+            {
+                equip.Invoke(_player, new object[] { weapon });
+
+                // The regression: this property used to read the character config, so all three
+                // weapons deflected for the same posture and the authored values never applied.
+                Assert.AreEqual(
+                    weapon.DeflectPostureDamage, _player.DeflectPostureDamage, 0.001f,
+                    $"With '{weapon.DisplayName}' drawn, a deflect pays out the wrong posture.");
+            }
 
             yield return null;
         }

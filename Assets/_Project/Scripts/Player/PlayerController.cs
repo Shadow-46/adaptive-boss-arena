@@ -978,7 +978,14 @@ namespace AdaptiveBossArena.Player
         public IPoise Posture => _posture;
 
         /// <summary>Posture a clean deflect deals to the attacker.</summary>
-        public float DeflectPostureDamage => _config != null ? _config.DeflectPostureDamage : 0f;
+        /// <remarks>
+        /// Read from the context, not the config, so the drawn weapon decides. Reading the config
+        /// here made every weapon deflect for the same 28 posture and turned the authored per-weapon
+        /// values into dead data — the blade's tight, rewarding deflect and the energy blade's
+        /// cheaper, weaker one were indistinguishable in the only number that matters.
+        /// The context falls back to the config when nothing is drawn, so the unarmed path survives.
+        /// </remarks>
+        public float DeflectPostureDamage => _context != null ? _context.DeflectPostureDamage : 0f;
 
         /// <summary>Assigns the event channels. Used by the prefab generator.</summary>
         /// <param name="health">Normalised health channel.</param>
