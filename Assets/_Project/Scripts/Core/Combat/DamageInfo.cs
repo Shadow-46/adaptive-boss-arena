@@ -76,6 +76,15 @@ namespace AdaptiveBossArena.Core.Combat
         /// </remarks>
         public bool Unblockable { get; init; }
 
+        /// <summary>When true, a timed deflect does not refuse the hit.</summary>
+        /// <remarks>
+        /// The opposite pressure to <see cref="Unblockable"/>. That one takes an answer away from the
+        /// defender; this one protects a punish the attacker has already earned - a riposte into a
+        /// broken guard - from being waved away by the guard that broke. A defender who can block
+        /// still blocks it, at the block's usual cost, so it is not a free hit either.
+        /// </remarks>
+        public bool Unparryable { get; init; }
+
         /// <summary>Creates a hit description with sensible defaults for the fields not supplied.</summary>
         /// <param name="amount">Raw damage.</param>
         /// <param name="type">Hit category.</param>
@@ -134,7 +143,8 @@ namespace AdaptiveBossArena.Core.Combat
                 Stagger = source.Stagger,
                 HitStopSeconds = source.HitStopSeconds,
                 IgnoresInvulnerability = source.IgnoresInvulnerability,
-                Unblockable = source.Unblockable
+                Unblockable = source.Unblockable,
+                Unparryable = source.Unparryable
             };
     }
 

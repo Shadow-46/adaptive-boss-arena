@@ -818,7 +818,8 @@ namespace AdaptiveBossArena.Player
                 CanBlock = true,
                 TimeInDefenceSeconds = _parryState.TimeInState,
                 DeflectWindowSeconds = _context.DeflectWindowSeconds,
-                Unblockable = damage.Unblockable
+                Unblockable = damage.Unblockable,
+                Unparryable = damage.Unparryable
             });
 
         /// <summary>

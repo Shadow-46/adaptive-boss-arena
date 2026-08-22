@@ -376,6 +376,7 @@ namespace AdaptiveBossArena.Editor
             bool telegraph = true,
             Color? overlayColor = null,
             bool unblockable = false,
+            bool unparryable = false,
             bool leavesHazard = false,
             float hazardRadius = 2.5f,
             float hazardDamagePerTick = 4f,
@@ -412,6 +413,7 @@ namespace AdaptiveBossArena.Editor
                     .Float("_cameraTrauma", trauma)
                     .Bool("_showTelegraph", telegraph)
                     .Bool("_unblockable", unblockable)
+                    .Bool("_unparryable", unparryable)
                     .Bool("_leavesHazard", leavesHazard)
                     .Float("_hazardRadius", hazardRadius)
                     .Float("_hazardDamagePerTick", hazardDamagePerTick)
@@ -623,11 +625,17 @@ namespace AdaptiveBossArena.Editor
             // The execution: a devastating answer to a broken guard, thrown by the riposte state. Its
             // long active window and deep hit-stop read as a finishing strike, and the encounter
             // director turns a lethal one into a cinematic beat.
+            // Unparryable, and the only attack in the game that is. The player reaches this swing
+            // by breaking the boss's guard; letting the boss then deflect it would refuse a punish
+            // that has already been paid for, with the same stance that just failed. Note this is
+            // safe to mark only because the execution is its own asset - a weapon's _riposteAttack
+            // is the ordinary heavy, and marking that would make every heavy swing unparryable and
+            // remove the read the boss's parry exists to make.
             AttackDefinition execution = CreateAttack(
                 "PlayerExecution", "Execution", DamageType.Heavy,
                 damage: 72f, startup: 0.10f, active: 0.34f, recovery: 0.46f,
                 range: 2.9f, arc: 120f, poise: 60f, knockback: 8f, hitStop: 0.18f, trauma: 0.6f,
-                stagger: StaggerStrength.Break, overlayColor: PlayerSwingColor);
+                stagger: StaggerStrength.Break, unparryable: true, overlayColor: PlayerSwingColor);
 
             using (AssetAuthoring.AssetWriter writer = AssetAuthoring.Edit(config))
             {

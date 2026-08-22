@@ -91,6 +91,40 @@ namespace AdaptiveBossArena.Editor
                 {
                     problems.Add($"{config.name}: special attack is unresolved.");
                 }
+
+                ValidateExecution(config, problems);
+            }
+        }
+
+        /// <summary>
+        /// Asserts the execution exists and refuses to be deflected.
+        /// </summary>
+        /// <remarks>
+        /// Both halves matter, and neither is visible at author time. The riposte state throws
+        /// <c>ExecutionAttack</c>, which falls back through the weapon's riposte to the ordinary
+        /// heavy - so a config with no execution assigned does not fail, it silently downgrades the
+        /// punish to a normal swing that the boss's stance can then refuse. That is the exact shape
+        /// of bug this validator exists for: it runs, it looks fine, and a mechanic quietly stops
+        /// working.
+        /// </remarks>
+        /// <param name="config">The player config to inspect.</param>
+        /// <param name="problems">Collection to report failures into.</param>
+        private static void ValidateExecution(PlayerConfig config, ICollection<string> problems)
+        {
+            if (config.ExecutionAttack == null)
+            {
+                problems.Add(
+                    $"{config.name}: execution attack is unresolved, so a riposte falls back to " +
+                    "the ordinary heavy and can be parried away.");
+
+                return;
+            }
+
+            if (!config.ExecutionAttack.Unparryable)
+            {
+                problems.Add(
+                    $"{config.name}: execution attack '{config.ExecutionAttack.name}' is " +
+                    "parryable. A punish earned by breaking a guard must not be refused by it.");
             }
         }
 

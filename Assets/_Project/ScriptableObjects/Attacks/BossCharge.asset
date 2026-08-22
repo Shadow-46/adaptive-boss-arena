@@ -38,6 +38,7 @@ MonoBehaviour:
   _hazardDamagePerTick: 4
   _hazardDurationSeconds: 3
   _unblockable: 0
+  _unparryable: 0
   _telegraphColor: {r: 1, g: 0.35, b: 0.2, a: 0.55}
   _showTelegraph: 1
   _comboWindowStart: 0.1

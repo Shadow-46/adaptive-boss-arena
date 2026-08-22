@@ -156,6 +156,11 @@ namespace AdaptiveBossArena.Combat
                  "still avoids it. The 'perilous' attack; pair it with a distinct telegraph.")]
         private bool _unblockable;
 
+        [SerializeField]
+        [Tooltip("When true, this attack cannot be deflected. Reserved for a punish the defender " +
+                 "has already earned, such as a riposte thrown into a broken guard.")]
+        private bool _unparryable;
+
         [Header("Telegraph")]
         [SerializeField]
         [Tooltip("Colour of the ground telegraph drawn during startup. Boss attacks only.")]
@@ -263,6 +268,15 @@ namespace AdaptiveBossArena.Combat
         /// <summary>Whether a raised guard fails to stop this attack, so it must be dodged.</summary>
         public bool Unblockable => _unblockable;
 
+        /// <summary>Whether this attack refuses to be deflected.</summary>
+        /// <remarks>
+        /// Narrower than <see cref="Unblockable"/>, and pointed the other way. An unblockable attack
+        /// is a threat the defender must answer differently; an unparryable one is a punish the
+        /// attacker has already paid for - breaking a guard, then throwing the execution into it -
+        /// which should not then be refused by the same guard that just broke.
+        /// </remarks>
+        public bool Unparryable => _unparryable;
+
         /// <summary>Absolute time at which the combo window opens, measured from attack start.</summary>
         public float ComboWindowStartSeconds => ActiveEndSeconds + _recoverySeconds * _comboWindowStart;
 
@@ -284,6 +298,7 @@ namespace AdaptiveBossArena.Combat
             KnockbackSpeed = _knockbackSpeed,
             HitStopSeconds = _hitStopSeconds,
             Unblockable = _unblockable,
+            Unparryable = _unparryable,
             HitDirection = Vector3.forward
         };
 
