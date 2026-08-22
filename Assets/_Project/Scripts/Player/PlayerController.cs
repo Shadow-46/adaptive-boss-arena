@@ -347,11 +347,16 @@ namespace AdaptiveBossArena.Player
                 return ResolveEvasion();
             }
 
-            // A perilous (unblockable) attack slips past a raised guard entirely and must be dodged;
-            // the invulnerability check above still lets a dash avoid it.
-            if (DefenceResolver.GuardStopsHit(_context.IsGuarding, damage.Unblockable))
+            // One decision, shared with the boss. A perilous (unblockable) attack resolves as None
+            // here and slips past a raised guard entirely; the invulnerability check above still
+            // lets a dash avoid it.
+            switch (DescribeDefence(damage))
             {
-                return ResolveGuard(damage);
+                case DefenceOutcome.Deflected:
+                    return ResolveDeflect(damage);
+
+                case DefenceOutcome.Blocked:
+                    return ResolveBlock(damage);
             }
 
             // Run modifiers scale incoming damage (Fragile) and, in Training, hold the player one hit
@@ -795,23 +800,54 @@ namespace AdaptiveBossArena.Player
         /// the player improved rather than the game relented.
         /// </para>
         /// </remarks>
-        private DamageResult ResolveGuard(in DamageInfo damage)
-        {
-            if (_parryState.IsInDeflectWindow(_context))
+        /// <summary>
+        /// Asks the shared resolver how the player's guard meets an incoming hit.
+        /// </summary>
+        /// <remarks>
+        /// The player can always fall back on a block, so <c>CanBlock</c> is true here and false for
+        /// the boss. That single flag is the whole difference between the two combatants' defences;
+        /// everything else about the decision is the same function.
+        /// </remarks>
+        /// <param name="damage">The incoming hit.</param>
+        /// <returns>How the hit resolves against the guard.</returns>
+        private DefenceOutcome DescribeDefence(in DamageInfo damage) =>
+            DefenceResolver.ResolveDefence(new DefenceQuery
             {
-                _time.RequestHitStop(DeflectHitStopSeconds);
-                _screenShake?.AddTrauma(DeflectTrauma);
-                _screenShake?.Punch(DeflectTrauma);
+                IsDefending = _context.IsGuarding,
+                CanDeflect = _context.CanDeflect,
+                CanBlock = true,
+                TimeInDefenceSeconds = _parryState.TimeInState,
+                DeflectWindowSeconds = _context.DeflectWindowSeconds,
+                Unblockable = damage.Unblockable
+            });
 
-                // Carries the incoming direction so the sparks are thrown back the way the blow
-                // came from rather than in an undirected puff.
-                _context.PublishCombatEvent(CombatEventKind.Deflected, damage.HitDirection);
-                _deflectChannel?.Raise();
-                _focus?.AddFromDeflect();
+        /// <summary>
+        /// Refuses a hit met on the beat, at no cost to the player.
+        /// </summary>
+        /// <param name="damage">The incoming hit.</param>
+        /// <returns>A result carrying no damage.</returns>
+        private DamageResult ResolveDeflect(in DamageInfo damage)
+        {
+            _time.RequestHitStop(DeflectHitStopSeconds);
+            _screenShake?.AddTrauma(DeflectTrauma);
+            _screenShake?.Punch(DeflectTrauma);
 
-                return DamageResult.NoDamage(DamageOutcome.Blocked);
-            }
+            // Carries the incoming direction so the sparks are thrown back the way the blow
+            // came from rather than in an undirected puff.
+            _context.PublishCombatEvent(CombatEventKind.Deflected, damage.HitDirection);
+            _deflectChannel?.Raise();
+            _focus?.AddFromDeflect();
 
+            return DamageResult.NoDamage(DamageOutcome.Blocked);
+        }
+
+        /// <summary>
+        /// Absorbs a hit the guard was raised for but not timed for.
+        /// </summary>
+        /// <param name="damage">The incoming hit.</param>
+        /// <returns>The chip damage that got through.</returns>
+        private DamageResult ResolveBlock(in DamageInfo damage)
+        {
             // Late. The hit is survived but it costs, and enough of these break the guard outright. A
             // sustained guard bleeds slower here, which is what lets it be held rather than only timed.
             float chip = damage.Amount * _config.BlockChipFraction;

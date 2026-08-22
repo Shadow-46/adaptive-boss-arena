@@ -44,8 +44,23 @@ namespace AdaptiveBossArena.Player.States
         private const float GuardStaminaDrainPerSecond = 12f;
 
         /// <summary>True while a hit arriving now would be deflected outright.</summary>
+        /// <remarks>
+        /// Answered by the shared resolver rather than by a second copy of the timing rule, so what
+        /// this reports and what the damage path actually does cannot disagree. It is asked with no
+        /// particular hit in mind, which is why it is a presentation read - the stamina drain and
+        /// any tell - and not the decision itself.
+        /// </remarks>
+        /// <param name="context">The player context.</param>
+        /// <returns>Whether the deflect window is currently open.</returns>
         public bool IsInDeflectWindow(PlayerContext context) =>
-            context.CanDeflect && TimeInState <= context.DeflectWindowSeconds;
+            DefenceResolver.ResolveDefence(new DefenceQuery
+            {
+                IsDefending = true,
+                CanDeflect = context.CanDeflect,
+                CanBlock = true,
+                TimeInDefenceSeconds = TimeInState,
+                DeflectWindowSeconds = context.DeflectWindowSeconds
+            }) == DefenceOutcome.Deflected;
 
         /// <summary>True once the guard may be released.</summary>
         /// <param name="context">The player context.</param>
