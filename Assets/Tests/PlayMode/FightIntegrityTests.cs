@@ -56,6 +56,23 @@ namespace AdaptiveBossArena.Tests.PlayMode
             _boss = Object.FindAnyObjectByType<BossController>();
         }
 
+        /// <summary>Waits until the intro releases and the combat clock is actually running.</summary>
+        private static IEnumerator WaitForTheFightToStart()
+        {
+            const float GiveUpAfterSeconds = 15f;
+
+            float waited = 0f;
+
+            while (Time.timeScale <= 0f && waited < GiveUpAfterSeconds)
+            {
+                waited += Time.unscaledDeltaTime;
+
+                yield return null;
+            }
+
+            Assert.Less(waited, GiveUpAfterSeconds, "The fight never started.");
+        }
+
         [UnityTest]
         public IEnumerator TheArenaBringsUpBothCombatants()
         {
@@ -236,6 +253,52 @@ namespace AdaptiveBossArena.Tests.PlayMode
             Assert.Greater(
                 attacksStarted, 0,
                 "The boss threw no attacks in 25 seconds against a stationary player.");
+        }
+
+        [UnityTest]
+        public IEnumerator ABrokenGuardStillAnnouncesItself()
+        {
+            // A regression this nearly shipped. The boss's stagger state used to publish PoiseBroken
+            // on every entry; once the reason travelled with the request, publishing was gated on
+            // the reason being a break - and every poise-break call site still defaulted to an
+            // ordinary hit. The result compiled, passed, and silently removed the loudest beat in
+            // the fight. Nothing had ever asserted it was published.
+            Assert.IsNotNull(_boss, "No boss in the arena scene.");
+            Assert.IsTrue(ServiceRegistry.Current.TryGet(out ICombatEventBus events), "No event bus.");
+
+            bool announced = false;
+            void Listen(CombatEvent recorded)
+            {
+                if (recorded.Kind == CombatEventKind.PoiseBroken)
+                {
+                    announced = true;
+                }
+            }
+
+            // The encounter opens with a ready-fight intro that freezes time, so the boss's state
+            // machine is not ticking yet and a stagger requested now would sit unconsumed. Waiting
+            // for the clock rather than for a fixed number of frames keeps this independent of how
+            // long the intro is tuned to run.
+            yield return WaitForTheFightToStart();
+
+            events.EventRecorded += Listen;
+
+            try
+            {
+                // Far more posture than the pool holds, so the break is certain rather than tuned.
+                _boss.ApplyDeflectPosture(_boss.Poise.Maximum * 2f);
+
+                for (int i = 0; i < WarmUpFrames; i++)
+                {
+                    yield return null;
+                }
+            }
+            finally
+            {
+                events.EventRecorded -= Listen;
+            }
+
+            Assert.IsTrue(announced, "The boss's guard broke and nothing announced it.");
         }
 
         [UnityTest]

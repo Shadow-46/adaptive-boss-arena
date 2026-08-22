@@ -413,6 +413,8 @@ namespace AdaptiveBossArena.AI.States
     {
         private float _remainingSeconds;
 
+        private StaggerReason _reason;
+
         /// <summary>True once the interruption has run its course.</summary>
         /// <param name="context">The boss context.</param>
         /// <returns>Whether the boss may act again.</returns>
@@ -422,10 +424,20 @@ namespace AdaptiveBossArena.AI.States
         protected override void OnEnter(BossContext context)
         {
             _remainingSeconds = context.RequestedStaggerSeconds;
+            _reason = context.RequestedStaggerReason;
             context.StaggerRequested = false;
+            context.RequestedStaggerReason = StaggerReason.Hit;
 
             context.Motor.Halt();
-            context.PublishCombatEvent(CombatEventKind.PoiseBroken);
+
+            // Announced only when the guard actually broke. PoiseBroken throws the loudest burst and
+            // cue in the game, and firing it for a parry recoil would tell the player they had won
+            // something they had not - the parry has its own, quieter feedback at the moment of
+            // contact.
+            if (_reason == StaggerReason.PoiseBreak)
+            {
+                context.PublishCombatEvent(CombatEventKind.PoiseBroken);
+            }
         }
 
         /// <inheritdoc />
@@ -435,6 +447,21 @@ namespace AdaptiveBossArena.AI.States
             {
                 _remainingSeconds = Mathf.Max(_remainingSeconds, context.RequestedStaggerSeconds);
                 context.StaggerRequested = false;
+
+                // A poise break arriving on the same frame as a parry recoil must not be downgraded
+                // to one. Clearing the reason afterwards matters as much: left set, the next
+                // ordinary stagger would inherit it and announce the wrong thing.
+                if (context.RequestedStaggerReason > _reason)
+                {
+                    _reason = context.RequestedStaggerReason;
+
+                    if (_reason == StaggerReason.PoiseBreak)
+                    {
+                        context.PublishCombatEvent(CombatEventKind.PoiseBroken);
+                    }
+                }
+
+                context.RequestedStaggerReason = StaggerReason.Hit;
             }
 
             _remainingSeconds -= deltaTime;

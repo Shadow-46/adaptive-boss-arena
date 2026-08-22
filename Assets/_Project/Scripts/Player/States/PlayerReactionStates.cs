@@ -1,3 +1,4 @@
+using AdaptiveBossArena.Combat;
 using AdaptiveBossArena.Core.Perception;
 using AdaptiveBossArena.Core.StateMachine;
 using UnityEngine;
@@ -29,6 +30,12 @@ namespace AdaptiveBossArena.Player.States
             _remainingSeconds = context.RequestedStaggerSeconds;
             context.StaggerRequested = false;
 
+            // The player's stagger announces nothing, so the reason has no presentation to get
+            // wrong here - but it is consumed all the same. Left set, the next ordinary hit would
+            // inherit it, and the boss's stagger, which does announce itself, shares the field's
+            // contract.
+            context.RequestedStaggerReason = StaggerReason.Hit;
+
             // Buffered presses from before the hit would otherwise fire the instant control returns,
             // spending an attack or a dash the player no longer wants.
             context.InputBuffer.Clear();
@@ -44,6 +51,7 @@ namespace AdaptiveBossArena.Player.States
             {
                 _remainingSeconds = Mathf.Max(_remainingSeconds, context.RequestedStaggerSeconds);
                 context.StaggerRequested = false;
+                context.RequestedStaggerReason = StaggerReason.Hit;
             }
 
             _remainingSeconds -= deltaTime;

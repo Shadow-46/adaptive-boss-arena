@@ -211,6 +211,8 @@ namespace AdaptiveBossArena.AI
                 _config, transform, motor, _health, _poise, attacks,
                 _perception, tuning, _time, random, _events);
 
+            attacks.Parried += OnOwnAttackParried;
+
             _selector = new BossAttackSelector(random);
 
             BuildLearning(random);
@@ -503,11 +505,24 @@ namespace AdaptiveBossArena.AI
             // the posture break that opens the execution — the concrete reward for baiting the read.
             if (_poise.ApplyPoiseDamage(damage.PoiseDamage * _context.IncomingPoiseMultiplier))
             {
-                _context.RequestStagger(PoiseBreakStaggerSeconds);
+                _context.RequestStagger(PoiseBreakStaggerSeconds, StaggerReason.PoiseBreak);
             }
 
             return DamageResult.Applied(applied, !_health.IsAlive);
         }
+
+        /// <summary>
+        /// Recoils from a swing the player deflected.
+        /// </summary>
+        /// <remarks>
+        /// The boss's half of the same exchange, and deferred for the same reason as the player's:
+        /// this runs inside the attack executor's phase-stepping loop, so the swing is torn down by
+        /// the stagger it requests rather than cancelled here. Until now a deflect only moved the
+        /// boss's posture; the swing itself carried on through the guard as though nothing had
+        /// happened, which is most of why deflecting never felt like winning an exchange.
+        /// </remarks>
+        private void OnOwnAttackParried() =>
+            _context.RequestStagger(StaggerDurations.InterruptSeconds, StaggerReason.Parried);
 
         /// <summary>Restores the boss to its starting condition for a retry.</summary>
         /// <param name="spawnPosition">Where to place the boss.</param>
@@ -883,7 +898,7 @@ namespace AdaptiveBossArena.AI
 
             if (_poise.ApplyPoiseDamage(postureDamage))
             {
-                _context.RequestStagger(PoiseBreakStaggerSeconds);
+                _context.RequestStagger(PoiseBreakStaggerSeconds, StaggerReason.PoiseBreak);
             }
         }
 

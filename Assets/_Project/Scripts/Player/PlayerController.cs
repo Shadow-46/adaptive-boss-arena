@@ -257,6 +257,8 @@ namespace AdaptiveBossArena.Player
             _context = new PlayerContext(
                 _config, motor, _health, _stamina, _input, new InputBuffer(), _time, attacks, _events);
 
+            attacks.Parried += OnOwnAttackParried;
+
             BuildStateMachine();
             SubscribeToVitals();
 
@@ -863,7 +865,7 @@ namespace AdaptiveBossArena.Player
 
             if (_posture.ApplyPoiseDamage(postureCost))
             {
-                _context.RequestStagger(StaggerDurations.BreakSeconds);
+                _context.RequestStagger(StaggerDurations.BreakSeconds, StaggerReason.PoiseBreak);
                 _focus?.Reset();
             }
 
@@ -1012,6 +1014,19 @@ namespace AdaptiveBossArena.Player
 
             _context.IsThreatPostureBroken = isBroken;
         }
+
+        /// <summary>
+        /// Recoils from a swing the boss met on the beat.
+        /// </summary>
+        /// <remarks>
+        /// Requested rather than applied. This runs from inside the attack executor's own
+        /// phase-stepping loop, so tearing the swing down here would re-enter a loop still in
+        /// progress. A stagger request defers it by one tick, and the attack state's exit already
+        /// cancels the swing on the way out - the recoil and the cancellation are the same
+        /// mechanism, which is why no second one was added.
+        /// </remarks>
+        private void OnOwnAttackParried() =>
+            _context.RequestStagger(StaggerDurations.InterruptSeconds, StaggerReason.Parried);
 
         /// <summary>Player posture, exposed for the guard bar.</summary>
         public IPoise Posture => _posture;

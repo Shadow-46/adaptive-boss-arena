@@ -149,6 +149,9 @@ namespace AdaptiveBossArena.AI
         /// <summary>Duration of the interruption being requested.</summary>
         public float RequestedStaggerSeconds { get; set; }
 
+        /// <summary>What caused the interruption being requested.</summary>
+        public StaggerReason RequestedStaggerReason { get; set; }
+
         /// <summary>True while the boss is committed to a parry attempt.</summary>
         public bool IsParrying { get; set; }
 
@@ -226,10 +229,26 @@ namespace AdaptiveBossArena.AI
 
         /// <summary>Records that a hit should interrupt the boss.</summary>
         /// <param name="durationSeconds">How long the interruption should last.</param>
-        public void RequestStagger(float durationSeconds)
+        public void RequestStagger(float durationSeconds) =>
+            RequestStagger(durationSeconds, StaggerReason.Hit);
+
+        /// <summary>
+        /// Requests an interruption, saying what caused it.
+        /// </summary>
+        /// <remarks>
+        /// The reason travels with the request because the stagger state announces itself, and a
+        /// parry recoil announced as a poise break would tell the player their guard had broken when
+        /// it had not. A request arriving while an interruption is already running keeps the more
+        /// severe of the two reasons, so the louder truth is never downgraded by a quieter one
+        /// landing on the same frame.
+        /// </remarks>
+        /// <param name="durationSeconds">How long the interruption lasts.</param>
+        /// <param name="reason">What caused it.</param>
+        public void RequestStagger(float durationSeconds, StaggerReason reason)
         {
             StaggerRequested = true;
             RequestedStaggerSeconds = Mathf.Max(0f, durationSeconds);
+            RequestedStaggerReason = reason;
         }
 
         /// <summary>Advances timers that run regardless of the active state.</summary>
