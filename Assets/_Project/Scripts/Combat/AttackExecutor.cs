@@ -340,6 +340,24 @@ namespace AdaptiveBossArena.Combat
             if (phase == AttackPhase.Active)
             {
                 TrySpawnHazard(_timeline.CurrentAttack);
+
+                // Resolved here as well as per frame, so entering the window always tests it at
+                // least once. The timeline steps one phase at a time specifically so a long frame
+                // cannot skip past an active window without the hitbox opening -- but Tick then
+                // reads the phase only after that stepping has finished, so a frame long enough to
+                // cross startup, active and recovery together ended on recovery and never queried
+                // at all. The swing looked like it should have connected and nothing happened.
+                //
+                // Running twice on an ordinary frame is harmless: the already-struck set dedupes
+                // per swing, so the second pass is a no-op for anything already hit and can still
+                // catch something that moved in.
+                //
+                // One constraint this creates: damage is now applied from inside the timeline's own
+                // phase-stepping loop, so nothing reached from a damage path may cancel this
+                // executor's timeline synchronously. Every Cancel call site today sits in a state
+                // tick or a state exit, so none does -- but a deflect that aborts the attacker's
+                // swing would, and must therefore defer rather than cancel inline.
+                ResolveHits(_timeline.CurrentAttack);
             }
 
             PhaseChanged?.Invoke(phase);
