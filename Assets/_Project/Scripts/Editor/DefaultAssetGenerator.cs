@@ -292,10 +292,14 @@ namespace AdaptiveBossArena.Editor
 
         private static BossAttacks CreateBossAttacks()
         {
+            // 120 degrees, down from 160. At 4 m reach a 160-degree wedge covered nearly everything
+            // in front of the boss, so the only answer to it was to back out of range - spacing
+            // mattered but position did not. At 120 there is a flank to move to, which is the read
+            // the fight is built around.
             AttackDefinition sweep = CreateAttack(
                 "BossSweep", "Wide Sweep", DamageType.BossMelee,
                 damage: 12f, startup: 0.45f, active: 0.12f, recovery: 0.45f,
-                range: 4f, arc: 160f, poise: 20f, knockback: 5f, hitStop: 0.06f, trauma: 0.25f,
+                range: 4f, arc: 120f, poise: 20f, knockback: 5f, hitStop: 0.06f, trauma: 0.25f,
                 telegraph: true);
 
             AttackDefinition slam = CreateAttack(
@@ -375,7 +379,9 @@ namespace AdaptiveBossArena.Editor
             bool leavesHazard = false,
             float hazardRadius = 2.5f,
             float hazardDamagePerTick = 4f,
-            float hazardDuration = 3f)
+            float hazardDuration = 3f,
+            Vector3? offset = null,
+            Vector3? boxHalfExtents = null)
         {
             var attack = AssetAuthoring.CreateOrLoad<AttackDefinition>(
                 $"{AttackFolder}/{assetName}.asset", out bool created);
@@ -410,6 +416,22 @@ namespace AdaptiveBossArena.Editor
                     .Float("_hazardRadius", hazardRadius)
                     .Float("_hazardDamagePerTick", hazardDamagePerTick)
                     .Float("_hazardDurationSeconds", hazardDuration);
+
+                // Only written for a box, whose extents are the whole hitbox. Every other shape
+                // reads its size from range and arc, and would be given a misleading box to look at
+                // in the inspector for no benefit.
+                if (shape == AttackShape.Box && boxHalfExtents.HasValue)
+                {
+                    writer.Vector3("_boxHalfExtents", boxHalfExtents.Value);
+                }
+
+                // An arc reads only the height from the offset - it centres on the attacker by
+                // design, so writing a forward component would be misleading rather than wrong.
+                // A box is placed entirely by it.
+                if (offset.HasValue)
+                {
+                    writer.Vector3("_offset", offset.Value);
+                }
 
                 if (overlayColor.HasValue)
                 {
@@ -777,11 +799,20 @@ namespace AdaptiveBossArena.Editor
                 range: 2.1f, arc: 120f, poise: 18f, knockback: 3.5f, hitStop: 0.06f, trauma: 0.18f,
                 overlayColor: EnergySwingColor);
 
+            // The only box in the game, and the one attack that should be. A 40-degree cone at 3.4 m
+            // is a wedge wide enough to catch someone standing well off to the side, which is not
+            // what a lunge looks like. A narrow box along +Z hits what the animation points at and
+            // misses what it does not, so sidestepping a thrust works the way it should.
+            // Centred at z = 2.0 with a 1.4 m half-depth, the box spans 0.6 m to 3.4 m ahead: it
+            // reaches exactly as far as the arc did, without the dead zone inside the guard.
             AttackDefinition thrust = CreateAttack(
                 "EnergyHeavy", "Lunge Thrust", DamageType.Heavy,
                 damage: 30f, startup: 0.22f, active: 0.08f, recovery: 0.4f,
                 range: 3.4f, arc: 40f, poise: 30f, knockback: 5f, hitStop: 0.10f, trauma: 0.3f,
                 staminaCost: 22f, lungeSpeed: 8f, stagger: StaggerStrength.Interrupt,
+                shape: AttackShape.Box,
+                offset: new Vector3(0f, 1.1f, 2f),
+                boxHalfExtents: new Vector3(0.5f, 0.6f, 1.4f),
                 overlayColor: EnergySwingColor);
 
             AttackDefinition dance = CreateAttack(

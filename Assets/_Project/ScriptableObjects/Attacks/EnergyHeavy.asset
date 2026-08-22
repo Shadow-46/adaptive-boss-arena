@@ -24,11 +24,11 @@ MonoBehaviour:
   _startupSeconds: 0.22
   _activeSeconds: 0.08
   _recoverySeconds: 0.4
-  _shape: 2
-  _offset: {x: 0, y: 1, z: 1}
+  _shape: 1
+  _offset: {x: 0, y: 1.1, z: 2}
   _range: 3.4
   _arcDegrees: 40
-  _boxHalfExtents: {x: 0.6, y: 0.6, z: 1}
+  _boxHalfExtents: {x: 0.5, y: 0.6, z: 1.4}
   _staminaCost: 22
   _lungeSpeed: 8
   _hitStopSeconds: 0.1

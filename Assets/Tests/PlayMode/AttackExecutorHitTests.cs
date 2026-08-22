@@ -121,6 +121,74 @@ namespace AdaptiveBossArena.Tests.PlayMode
             return _attack;
         }
 
+        /// <summary>Builds the lunge thrust's shape: a narrow box reaching straight ahead.</summary>
+        /// <remarks>
+        /// Box was implemented in the detector, the gizmo and the telegraph mesh, and referenced by
+        /// no attack asset in the game — so nothing had ever exercised it end to end. The thrust now
+        /// uses it, and these are the tests that say the path works. Numbers match the asset: a
+        /// 1.4 m half-depth centred 2 m ahead, half a metre wide.
+        /// </remarks>
+        private AttackDefinition MakeBoxAttack()
+        {
+            MakeAttack();
+
+            Set("_shape", AttackShape.Box);
+            Set("_offset", new Vector3(0f, 1.1f, 2f));
+            Set("_boxHalfExtents", new Vector3(0.5f, 0.6f, 1.4f));
+
+            return _attack;
+        }
+
+        /// <summary>Runs an attack to completion against an already-spawned target.</summary>
+        private void SwingAt(AttackDefinition attack, Transform attacker)
+        {
+            var time = new ScriptedTime();
+            var events = new CombatEventBus();
+
+            var executor = new AttackExecutor(
+                attacker, CombatantTeam.Player, Layers.PlayerAttackMask, time, events);
+
+            executor.Begin(attack, 1.5f);
+
+            for (int i = 0; i < 40; i++)
+            {
+                time.DeltaTime = 0.01f;
+                time.CombatTime += 0.01f;
+                executor.Tick(0.01f);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator ABoxAttackLandsOnATargetInItsPath()
+        {
+            GameObject attacker = Spawn("Attacker");
+            RecordingTarget target = SpawnTarget(Vector3.forward * 2f);
+
+            // Awake has to run before the hurtbox can resolve its owner.
+            yield return null;
+
+            SwingAt(MakeBoxAttack(), attacker.transform);
+
+            Assert.AreEqual(
+                1, target.Hits.Count, "A thrust did not hit a target standing in front of it.");
+        }
+
+        [UnityTest]
+        public IEnumerator ABoxAttackMissesATargetStandingAside()
+        {
+            GameObject attacker = Spawn("Attacker");
+            RecordingTarget target = SpawnTarget(new Vector3(3f, 0f, 2f));
+
+            yield return null;
+
+            SwingAt(MakeBoxAttack(), attacker.transform);
+
+            // The whole point of making the thrust a box: at this angle the old 40-degree cone,
+            // widened by the target's own width, still reached — so sidestepping a lunge did little.
+            Assert.AreEqual(
+                0, target.Hits.Count, "A thrust hit a target standing well off to the side.");
+        }
+
         /// <summary>Writes one of the attack's serialized fields.</summary>
         private void Set(string fieldName, object value)
         {

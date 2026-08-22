@@ -27,7 +27,7 @@ MonoBehaviour:
   _shape: 2
   _offset: {x: 0, y: 1, z: 1}
   _range: 4
-  _arcDegrees: 160
+  _arcDegrees: 120
   _boxHalfExtents: {x: 0.6, y: 0.6, z: 1}
   _staminaCost: 0
   _lungeSpeed: 0
