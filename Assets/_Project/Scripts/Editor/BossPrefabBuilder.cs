@@ -25,6 +25,23 @@ namespace AdaptiveBossArena.Editor
         private const float BodyRadius = 0.9f;
         private const float HurtboxRadius = 0.85f;
 
+        // The weak point sits over the glowing core the brute silhouette already carries, and is
+        // deliberately wider than the art it covers: a 0.3 m sphere would be a pixel-hunt at combat
+        // speed, and the decision worth asking for is where the player stands, not how precisely
+        // they aim. Both numbers are read together with SilhouetteBuilder's Core part, which is
+        // placed at the same fractions of height and radius.
+        private const float WeakPointRadius = 0.45f;
+        private const float WeakPointHeightFraction = 0.63f;
+        private const float WeakPointForwardFraction = 0.56f;
+
+        /// <summary>Damage scaling for hits landing on the core.</summary>
+        /// <remarks>
+        /// Chosen so a full light chain to the core is clearly better than one to the flank without
+        /// making anything else pointless. The trade the player is being offered is that the core
+        /// faces them only while the boss does too, so the extra damage is paid for in risk.
+        /// </remarks>
+        private const float WeakPointMultiplier = 1.6f;
+
         private static readonly Color BossColor = new Color(0.85f, 0.25f, 0.3f);
         private static readonly Color WeakPointColor = new Color(1f, 0.85f, 0.3f);
 
@@ -135,6 +152,45 @@ namespace AdaptiveBossArena.Editor
             collider.center = new Vector3(0f, BodyHeight * 0.5f, 0f);
 
             hurtboxObject.AddComponent<Hurtbox>();
+
+            BuildWeakPoint(parent);
+        }
+
+        /// <summary>
+        /// Adds the second, higher-multiplier hurtbox over the boss's forward core.
+        /// </summary>
+        /// <remarks>
+        /// Parented to the root rather than to the visual, for the same reason the body hurtbox is:
+        /// the visual leans and bobs under the animator, and a hitbox that moved with an idle
+        /// animation would make the same swing land differently from one moment to the next.
+        /// <para>
+        /// It sits entirely inside the body capsule, which is intended. Both are found by a swing
+        /// from the front, and <see cref="AttackHitDetector"/> resolves that overlap in favour of
+        /// the higher multiplier — so the core rewards fighting the boss face-on, where its own
+        /// attacks are pointed.
+        /// </para>
+        /// </remarks>
+        private static void BuildWeakPoint(Transform parent)
+        {
+            var weakPointObject = new GameObject("WeakPoint")
+            {
+                layer = Layers.BossHurtbox
+            };
+
+            weakPointObject.transform.SetParent(parent, false);
+
+            SphereCollider collider = weakPointObject.AddComponent<SphereCollider>();
+            collider.isTrigger = true;
+            collider.radius = WeakPointRadius;
+            collider.center = new Vector3(
+                0f, BodyHeight * WeakPointHeightFraction, BodyRadius * WeakPointForwardFraction);
+
+            var hurtbox = weakPointObject.AddComponent<Hurtbox>();
+
+            using (AssetAuthoring.AssetWriter writer = AssetAuthoring.Edit(hurtbox))
+            {
+                writer.Float("_damageMultiplier", WeakPointMultiplier);
+            }
         }
 
         private static void WireComponents(GameObject root)

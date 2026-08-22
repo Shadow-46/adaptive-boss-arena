@@ -121,6 +121,48 @@ namespace AdaptiveBossArena.Tests.PlayMode
             return _attack;
         }
 
+        /// <summary>Adds a second, higher-multiplier hurtbox over the same combatant.</summary>
+        private void AddWeakPoint(RecordingTarget owner, float multiplier)
+        {
+            GameObject weakPointObject = Spawn("WeakPoint");
+            weakPointObject.transform.SetParent(owner.transform, false);
+            weakPointObject.layer = Layers.BossHurtbox;
+
+            SphereCollider collider = weakPointObject.AddComponent<SphereCollider>();
+            collider.isTrigger = true;
+            collider.radius = 0.45f;
+
+            var hurtbox = weakPointObject.AddComponent<Hurtbox>();
+
+            FieldInfo field = typeof(Hurtbox).GetField(
+                "_damageMultiplier", BindingFlags.Instance | BindingFlags.NonPublic);
+
+            Assert.IsNotNull(field, "Hurtbox has no field '_damageMultiplier'.");
+            field.SetValue(hurtbox, multiplier);
+        }
+
+        [UnityTest]
+        public IEnumerator AWeakPointWinsOverTheBodyItSitsInside()
+        {
+            // The boss's weak point is a small sphere entirely inside its body capsule, so a swing
+            // from the front overlaps both. The executor's already-struck set keys on the owner, so
+            // only one of them can ever be applied — and Physics returns overlaps in no defined
+            // order. Without the detector resolving the tie, aiming for the core would be a coin
+            // flip, which is worse than not having a weak point at all.
+            GameObject attacker = Spawn("Attacker");
+            RecordingTarget target = SpawnTarget(Vector3.forward * 1.5f);
+            AddWeakPoint(target, 1.6f);
+
+            yield return null;
+
+            SwingAt(MakeAttack(), attacker.transform);
+
+            Assert.AreEqual(1, target.Hits.Count, "Two hurtboxes on one body dealt damage twice.");
+            Assert.AreEqual(
+                16f, target.Hits[0].Amount, 0.001f,
+                "The hit was not scaled by the weak point's multiplier.");
+        }
+
         /// <summary>Builds the lunge thrust's shape: a narrow box reaching straight ahead.</summary>
         /// <remarks>
         /// Box was implemented in the detector, the gizmo and the telegraph mesh, and referenced by

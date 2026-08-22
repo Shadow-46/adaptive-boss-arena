@@ -73,6 +73,29 @@ namespace AdaptiveBossArena.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator TheBossInTheSceneCarriesItsWeakPoint()
+        {
+            Assert.IsNotNull(_boss, "No boss in the arena scene.");
+
+            Hurtbox[] hurtboxes = _boss.GetComponentsInChildren<Hurtbox>();
+
+            // The weak point lives on the prefab, and the scene is built from the prefab. Every part
+            // of that chain has broken silently at least once in this project, and a weak point that
+            // does not exist looks exactly like one the player keeps failing to hit.
+            Assert.AreEqual(
+                1,
+                System.Array.FindAll(hurtboxes, h => h.DamageMultiplier > 1f).Length,
+                "The boss in the arena has no weak point, or more than one.");
+
+            Assert.AreEqual(
+                1,
+                System.Array.FindAll(hurtboxes, h => Mathf.Approximately(h.DamageMultiplier, 1f)).Length,
+                "The boss lost the ordinary body hurtbox its weak point is meant to sit inside.");
+
+            yield return null;
+        }
+
+        [UnityTest]
         public IEnumerator AHitOnThePlayerReducesTheirHealth()
         {
             Assert.IsNotNull(_player);

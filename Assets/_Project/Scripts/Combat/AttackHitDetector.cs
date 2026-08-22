@@ -54,8 +54,44 @@ namespace AdaptiveBossArena.Combat
                     continue;
                 }
 
-                _resultBuffer[resultCount++] = hurtbox;
+                resultCount = AddPreferringWeakPoint(hurtbox, resultCount);
             }
+
+            return resultCount;
+        }
+
+        /// <summary>
+        /// Records a hurtbox, keeping only the most valuable one per combatant.
+        /// </summary>
+        /// <remarks>
+        /// A boss with a weak point carries several hurtboxes, and a wide swing can overlap more
+        /// than one of them at once. The executor's already-struck set keys on the owner, so only
+        /// the first of those would ever be applied — and physics returns overlaps in no defined
+        /// order, which would make hitting the weak point a coin flip rather than a decision.
+        /// Resolving the choice here, in favour of the highest multiplier, makes aiming for the core
+        /// worth doing: if the swing reached it, it counts.
+        /// </remarks>
+        /// <param name=hurtbox>The newly found hurtbox.</param>
+        /// <param name=resultCount>How many results have been recorded so far.</param>
+        /// <returns>The new result count.</returns>
+        private int AddPreferringWeakPoint(Hurtbox hurtbox, int resultCount)
+        {
+            for (int i = 0; i < resultCount; i++)
+            {
+                if (!ReferenceEquals(_resultBuffer[i].Owner, hurtbox.Owner))
+                {
+                    continue;
+                }
+
+                if (hurtbox.DamageMultiplier > _resultBuffer[i].DamageMultiplier)
+                {
+                    _resultBuffer[i] = hurtbox;
+                }
+
+                return resultCount;
+            }
+
+            _resultBuffer[resultCount++] = hurtbox;
 
             return resultCount;
         }
