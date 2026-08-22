@@ -108,17 +108,71 @@ namespace AdaptiveBossArena.Combat
             Vector3 toTarget = target.bounds.center - origin.position;
             toTarget.y = 0f;
 
-            if (toTarget.sqrMagnitude < Mathf.Epsilon)
-            {
-                // Standing exactly on top of the attacker counts as hit; there is no meaningful
-                // direction to reject, and a miss at point-blank range would look like a bug.
-                return true;
-            }
-
             Vector3 forward = origin.forward;
             forward.y = 0f;
 
-            return Vector3.Angle(forward, toTarget) <= attack.ArcDegrees * 0.5f;
+            // The horizontal half-width of the body. For the capsules both combatants use, the two
+            // horizontal extents are the capsule radius.
+            Vector3 extents = target.bounds.extents;
+            float targetRadius = Mathf.Max(extents.x, extents.z);
+
+            return IsWithinArc(forward, toTarget, targetRadius, attack.ArcDegrees);
+        }
+
+        /// <summary>
+        /// Decides whether a body of a given width falls inside a swing's wedge.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The angle is measured to the target's centre, but the test allows for the target having
+        /// width. Comparing the centre angle alone against the arc — which is what this did
+        /// originally — silently requires the target's <em>axis</em> to be inside the wedge, and
+        /// throws away everything between the axis and the near edge of the body.
+        /// </para>
+        /// <para>
+        /// That is not a small error. The boss's hurtbox has a radius of 0.85 m, so at 2.5 m it
+        /// spans about 39 degrees; up to 19 of those on each side were being discarded. A swing whose
+        /// wedge visibly overlapped the boss was rejected because its middle did not, which is
+        /// exactly the "that clearly hit it" complaint, and it was worst on the narrow attacks and
+        /// against the largest target.
+        /// </para>
+        /// <para>
+        /// Pure and static so the geometry can be tested directly, without a scene, a collider or a
+        /// physics step.
+        /// </para>
+        /// </remarks>
+        /// <param name="forward">Attacker's facing, flattened to the horizontal plane.</param>
+        /// <param name="toTarget">Attacker to target centre, flattened to the horizontal plane.</param>
+        /// <param name="targetRadius">Half-width of the target's body.</param>
+        /// <param name="arcDegrees">Full angular width of the swing.</param>
+        /// <returns>True when any part of the body lies within the wedge.</returns>
+        public static bool IsWithinArc(
+            Vector3 forward, Vector3 toTarget, float targetRadius, float arcDegrees)
+        {
+            float distance = toTarget.magnitude;
+
+            // Standing on top of the attacker counts as a hit: there is no meaningful direction to
+            // reject, and a miss at point-blank range reads as a bug.
+            if (distance < Mathf.Epsilon)
+            {
+                return true;
+            }
+
+            float radius = Mathf.Max(0f, targetRadius);
+
+            // A body wider than its own distance encloses the attacker, so there is no direction it
+            // could be swung at that would not meet it. Left to the arithmetic below this saturates
+            // at a quarter turn instead, which would reject a swing at something pressed against and
+            // slightly behind the attacker while it was demonstrably overlapping them.
+            if (radius >= distance)
+            {
+                return true;
+            }
+
+            // How far off-axis the body's near edge reaches.
+            float subtendedHalfAngle = Mathf.Asin(Mathf.Clamp01(radius / distance)) * Mathf.Rad2Deg;
+
+            return Vector3.Angle(forward, toTarget) <= (arcDegrees * 0.5f) + subtendedHalfAngle;
         }
 
         /// <summary>Draws the attack volume for debugging, in the editor only.</summary>
