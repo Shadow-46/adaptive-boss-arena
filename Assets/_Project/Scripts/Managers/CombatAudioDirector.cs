@@ -184,6 +184,14 @@ namespace AdaptiveBossArena.Game
                     _audio.PlayCue(AudioService.Cues.Block, combatEvent.Position);
                     break;
 
+                case CombatEventKind.Parried when combatEvent.Actor != CombatantTeam.Player:
+                    // The boss parrying. The player's own deflect already rings through the deflect
+                    // channel, flat, because it happens at the player's own ear; this one happened
+                    // somewhere else, so it is placed - and filtered, or a player deflect would
+                    // clang twice.
+                    _audio.PlayCue(AudioService.Cues.Deflect, combatEvent.Position);
+                    break;
+
                 case CombatEventKind.GuardRaised:
                     _audio.PlayCue2D(AudioService.Cues.GuardRaise);
                     break;

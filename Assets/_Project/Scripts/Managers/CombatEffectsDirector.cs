@@ -170,6 +170,14 @@ namespace AdaptiveBossArena.Game
                     Burst(combatEvent.Position, -combatEvent.Direction, ImpactFlavour.Block);
                     break;
 
+                case CombatEventKind.Parried when combatEvent.Actor != CombatantTeam.Player:
+                    // Only when someone other than the player parried. The player's own deflect
+                    // publishes Deflected as well and is served by the case above; bursting on both
+                    // would double the sparks on the single most important beat in the fight, which
+                    // is the same mistake the comment there already guards against.
+                    Burst(combatEvent.Position, -combatEvent.Direction, ImpactFlavour.Deflect);
+                    break;
+
                 case CombatEventKind.PoiseBroken:
                     Burst(combatEvent.Position, Vector3.up, ImpactFlavour.PostureBreak);
                     break;

@@ -111,6 +111,18 @@ namespace AdaptiveBossArena.Combat
         /// <summary>Raised whenever the running attack changes phase.</summary>
         public event Action<AttackPhase> PhaseChanged;
 
+        /// <summary>
+        /// Raised when this attack was met on the beat and refused.
+        /// </summary>
+        /// <remarks>
+        /// <b>A handler may set flags only.</b> This fires from inside the timeline's phase-stepping
+        /// loop, so calling <see cref="Cancel"/> from a handler re-enters that loop while it is
+        /// still running. The recoil a parry deserves must therefore be requested and acted on next
+        /// tick — which the stagger request already does, since entering the stagger state exits the
+        /// attack state and its exit cancels the swing.
+        /// </remarks>
+        public event Action Parried;
+
         /// <summary>Begins an attack, replacing any already running.</summary>
         /// <param name="attack">The attack to perform.</param>
         /// <param name="separationDistance">Distance to the opponent, recorded with the event.</param>
@@ -226,7 +238,34 @@ namespace AdaptiveBossArena.Combat
                 case DamageOutcome.Invulnerable:
                     PublishEvaded(attack, contactPoint);
                     break;
+
+                case DamageOutcome.Deflected:
+                    OnParried(attack, contactPoint, direction);
+                    break;
             }
+        }
+
+        /// <summary>Reports that this swing was parried, so the attacker can pay for it.</summary>
+        /// <remarks>
+        /// The only place an attacker learns it was parried. The event carries the <em>defender</em>
+        /// as its actor, per the convention documented on <see cref="CombatEventKind.Parried"/>, and
+        /// the incoming direction so sparks are thrown back the way the blow came rather than in an
+        /// undirected puff.
+        /// </remarks>
+        private void OnParried(AttackDefinition attack, Vector3 contactPoint, Vector3 direction)
+        {
+            _events.Publish(new CombatEvent
+            {
+                Kind = CombatEventKind.Parried,
+                Actor = _team == CombatantTeam.Player ? CombatantTeam.Boss : CombatantTeam.Player,
+                Timestamp = _time.CombatTime,
+                DamageType = attack.DamageType,
+                Unblockable = attack.Unblockable,
+                Position = contactPoint,
+                Direction = direction
+            });
+
+            Parried?.Invoke();
         }
 
         /// <summary>Applies impact feedback and reports a landed hit.</summary>

@@ -839,7 +839,9 @@ namespace AdaptiveBossArena.Player
             _deflectChannel?.Raise();
             _focus?.AddFromDeflect();
 
-            return DamageResult.NoDamage(DamageOutcome.Blocked);
+            // Deflected, not Blocked. The distinction is for the attacker: this is the outcome that
+            // recoils the swing that caused it, and a late block must not.
+            return DamageResult.NoDamage(DamageOutcome.Deflected);
         }
 
         /// <summary>

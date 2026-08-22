@@ -59,7 +59,18 @@ namespace AdaptiveBossArena.Core.Combat
         /// Legitimately observable — the weapon is visibly in the player's hands — so the boss may
         /// learn which one they favour and answer it.
         /// </remarks>
-        WeaponDrawn = 14
+        WeaponDrawn = 14,
+
+        /// <summary>
+        /// A swing was met on the beat and refused.
+        /// </summary>
+        /// <remarks>
+        /// <b>Actor is the defender</b> — the one who parried, not the one who was parried. The
+        /// convention matters because <c>CombatMemory</c> routes every event by its actor, so
+        /// publishing this with the attacker would credit a parried player with a deflect and the
+        /// boss would then adapt to a statistic that never happened.
+        /// </remarks>
+        Parried = 15
     }
 
     /// <summary>

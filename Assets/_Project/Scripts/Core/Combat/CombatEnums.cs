@@ -62,14 +62,25 @@ namespace AdaptiveBossArena.Core.Combat
         /// <summary>The target dodged inside the perfect-dodge window and should be rewarded.</summary>
         PerfectDodged = 2,
 
-        /// <summary>The target blocked or parried the hit.</summary>
+        /// <summary>The target absorbed the hit behind a guard, at a cost in chip and posture.</summary>
         Blocked = 3,
 
         /// <summary>The hit never connected with a valid target.</summary>
         Missed = 4,
 
         /// <summary>The target was already dead or otherwise not a valid recipient.</summary>
-        Ignored = 5
+        Ignored = 5,
+
+        /// <summary>
+        /// The target met the hit on the beat and refused it outright.
+        /// </summary>
+        /// <remarks>
+        /// Distinct from <see cref="Blocked"/>, which absorbed the hit at a cost. The difference
+        /// matters to the attacker, not the defender: a parry is the only outcome that should
+        /// recoil the swing that caused it, and until this existed a clean deflect and a late block
+        /// were indistinguishable from the attacking side, so a parried swing simply carried on.
+        /// </remarks>
+        Deflected = 6
     }
 
     /// <summary>How forcefully a hit interrupts what the victim was doing.</summary>

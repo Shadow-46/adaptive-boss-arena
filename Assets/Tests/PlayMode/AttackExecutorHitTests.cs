@@ -46,6 +46,23 @@ namespace AdaptiveBossArena.Tests.PlayMode
             }
         }
 
+        /// <summary>Refuses everything on the beat, standing in for a defender that parries.</summary>
+        private sealed class ParryingTarget : MonoBehaviour, IDamageable
+        {
+            public int Offers { get; private set; }
+
+            public CombatantTeam Team => CombatantTeam.Boss;
+
+            public bool IsAlive => true;
+
+            public DamageResult TakeDamage(in DamageInfo damage)
+            {
+                Offers++;
+
+                return DamageResult.NoDamage(DamageOutcome.Deflected);
+            }
+        }
+
         /// <summary>A clock the test drives by hand, so frame length is an input.</summary>
         private sealed class ScriptedTime : ITimeService
         {
@@ -119,6 +136,113 @@ namespace AdaptiveBossArena.Tests.PlayMode
             Set("_showTelegraph", false);
 
             return _attack;
+        }
+
+        [UnityTest]
+        public IEnumerator AParriedSwingReportsItselfExactlyOnce()
+        {
+            var time = new ScriptedTime();
+            var events = new CombatEventBus();
+
+            GameObject attacker = Spawn("Attacker");
+
+            GameObject targetObject = Spawn("Parrier");
+            targetObject.transform.position = Vector3.forward * 1.5f;
+            var target = targetObject.AddComponent<ParryingTarget>();
+
+            GameObject hurtboxObject = Spawn("Hurtbox");
+            hurtboxObject.transform.SetParent(targetObject.transform, false);
+            hurtboxObject.layer = Layers.BossHurtbox;
+
+            SphereCollider collider = hurtboxObject.AddComponent<SphereCollider>();
+            collider.isTrigger = true;
+            collider.radius = 0.85f;
+            hurtboxObject.AddComponent<Hurtbox>();
+
+            yield return null;
+
+            var executor = new AttackExecutor(
+                attacker.transform, CombatantTeam.Player, Layers.PlayerAttackMask, time, events);
+
+            int parried = 0;
+            bool runningInsideHandler = false;
+
+            executor.Parried += () =>
+            {
+                parried++;
+
+                // The contract the event's documentation states: this fires from inside the
+                // timeline's own phase-stepping loop. A handler that cancelled here would re-enter
+                // a loop still in progress, which is why the recoil defers to a stagger request
+                // instead. Asserting the timeline is live proves the hazard is real rather than
+                // theoretical, and that nothing has quietly started cancelling synchronously.
+                runningInsideHandler = executor.IsRunning;
+            };
+
+            executor.Begin(MakeAttack(), 1.5f);
+
+            for (int i = 0; i < 40; i++)
+            {
+                time.DeltaTime = 0.01f;
+                time.CombatTime += 0.01f;
+                executor.Tick(0.01f);
+            }
+
+            Assert.AreEqual(1, target.Offers, "One swing was offered to the defender more than once.");
+            Assert.AreEqual(1, parried, "A parried swing did not report itself exactly once.");
+            Assert.IsTrue(runningInsideHandler, "The swing was already cancelled when the handler ran.");
+        }
+
+        [UnityTest]
+        public IEnumerator AParriedSwingPublishesTheDefenderAsTheActor()
+        {
+            // The convention CombatMemory routes on. Published with the attacker, a parried player
+            // would be credited with a deflect and the boss would adapt to a statistic that never
+            // happened.
+            var time = new ScriptedTime();
+            var events = new CombatEventBus();
+
+            GameObject attacker = Spawn("Attacker");
+
+            GameObject targetObject = Spawn("Parrier");
+            targetObject.transform.position = Vector3.forward * 1.5f;
+            targetObject.AddComponent<ParryingTarget>();
+
+            GameObject hurtboxObject = Spawn("Hurtbox");
+            hurtboxObject.transform.SetParent(targetObject.transform, false);
+            hurtboxObject.layer = Layers.BossHurtbox;
+
+            SphereCollider collider = hurtboxObject.AddComponent<SphereCollider>();
+            collider.isTrigger = true;
+            collider.radius = 0.85f;
+            hurtboxObject.AddComponent<Hurtbox>();
+
+            yield return null;
+
+            CombatantTeam? actor = null;
+            events.EventRecorded += recorded =>
+            {
+                if (recorded.Kind == CombatEventKind.Parried)
+                {
+                    actor = recorded.Actor;
+                }
+            };
+
+            var executor = new AttackExecutor(
+                attacker.transform, CombatantTeam.Player, Layers.PlayerAttackMask, time, events);
+
+            executor.Begin(MakeAttack(), 1.5f);
+
+            for (int i = 0; i < 40; i++)
+            {
+                time.DeltaTime = 0.01f;
+                time.CombatTime += 0.01f;
+                executor.Tick(0.01f);
+            }
+
+            Assert.AreEqual(
+                CombatantTeam.Boss, actor,
+                "A player swing parried by the boss must name the boss as the actor.");
         }
 
         /// <summary>Adds a second, higher-multiplier hurtbox over the same combatant.</summary>
