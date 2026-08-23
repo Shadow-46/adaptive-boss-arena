@@ -32,6 +32,12 @@ namespace AdaptiveBossArena.Game
         private float _radius = 16f;
 
         [SerializeField]
+        [Tooltip("When true, two swings that meet head-on refuse each other instead of both " +
+                 "landing. Off makes simultaneous attacks a damage race again, which is worth " +
+                 "being able to compare in a play test without a recompile.")]
+        private bool _clashEnabled = true;
+
+        [SerializeField]
         [Range(1f, 8f)]
         [Tooltip("Height of the boundary wall.")]
         private float _wallHeight = 3f;
@@ -95,6 +101,9 @@ namespace AdaptiveBossArena.Game
 
         /// <summary>Optional set-dressing prefab instantiated at the arena centre, or null.</summary>
         public GameObject EnvironmentPrefab => _environmentPrefab;
+
+        /// <summary>Whether two simultaneous swings bounce off each other instead of both landing.</summary>
+        public bool ClashEnabled => _clashEnabled;
 
         /// <summary>Whether the procedural floor/wall meshes are hidden when an environment is present.</summary>
         public bool HideProceduralMeshesWithEnvironment => _hideProceduralMeshesWithEnvironment;

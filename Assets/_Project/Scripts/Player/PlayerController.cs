@@ -1054,6 +1054,41 @@ namespace AdaptiveBossArena.Player
             }
         }
 
+        /// <summary>The reach of a swing whose hitbox is open right now, or zero if none is.</summary>
+        /// <remarks>
+        /// Deliberately narrower than exposing the attack executor. The encounter director needs to
+        /// know whether a live blade is out and how far it reaches in order to detect a clash, and
+        /// nothing more; handing it the executor would hand it Cancel as well, and cancelling a swing
+        /// from outside is exactly the thing Stage D's constraint exists to control.
+        /// </remarks>
+        public float LiveSwingReach =>
+            _isInitialised &&
+            _context.Attacks.IsRunning &&
+            _context.Attacks.Phase == AttackPhase.Active &&
+            _context.Attacks.CurrentAttack != null
+                ? _context.Attacks.CurrentAttack.Range
+                : 0f;
+
+        /// <summary>
+        /// Refuses the swing in progress because it met another blade.
+        /// </summary>
+        /// <remarks>
+        /// Routed through the same stagger request a parry uses, and for the same reason: it defers
+        /// to the next tick, where the attack state's exit tears the swing down. Called from the
+        /// director's LateUpdate, which is outside any executor's phase-stepping loop, so a
+        /// synchronous cancel would in fact be safe here - but there is no reason to have two ways of
+        /// stopping a swing when the existing one already reads correctly on both fighters.
+        /// </remarks>
+        public void RecoilFromClash()
+        {
+            if (!_isInitialised)
+            {
+                return;
+            }
+
+            _context.RequestStagger(StaggerDurations.InterruptSeconds, StaggerReason.Parried);
+        }
+
         /// <summary>Player posture, exposed for the guard bar.</summary>
         public IPoise Posture => _posture;
 

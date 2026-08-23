@@ -1001,11 +1001,20 @@ namespace AdaptiveBossArena.Editor
             var config = AssetAuthoring.CreateOrLoad<ArenaConfig>(
                 $"{ConfigFolder}/DefaultArenaConfig.asset", out bool created);
 
-            if (created)
+            using (AssetAuthoring.AssetWriter writer = AssetAuthoring.Edit(config))
             {
-                using (AssetAuthoring.AssetWriter writer = AssetAuthoring.Edit(config))
+                if (created)
                 {
                     writer.String("_id", "arena.default");
+                }
+
+                if (ShouldWriteTuning(created))
+                {
+                    // Written rather than left to the C# field default, which only applies at the
+                    // moment an asset is first created. This asset already exists, so a default set
+                    // in code would never reach it and the flag would read as unset in the
+                    // inspector while behaving as set.
+                    writer.Bool("_clashEnabled", true);
                 }
             }
         }

@@ -1,5 +1,6 @@
 using System.Text;
 using AdaptiveBossArena.AI;
+using AdaptiveBossArena.Combat;
 using AdaptiveBossArena.Core.Constants;
 using AdaptiveBossArena.Core.Events;
 using AdaptiveBossArena.Core.Services;
@@ -219,6 +220,55 @@ namespace AdaptiveBossArena.Game
 
             _player.SetThreat(_boss.transform);
             _player.SetThreatPostureBroken(_boss.Poise != null && _boss.Poise.IsBroken);
+
+            TryClash();
+        }
+
+        /// <summary>
+        /// Refuses both swings when two live blades meet each other rather than their targets.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Detected here because the director is the only object that sees both fighters' swings at
+        /// once — and, usefully, because <c>LateUpdate</c> runs outside either attack executor's
+        /// phase-stepping loop. This is the one place in the parry work where stopping a swing
+        /// synchronously would in fact be safe. It still goes through the deferred recoil both
+        /// fighters already use, because two ways of stopping a swing is one too many.
+        /// </para>
+        /// <para>
+        /// Self-limiting against firing twice: both swings are torn down by the recoil, so on the
+        /// following frame neither reports a live blade.
+        /// </para>
+        /// </remarks>
+        private void TryClash()
+        {
+            if (_arenaConfig == null || !_arenaConfig.ClashEnabled)
+            {
+                return;
+            }
+
+            float playerReach = _player.LiveSwingReach;
+            float bossReach = _boss.LiveSwingReach;
+
+            Transform playerTransform = _player.transform;
+            Transform bossTransform = _boss.transform;
+
+            bool clash = ClashResolver.ShouldClash(
+                playerReach > 0f,
+                bossReach > 0f,
+                Vector3.Distance(playerTransform.position, bossTransform.position),
+                playerReach + bossReach,
+                ClashResolver.FacingDot(
+                    playerTransform.position, playerTransform.forward,
+                    bossTransform.position, bossTransform.forward));
+
+            if (!clash)
+            {
+                return;
+            }
+
+            _player.RecoilFromClash();
+            _boss.RecoilFromClash();
         }
 
         /// <summary>

@@ -15,8 +15,11 @@ MonoBehaviour:
   _id: arena.default
   _designerNotes: 
   _radius: 16
+  _clashEnabled: 1
   _wallHeight: 3
   _wallSegments: 32
+  _environmentPrefab: {fileID: 0}
+  _hideProceduralMeshesWithEnvironment: 1
   _playerSpawn: {x: 0, y: 0, z: -6}
   _bossSpawn: {x: 0, y: 0, z: 6}
   _cameraHeight: 10.5
