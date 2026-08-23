@@ -77,6 +77,15 @@ namespace AdaptiveBossArena.Learning
         /// <summary>Boss attacks that touched nothing.</summary>
         public int BossAttacksWhiffed { get; private set; }
 
+        /// <summary>Player swings the boss met on the beat.</summary>
+        /// <remarks>
+        /// Statistics only, like everything here. Nothing the boss does may hang off this: the bus
+        /// delivers immediately, so a behaviour wired to it would react without the perception delay
+        /// that keeps the boss honest. If the boss should ever parry more against a player it keeps
+        /// reading correctly, that has to ease a tuning parameter on the slow adaptation tick.
+        /// </remarks>
+        public int BossParries { get; private set; }
+
         /// <summary>Records an occurrence and updates the running counts.</summary>
         /// <param name="combatEvent">The occurrence to remember.</param>
         public void Record(in CombatEvent combatEvent)
@@ -159,6 +168,14 @@ namespace AdaptiveBossArena.Learning
                 case CombatEventKind.AttackWhiffed:
                     BossAttacksWhiffed++;
                     break;
+
+                // Published by the attacker's executor with the defender as actor, so a swing the
+                // boss parried arrives here rather than in the player's tally. Getting that backwards
+                // would credit a parried player with a deflect and feed the deflect-mastery read a
+                // number that never happened.
+                case CombatEventKind.Parried:
+                    BossParries++;
+                    break;
             }
         }
 
@@ -204,6 +221,7 @@ namespace AdaptiveBossArena.Learning
             BossAttacksLanded = 0;
             BossAttacksEvaded = 0;
             BossAttacksWhiffed = 0;
+            BossParries = 0;
         }
     }
 }

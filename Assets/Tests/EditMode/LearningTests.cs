@@ -57,6 +57,39 @@ namespace AdaptiveBossArena.Tests.EditMode
         private void Analyse(float timeNow) => _recognizer.Analyse(_tracker, _memory, _profile, timeNow);
 
         [Test]
+        public void AParryIsCreditedToTheDefenderNotTheAttacker()
+        {
+            // The convention every part of the parry chain depends on: Parried names the defender as
+            // its actor. Published the other way, a player whose swing was parried would be counted
+            // as having deflected, and the deflect-mastery read the boss answers with feints and
+            // unblockables would be reasoning from a number that never happened. Nothing about that
+            // failure would be visible - the boss would simply adapt to the wrong player.
+            _memory.Record(new CombatEvent
+            {
+                Kind = CombatEventKind.Parried,
+                Actor = CombatantTeam.Boss,
+                Timestamp = 1f
+            });
+
+            Assert.AreEqual(1, _memory.BossParries, "A boss parry was not counted for the boss.");
+            Assert.AreEqual(0, _memory.PlayerDeflects, "A boss parry was counted as a player deflect.");
+        }
+
+        [Test]
+        public void APlayerDeflectStaysOnThePlayersTally()
+        {
+            _memory.Record(new CombatEvent
+            {
+                Kind = CombatEventKind.Deflected,
+                Actor = CombatantTeam.Player,
+                Timestamp = 1f
+            });
+
+            Assert.AreEqual(1, _memory.PlayerDeflects);
+            Assert.AreEqual(0, _memory.BossParries);
+        }
+
+        [Test]
         public void WithNoObservations_EveryHabitHasZeroConfidence()
         {
             Analyse(0f);

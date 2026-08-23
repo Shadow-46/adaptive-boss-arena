@@ -400,6 +400,10 @@ namespace AdaptiveBossArena.AI
             UpdatePhase();
             UpdateResolve(deltaTime);
 
+            // Driven every frame rather than from the parry state's entry and exit, so the light can
+            // never be left on by a state torn down mid-stance.
+            _phaseAura?.SetParryWindow(_context.ParryWindowOpen);
+
             DriveAnimation();
         }
 
@@ -463,7 +467,10 @@ namespace AdaptiveBossArena.AI
                 return ObservableActionState.Staggered;
             }
 
-            if (_context.IsParrying)
+            // The window, not the whole stance. Holding the guard pose through the tail would show
+            // the player a raised guard at the exact moment the guard has already been spent, which
+            // is the one frame where the pose has to be honest.
+            if (_context.ParryWindowOpen)
             {
                 return ObservableActionState.Guarding;
             }

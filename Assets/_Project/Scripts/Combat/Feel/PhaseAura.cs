@@ -40,12 +40,26 @@ namespace AdaptiveBossArena.Combat.Feel
         /// <summary>Extra intensity a fully-charged gambit adds, so the boss visibly winds up.</summary>
         private const float ChargeIntensity = 6f;
 
+        /// <summary>Extra intensity while the parry window is open.</summary>
+        private const float ParryIntensity = 5f;
+
+        /// <summary>
+        /// The colour the aura snaps to while a parry window is open.
+        /// </summary>
+        /// <remarks>
+        /// Cold and unlike anything else the boss does, all of which is hot. The distinction has to
+        /// survive being seen for a sixth of a second in peripheral vision, which rules out anything
+        /// that reads as a brighter version of the ordinary glow.
+        /// </remarks>
+        private static readonly Color ParryColor = new Color(0.55f, 0.85f, 1.6f);
+
         private Light _light;
         private Color _targetColor = Color.black;
         private float _targetIntensity;
         private float _steadyIntensity;
         private float _pulse;
         private float _charge;
+        private bool _parryWindowOpen;
 
         private void Awake()
         {
@@ -107,11 +121,31 @@ namespace AdaptiveBossArena.Combat.Feel
         /// <param name="normalized">How full the gambit meter is, zero to one.</param>
         public void SetCharge(float normalized) => _charge = Mathf.Clamp01(normalized);
 
+        /// <summary>
+        /// Shows or hides the parry window on the boss.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// A term of its own rather than a use of <see cref="SetCharge"/>, which the gambit meter
+        /// owns: borrowing it would make the wind-up glow lie about how full the meter is.
+        /// </para>
+        /// <para>
+        /// The obligation runs both ways. The boss is told a guard is raised but never whether the
+        /// player's deflect window is open; the player's channel is the screen, so the boss's window
+        /// has to be visible there or a stance that refuses hits is indistinguishable from one that
+        /// refuses them at random. What must be shown is the window alone - the punishable tail
+        /// looks like the boss standing still, which is what it is.
+        /// </para>
+        /// </remarks>
+        /// <param name="isOpen">Whether a hit arriving now would be refused.</param>
+        public void SetParryWindow(bool isOpen) => _parryWindowOpen = isOpen;
+
         /// <summary>Clears the glow back to its opening state, for a retry.</summary>
         public void ResetAura()
         {
             _pulse = 0f;
             _charge = 0f;
+            _parryWindowOpen = false;
             _steadyIntensity = 0f;
             SetPhase(0);
 
@@ -139,8 +173,16 @@ namespace AdaptiveBossArena.Combat.Feel
             _steadyIntensity = Mathf.Lerp(
                 _steadyIntensity, _targetIntensity, DampFactor(EaseHalfLife, deltaTime));
 
-            _light.intensity = _steadyIntensity + _pulse + _charge * ChargeIntensity;
-            _light.color = Color.Lerp(_light.color, _targetColor, DampFactor(EaseHalfLife, deltaTime));
+            _light.intensity = _steadyIntensity + _pulse + _charge * ChargeIntensity +
+                               (_parryWindowOpen ? ParryIntensity : 0f);
+
+            // Snapped, not eased. Every other colour change here is a slow escalation the player has
+            // seconds to notice; this one has to be legible inside a window shorter than the ease's
+            // own half-life, so easing it would show the player a colour that had barely started
+            // moving by the time the window shut.
+            _light.color = _parryWindowOpen
+                ? ParryColor
+                : Color.Lerp(_light.color, _targetColor, DampFactor(EaseHalfLife, deltaTime));
 
             // Switched off entirely once dark, so the opening phase spends nothing on a light that
             // contributes nothing.
