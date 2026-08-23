@@ -1052,6 +1052,11 @@ namespace AdaptiveBossArena.Editor
                 "OnBossOverbalanced",
                 "Raised when a committed boss swing whiffs hard enough to overbalance it. Drives the " +
                 "stumble, dust and stagger sound that show the opening the player's read just bought.");
+            CreateChannel<VoidEventChannel>(
+                "OnBossParried",
+                "Raised when the boss meets a swing on the beat. The mirror of the player's deflect " +
+                "channel, and routed the same way: the encounter director turns it into posture " +
+                "damage on the player, so the player never holds a reference to the boss.");
         }
 
         private static void CreateChannel<TChannel>(string assetName, string description)

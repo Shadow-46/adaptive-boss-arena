@@ -81,6 +81,11 @@ namespace AdaptiveBossArena.AI
                  "presentation can show the stumble and the opening it leaves.")]
         private VoidEventChannel _overbalanceChannel;
 
+        [SerializeField]
+        [Tooltip("Raised when the boss parries a swing. The encounter director relays it into " +
+                 "posture damage on the player.")]
+        private VoidEventChannel _parrySucceededChannel;
+
         private CharacterController _characterController;
         private HitFlash _hitFlash;
         private CharacterAnimator _animator;
@@ -558,6 +563,7 @@ namespace AdaptiveBossArena.AI
         private DamageResult ResolveParry()
         {
             _context.AttackCooldownRemaining = 0f;
+            _parrySucceededChannel?.Raise();
 
             return DamageResult.NoDamage(DamageOutcome.Deflected);
         }
@@ -910,7 +916,8 @@ namespace AdaptiveBossArena.AI
             VoidEventChannel defeat,
             StringEventChannel adaptation,
             FloatEventChannel posture,
-            VoidEventChannel overbalance)
+            VoidEventChannel overbalance,
+            VoidEventChannel parried)
         {
             _healthChannel = health;
             _phaseChannel = phase;
@@ -918,6 +925,7 @@ namespace AdaptiveBossArena.AI
             _adaptationChannel = adaptation;
             _postureChannel = posture;
             _overbalanceChannel = overbalance;
+            _parrySucceededChannel = parried;
         }
 
         /// <summary>
@@ -941,6 +949,14 @@ namespace AdaptiveBossArena.AI
                 _context.RequestStagger(PoiseBreakStaggerSeconds, StaggerReason.PoiseBreak);
             }
         }
+
+        /// <summary>Posture a successful boss parry deals to the player.</summary>
+        /// <remarks>
+        /// The exact mirror of <c>PlayerController.DeflectPostureDamage</c>, read by the encounter
+        /// director for the same reason: neither combatant may hold a reference to the other, so the
+        /// one that acted reports what it did and the director decides what that means for the other.
+        /// </remarks>
+        public float ParryPostureDamage => _config != null ? _config.ParryPostureDamage : 0f;
 
         /// <summary>Exposes the learning loop so the debug overlay can show what the boss believes.</summary>
         /// <returns>The adaptation manager, or null before initialisation.</returns>

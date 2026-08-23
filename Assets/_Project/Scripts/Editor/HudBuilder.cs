@@ -121,7 +121,8 @@ namespace AdaptiveBossArena.Editor
             BossDefeated = GeneratedAssets.EventChannel<VoidEventChannel>("OnBossDefeated"),
             Deflect = GeneratedAssets.EventChannel<VoidEventChannel>("OnDeflect"),
             PerfectDodge = GeneratedAssets.EventChannel<VoidEventChannel>("OnPerfectDodge"),
-            Overbalance = GeneratedAssets.EventChannel<VoidEventChannel>("OnBossOverbalanced")
+            Overbalance = GeneratedAssets.EventChannel<VoidEventChannel>("OnBossOverbalanced"),
+            BossParried = GeneratedAssets.EventChannel<VoidEventChannel>("OnBossParried")
         };
 
         /// <summary>Creates the scaling canvas and its event system.</summary>
@@ -545,6 +546,9 @@ namespace AdaptiveBossArena.Editor
 
         /// <summary>Raised when the boss overbalances on a committed whiff.</summary>
         public VoidEventChannel Overbalance { get; set; }
+
+        /// <summary>Raised when the boss parries a swing.</summary>
+        public VoidEventChannel BossParried { get; set; }
     }
 
     /// <summary>The generated interface components the scene builder needs to wire up.</summary>

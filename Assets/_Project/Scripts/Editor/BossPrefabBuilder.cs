@@ -224,7 +224,8 @@ namespace AdaptiveBossArena.Editor
                 GeneratedAssets.EventChannel<VoidEventChannel>("OnBossDefeated"),
                 GeneratedAssets.EventChannel<StringEventChannel>("OnAdaptationAdopted"),
                 GeneratedAssets.EventChannel<FloatEventChannel>("OnBossPostureChanged"),
-                GeneratedAssets.EventChannel<VoidEventChannel>("OnBossOverbalanced"));
+                GeneratedAssets.EventChannel<VoidEventChannel>("OnBossOverbalanced"),
+                GeneratedAssets.EventChannel<VoidEventChannel>("OnBossParried"));
         }
     }
 }

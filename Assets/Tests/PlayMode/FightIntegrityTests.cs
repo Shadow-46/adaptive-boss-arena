@@ -302,6 +302,42 @@ namespace AdaptiveBossArena.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator ABossParryCostsThePlayerPosture()
+        {
+            // The whole chain in one assertion: the channel asset exists, the boss prefab and the
+            // director both point at the same one, the director is subscribed, and the player's
+            // posture pool responds. Every reference in that chain is null-conditional, so a break
+            // anywhere in it fails silently - which is exactly how this project once shipped a
+            // full suite of green tests over a game whose bars never moved.
+            Assert.IsNotNull(_player, "No player in the arena scene.");
+
+            VoidEventChannel parried = null;
+
+            foreach (VoidEventChannel channel in Resources.FindObjectsOfTypeAll<VoidEventChannel>())
+            {
+                if (channel.name == "OnBossParried")
+                {
+                    parried = channel;
+                }
+            }
+
+            Assert.IsNotNull(parried, "The OnBossParried channel asset is missing.");
+
+            yield return WaitForTheFightToStart();
+
+            float postureBefore = _player.Posture.Current;
+            Assert.Greater(postureBefore, 0f, "The player started with no posture to lose.");
+
+            parried.Raise();
+
+            yield return null;
+
+            Assert.Less(
+                _player.Posture.Current, postureBefore,
+                "The boss parried and the player's posture did not move.");
+        }
+
+        [UnityTest]
         public IEnumerator TheHealthChannelStillHasItsListener()
         {
             // Narrows the previous two failures. The bar applies a raise immediately, so a bar that

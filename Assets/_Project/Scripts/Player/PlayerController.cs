@@ -1028,6 +1028,32 @@ namespace AdaptiveBossArena.Player
         private void OnOwnAttackParried() =>
             _context.RequestStagger(StaggerDurations.InterruptSeconds, StaggerReason.Parried);
 
+        /// <summary>
+        /// Applies posture damage from a swing the boss met on the beat.
+        /// </summary>
+        /// <remarks>
+        /// The mirror of <c>BossController.ApplyDeflectPosture</c>, called by the encounter director
+        /// so the player never holds a reference to the boss. It is also the second thing that has
+        /// ever damaged the player's posture: until now the pool was fed only by late blocks, so a
+        /// player who never blocked could not have their guard broken at all - over-blocking cost
+        /// everything and over-committing cost nothing. A parry landing during an existing break is
+        /// discarded by the pool, which is what stops breaks from chaining.
+        /// </remarks>
+        /// <param name="postureDamage">Posture to remove.</param>
+        public void ApplyParriedPosture(float postureDamage)
+        {
+            if (!_isInitialised || _posture == null)
+            {
+                return;
+            }
+
+            if (_posture.ApplyPoiseDamage(postureDamage))
+            {
+                _context.RequestStagger(StaggerDurations.BreakSeconds, StaggerReason.PoiseBreak);
+                _focus?.Reset();
+            }
+        }
+
         /// <summary>Player posture, exposed for the guard bar.</summary>
         public IPoise Posture => _posture;
 

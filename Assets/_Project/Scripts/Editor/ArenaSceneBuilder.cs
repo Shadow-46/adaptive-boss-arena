@@ -583,7 +583,8 @@ namespace AdaptiveBossArena.Editor
 
             director.Bind(
                 config, hud.EndScreen, hud.PauseMenu, hud.RoundIntro,
-                channels.PlayerDied, channels.BossDefeated, channels.Deflect, channels.PerfectDodge);
+                channels.PlayerDied, channels.BossDefeated, channels.Deflect, channels.PerfectDodge,
+                channels.BossParried);
 
             var audioDirector = Object.FindAnyObjectByType<CombatAudioDirector>();
             audioDirector?.Bind(

@@ -73,6 +73,10 @@ namespace AdaptiveBossArena.Game
         [Tooltip("Raised on a perfect dodge, counted for the post-fight report.")]
         private VoidEventChannel _perfectDodgeChannel;
 
+        [SerializeField]
+        [Tooltip("Raised when the boss parries, relayed into posture damage on the player.")]
+        private VoidEventChannel _bossParriedChannel;
+
         /// <summary>Speed the killing blow plays at, low enough to read as a beat rather than a stutter.</summary>
         private const float OutcomeSlowMotionScale = 0.35f;
 
@@ -98,6 +102,8 @@ namespace AdaptiveBossArena.Game
 
         // Tallied across the current attempt for the post-fight dossier, reset when a new one begins.
         private int _deflectsThisAttempt;
+
+        private int _parriedByBossThisAttempt;
         private int _perfectDodgesThisAttempt;
 
         /// <summary>Seconds the current attempt has been running.</summary>
@@ -129,6 +135,11 @@ namespace AdaptiveBossArena.Game
                 _bossDefeatedChannel.Raised += OnBossDefeated;
             }
 
+            if (_bossParriedChannel != null)
+            {
+                _bossParriedChannel.Raised += OnParriedByBoss;
+            }
+
             if (_deflectChannel != null)
             {
                 _deflectChannel.Raised += OnDeflected;
@@ -150,6 +161,11 @@ namespace AdaptiveBossArena.Game
             if (_bossDefeatedChannel != null)
             {
                 _bossDefeatedChannel.Raised -= OnBossDefeated;
+            }
+
+            if (_bossParriedChannel != null)
+            {
+                _bossParriedChannel.Raised -= OnParriedByBoss;
             }
 
             if (_deflectChannel != null)
@@ -225,6 +241,28 @@ namespace AdaptiveBossArena.Game
             _boss.ApplyDeflectPosture(_player.DeflectPostureDamage);
         }
 
+        /// <summary>
+        /// Relays a boss parry into posture damage on the player.
+        /// </summary>
+        /// <remarks>
+        /// The exact mirror of <see cref="OnDeflected"/>, and routed through the director for the
+        /// same reason: neither combatant may hold a reference to the other. Until this existed the
+        /// player's posture pool was fed only by late blocks, so a player who never blocked could
+        /// never have their guard broken - over-committing cost nothing while over-blocking cost
+        /// everything. Now both mistakes are punished the same way.
+        /// </remarks>
+        private void OnParriedByBoss()
+        {
+            _parriedByBossThisAttempt++;
+
+            if (_player == null || _boss == null)
+            {
+                return;
+            }
+
+            _player.ApplyParriedPosture(_boss.ParryPostureDamage);
+        }
+
         /// <summary>Counts a perfect dodge for the post-fight report.</summary>
         private void OnPerfectDodge() => _perfectDodgesThisAttempt++;
 
@@ -266,6 +304,7 @@ namespace AdaptiveBossArena.Game
             _attemptStartedAt = _time?.CombatTime ?? 0f;
 
             _deflectsThisAttempt = 0;
+            _parriedByBossThisAttempt = 0;
             _perfectDodgesThisAttempt = 0;
 
             _pauseMenu?.SetSuppressed(false);
@@ -407,9 +446,12 @@ namespace AdaptiveBossArena.Game
             }
 
             int healthPercent = Mathf.RoundToInt(Mathf.Clamp01(remainingHealth) * 100f);
+            // The reciprocal number is the most useful thing a duel's report can carry: deflects
+            // alone say how well the player defended, and say nothing about how often the boss read
+            // them back.
             builder.Append(
-                $"Deflects landed {_deflectsThisAttempt}   ·   Perfect dodges {_perfectDodgesThisAttempt}" +
-                $"   ·   Health left {healthPercent}%");
+                $"Deflects landed {_deflectsThisAttempt}   ·   Parried by it {_parriedByBossThisAttempt}" +
+                $"   ·   Perfect dodges {_perfectDodgesThisAttempt}   ·   Health left {healthPercent}%");
 
             RunModifiers modifiers = RunSettings.Current;
             if (modifiers != null && modifiers.AnyActive)
@@ -470,6 +512,7 @@ namespace AdaptiveBossArena.Game
         /// <param name="bossDefeated">Boss defeat channel.</param>
         /// <param name="deflect">Clean deflect channel.</param>
         /// <param name="perfectDodge">Perfect dodge channel, counted for the post-fight report.</param>
+        /// <param name="bossParried">Boss parry channel, relayed into posture damage on the player.</param>
         public void Bind(
             ArenaConfig arenaConfig,
             EndScreen endScreen,
@@ -478,7 +521,8 @@ namespace AdaptiveBossArena.Game
             VoidEventChannel playerDied,
             VoidEventChannel bossDefeated,
             VoidEventChannel deflect,
-            VoidEventChannel perfectDodge)
+            VoidEventChannel perfectDodge,
+            VoidEventChannel bossParried)
         {
             _arenaConfig = arenaConfig;
             _endScreen = endScreen;
@@ -488,6 +532,7 @@ namespace AdaptiveBossArena.Game
             _bossDefeatedChannel = bossDefeated;
             _deflectChannel = deflect;
             _perfectDodgeChannel = perfectDodge;
+            _bossParriedChannel = bossParried;
         }
     }
 }
