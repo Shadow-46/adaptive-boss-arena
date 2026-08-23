@@ -917,7 +917,17 @@ namespace AdaptiveBossArena.Editor
                         .Float("_poiseRegenPerSecond", 12f)
                         .Float("_resolveThreshold", 100f)
                         .Float("_resolveBuildPerSecond", 3.2f)
-                        .Float("_resolveBuildPerWhiff", 14f);
+                        .Float("_resolveBuildPerWhiff", 14f)
+
+                        // The parry stance: a tight window to beat and a long tail to punish. The
+                        // window is deliberately shorter than the blade's 0.2s deflect, because the
+                        // player chooses when to swing and the boss only guesses. 24 posture mirrors
+                        // what a clean deflect takes off the boss, slightly under it.
+                        .Float("_baselineParryChance", 0.12f)
+                        .Float("_parryWindowSeconds", 0.18f)
+                        .Float("_parryTailSeconds", 0.45f)
+                        .Float("_parryPostureDamage", 24f)
+                        .Float("_parryCooldownSeconds", 1.2f);
                 }
 
                 SerializedProperty phases = writer.Array("_phases", 4);

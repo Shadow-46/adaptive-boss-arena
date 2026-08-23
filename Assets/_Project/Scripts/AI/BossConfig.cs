@@ -98,6 +98,37 @@ namespace AdaptiveBossArena.AI
         [Tooltip("Poise restored per second while not being hit.")]
         private float _poiseRegenPerSecond = 12f;
 
+        [Header("Parry")]
+        [SerializeField]
+        [Tooltip("How readily the boss answers a heavy swing with a parry before it has learned " +
+                 "anything. Small but non-zero so the duel exists from the opening; the learning " +
+                 "loop raises it against a player who leans on heavies.")]
+        [Range(0f, 1f)]
+        private float _baselineParryChance = 0.12f;
+
+        [SerializeField]
+        [Tooltip("How long after committing to the stance a hit is refused outright. Deliberately " +
+                 "tighter than the player's deflect window: the player chooses when to swing, the " +
+                 "boss only guesses.")]
+        [Range(0.05f, 0.4f)]
+        private float _parryWindowSeconds = 0.18f;
+
+        [SerializeField]
+        [Tooltip("How long the boss remains committed after the window closes. This is the punish " +
+                 "for a stance thrown at the wrong moment; hits landing here connect in full.")]
+        [Range(0.1f, 1f)]
+        private float _parryTailSeconds = 0.45f;
+
+        [SerializeField]
+        [Tooltip("Posture the boss takes off the player for a successful parry. The mirror of what " +
+                 "a clean deflect costs the boss.")]
+        private float _parryPostureDamage = 24f;
+
+        [SerializeField]
+        [Tooltip("How long before the boss may attempt another parry. Held separately from the " +
+                 "attack cooldown, which a successful parry clears.")]
+        private float _parryCooldownSeconds = 1.2f;
+
         [Header("Movement")]
         [SerializeField]
         [Tooltip("Base movement speed in world units per second.")]
@@ -203,6 +234,21 @@ namespace AdaptiveBossArena.AI
 
         /// <summary>Poise restored per second.</summary>
         public float PoiseRegenPerSecond => _poiseRegenPerSecond;
+
+        /// <summary>Parry willingness before the boss has learned anything.</summary>
+        public float BaselineParryChance => _baselineParryChance;
+
+        /// <summary>How long the parry stance refuses hits outright.</summary>
+        public float ParryWindowSeconds => _parryWindowSeconds;
+
+        /// <summary>How long the boss stays committed after its parry window closes.</summary>
+        public float ParryTailSeconds => _parryTailSeconds;
+
+        /// <summary>Posture a successful boss parry deals to the player.</summary>
+        public float ParryPostureDamage => _parryPostureDamage;
+
+        /// <summary>How long before the boss may attempt another parry.</summary>
+        public float ParryCooldownSeconds => _parryCooldownSeconds;
 
         /// <summary>Base movement speed.</summary>
         public float MoveSpeed => _moveSpeed;

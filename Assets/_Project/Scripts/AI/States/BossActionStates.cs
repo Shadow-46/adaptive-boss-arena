@@ -375,24 +375,35 @@ namespace AdaptiveBossArena.AI.States
     /// </remarks>
     public sealed class BossParryState : StateBase<BossContext>
     {
-        /// <summary>How long the parry stance is held.</summary>
-        private const float ParryWindowSeconds = 0.5f;
-
         /// <summary>True once the parry attempt has resolved one way or the other.</summary>
+        /// <remarks>
+        /// The stance runs for its window plus its tail. It used to be a flat half-second during
+        /// which every hit was refused, which made it something to wait out rather than something
+        /// to beat: there was no moment at which committing to the stance had been the wrong call.
+        /// </remarks>
         /// <param name="context">The boss context.</param>
         /// <returns>Whether the boss may act again.</returns>
-        public bool IsComplete(BossContext context) => TimeInState >= ParryWindowSeconds;
+        public bool IsComplete(BossContext context) =>
+            TimeInState >= context.Config.ParryWindowSeconds + context.Config.ParryTailSeconds;
 
         /// <inheritdoc />
         protected override void OnEnter(BossContext context)
         {
             context.IsParrying = true;
+            context.ParryWindowOpen = true;
+
+            // Announced the instant the window opens, and only then. The player has to be able to
+            // see what they are being asked to beat, or a parry they cannot read is indistinguishable
+            // from the boss refusing hits at random.
+            context.PublishCombatEvent(CombatEventKind.GuardRaised);
             context.Motor.Halt();
         }
 
         /// <inheritdoc />
         protected override void OnTick(BossContext context, float deltaTime)
         {
+            context.ParryWindowOpen = TimeInState <= context.Config.ParryWindowSeconds;
+
             context.Motor.FaceDirection(context.DirectionToPlayer, deltaTime);
             context.Motor.Tick(deltaTime);
         }
@@ -401,10 +412,14 @@ namespace AdaptiveBossArena.AI.States
         protected override void OnExit(BossContext context)
         {
             context.IsParrying = false;
+            context.ParryWindowOpen = false;
 
-            // A short cooldown after any parry, successful or not, stops the boss from chaining
-            // parries and becoming impossible to attack at all.
-            context.AttackCooldownRemaining = Mathf.Max(context.AttackCooldownRemaining, 0.4f);
+            // On its own timer, not the attack cooldown. A successful parry clears the attack
+            // cooldown to hand the boss the punish it earned - and while the two shared one timer,
+            // that also re-armed the next parry, so a boss that kept guessing right could not be
+            // attacked at all. The old flat 0.4s clamp was papering over exactly this.
+            context.ParryCooldownRemaining =
+                Mathf.Max(context.ParryCooldownRemaining, context.Config.ParryCooldownSeconds);
         }
     }
 

@@ -205,7 +205,8 @@ namespace AdaptiveBossArena.AI
                 transform, CombatantTeam.Boss, Layers.BossAttackMask, _time, _events, _screenShake,
                 GetComponentInChildren<Combat.Feel.AttackVisualizer>(), hazardField);
 
-            var tuning = new BossTuning(_config.BaselinePreferredRange, _config.BaselineAggression);
+            var tuning = new BossTuning(
+                _config.BaselinePreferredRange, _config.BaselineAggression, _config.BaselineParryChance);
 
             _context = new BossContext(
                 _config, transform, motor, _health, _poise, attacks,
@@ -483,11 +484,13 @@ namespace AdaptiveBossArena.AI
             }
 
             // A successful parry refuses the hit and hands the punish window back to the boss. It is
-            // only reachable because the boss committed to the stance beforehand and guessed right.
-            if (_context.IsParrying)
+            // only reachable inside the window the stance opens with - a moment later the same
+            // stance is the boss standing still with its guard already spent, and the hit lands in
+            // full. CanBlock is false because the boss has no guard to fall back on: there is no
+            // chip, no cost, and no half-answer. It either timed it or it did not.
+            if (DescribeDefence(damage) == DefenceOutcome.Deflected)
             {
-                _context.AttackCooldownRemaining = 0f;
-                return DamageResult.NoDamage(DamageOutcome.Blocked);
+                return ResolveParry();
             }
 
             // Mid-transformation the boss is briefly untouchable. The window is short and unmistakably
@@ -524,6 +527,41 @@ namespace AdaptiveBossArena.AI
         private void OnOwnAttackParried() =>
             _context.RequestStagger(StaggerDurations.InterruptSeconds, StaggerReason.Parried);
 
+        /// <summary>
+        /// Asks the shared resolver how the boss's stance meets an incoming hit.
+        /// </summary>
+        /// <param name="damage">The incoming hit.</param>
+        /// <returns>How the hit resolves against the stance.</returns>
+        private DefenceOutcome DescribeDefence(in DamageInfo damage) =>
+            DefenceResolver.ResolveDefence(new DefenceQuery
+            {
+                IsDefending = _context.IsParrying,
+                CanDeflect = true,
+                CanBlock = false,
+                TimeInDefenceSeconds = _parryState.TimeInState,
+                DeflectWindowSeconds = _config.ParryWindowSeconds,
+                Unblockable = damage.Unblockable,
+                Unparryable = damage.Unparryable
+            });
+
+        /// <summary>
+        /// Refuses a hit the boss met on the beat.
+        /// </summary>
+        /// <remarks>
+        /// Clearing the attack cooldown is the reward: having guessed right, the boss may answer
+        /// immediately. Nothing is published from here on purpose - returning Deflected is what
+        /// makes the player's own executor raise <see cref="CombatEventKind.Parried"/> with the boss
+        /// named as the defender, and publishing a second event for the same instant would burst and
+        /// ring twice on one exchange.
+        /// </remarks>
+        /// <returns>A result carrying no damage.</returns>
+        private DamageResult ResolveParry()
+        {
+            _context.AttackCooldownRemaining = 0f;
+
+            return DamageResult.NoDamage(DamageOutcome.Deflected);
+        }
+
         /// <summary>Restores the boss to its starting condition for a retry.</summary>
         /// <param name="spawnPosition">Where to place the boss.</param>
         public void ResetForNewAttempt(Vector3 spawnPosition)
@@ -548,6 +586,8 @@ namespace AdaptiveBossArena.AI
             _resolve?.Reset();
             _context.StaggerRequested = false;
             _context.IsParrying = false;
+            _context.ParryWindowOpen = false;
+            _context.ParryCooldownRemaining = 0f;
             _context.PendingAttack = null;
             _context.Attacks.Cancel();
             _context.Motor.Teleport(spawnPosition);
@@ -707,7 +747,7 @@ namespace AdaptiveBossArena.AI
         /// </remarks>
         private bool WantsToParry(BossContext context)
         {
-            if (context.AttackCooldownRemaining > 0f)
+            if (context.AttackCooldownRemaining > 0f || context.ParryCooldownRemaining > 0f)
             {
                 return false;
             }

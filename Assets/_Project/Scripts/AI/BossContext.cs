@@ -155,6 +155,24 @@ namespace AdaptiveBossArena.AI
         /// <summary>True while the boss is committed to a parry attempt.</summary>
         public bool IsParrying { get; set; }
 
+        /// <summary>
+        /// True only while a hit arriving now would be refused outright.
+        /// </summary>
+        /// <remarks>
+        /// Narrower than <see cref="IsParrying"/>, which stays true through the punishable tail.
+        /// Separating the two is what turns the stance from an invincible half-second into a read:
+        /// the window is what the player must beat, the tail is what they get for beating it.
+        /// </remarks>
+        public bool ParryWindowOpen { get; set; }
+
+        /// <summary>Time remaining before the boss may attempt another parry.</summary>
+        /// <remarks>
+        /// Held apart from <see cref="AttackCooldownRemaining"/>, which a successful parry clears to
+        /// hand the boss its punish. Sharing one timer would mean every successful parry also
+        /// re-armed the next one, and a boss that chains parries cannot be attacked at all.
+        /// </remarks>
+        public float ParryCooldownRemaining { get; set; }
+
         /// <summary>Combat-clock time at which the current reaction delay expires.</summary>
         public float ReactionReadyAt { get; set; }
 
@@ -258,6 +276,11 @@ namespace AdaptiveBossArena.AI
             if (AttackCooldownRemaining > 0f)
             {
                 AttackCooldownRemaining = Mathf.Max(0f, AttackCooldownRemaining - deltaTime);
+            }
+
+            if (ParryCooldownRemaining > 0f)
+            {
+                ParryCooldownRemaining = Mathf.Max(0f, ParryCooldownRemaining - deltaTime);
             }
         }
 

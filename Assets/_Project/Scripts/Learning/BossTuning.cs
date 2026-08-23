@@ -44,7 +44,14 @@ namespace AdaptiveBossArena.Learning
         /// <summary>Creates a tuning set at its baseline values.</summary>
         /// <param name="baselinePreferredRange">Distance the boss holds before it has learned anything.</param>
         /// <param name="baselineAggression">Willingness to press before it has learned anything.</param>
-        public BossTuning(float baselinePreferredRange, float baselineAggression)
+        /// <param name="baselineParryChance">
+        /// How readily the boss answers a heavy swing with a parry before it has learned anything.
+        /// Small but non-zero, so the two-way exchange exists from the opening rather than being a
+        /// mechanic most fights never show; the learning loop still raises it sharply against a
+        /// player who leans on heavies, which is where the adaptation stays visible.
+        /// </param>
+        public BossTuning(
+            float baselinePreferredRange, float baselineAggression, float baselineParryChance = 0f)
         {
             _current = new float[ParameterCount];
             _target = new float[ParameterCount];
@@ -52,9 +59,10 @@ namespace AdaptiveBossArena.Learning
 
             SetBaseline(BossTuningParameter.PreferredRange, baselinePreferredRange);
             SetBaseline(BossTuningParameter.Aggression, baselineAggression);
+            SetBaseline(BossTuningParameter.ParryChance, baselineParryChance);
 
-            // Everything else starts at zero: the boss begins the fight with none of its
-            // counter-behaviours engaged and has to earn each one.
+            // Everything else starts at zero: the boss begins the fight with the rest of its
+            // counter-behaviours disengaged and has to earn each one.
             for (int i = 0; i < ParameterCount; i++)
             {
                 _current[i] = _baseline[i];
