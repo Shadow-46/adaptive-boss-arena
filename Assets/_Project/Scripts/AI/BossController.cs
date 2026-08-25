@@ -46,6 +46,15 @@ namespace AdaptiveBossArena.AI
         /// <summary>Stagger applied to the boss when its poise breaks.</summary>
         private const float PoiseBreakStaggerSeconds = 1.1f;
 
+        /// <summary>
+        /// How far two observed swing start times may differ and still count as the same swing.
+        /// </summary>
+        /// <remarks>
+        /// The start time is derived by subtraction from a delayed observation, so it carries a
+        /// little float noise across frames. Well under the shortest gap between two real swings.
+        /// </remarks>
+        private const float SameSwingToleranceSeconds = 0.01f;
+
         /// <summary>Camera trauma accompanying an adaptation, as a physical cue that something changed.</summary>
         private const float AdaptationTellTrauma = 0.25f;
 
@@ -133,6 +142,12 @@ namespace AdaptiveBossArena.AI
         private BossAttackState _attackState;
         private BossRecoverState _recoverState;
         private BossParryState _parryState;
+
+        /// <summary>When the swing the boss last made a parry decision about began.</summary>
+        private float _lastConsideredSwingStart = float.NegativeInfinity;
+
+        /// <summary>The decision made about that swing, held so it is not re-rolled every frame.</summary>
+        private bool _parryThisSwing;
         private BossStaggerState _staggerState;
         private BossDeadState _deadState;
 
@@ -601,6 +616,8 @@ namespace AdaptiveBossArena.AI
             _context.IsParrying = false;
             _context.ParryWindowOpen = false;
             _context.ParryCooldownRemaining = 0f;
+            _lastConsideredSwingStart = float.NegativeInfinity;
+            _parryThisSwing = false;
             _context.PendingAttack = null;
             _context.Attacks.Cancel();
             _context.Motor.Teleport(spawnPosition);
@@ -785,7 +802,20 @@ namespace AdaptiveBossArena.AI
                 return false;
             }
 
-            return context.Random.NextBool(parryChance);
+            // Decided once per swing, not once per frame. This predicate is evaluated by the state
+            // machine every frame the boss is eligible, so rolling here made the chance compound:
+            // across the ~fifty frames a heavy swing is visible for, even a modest per-frame chance
+            // becomes a near-certainty, and the boss would parry essentially every heavy thrown at
+            // it. Identifying the swing by when the observed action state began - not by the
+            // observation's own timestamp, which advances every frame - keeps one swing to one roll.
+            if (Mathf.Abs(observation.ActionStartedAt - _lastConsideredSwingStart) >
+                SameSwingToleranceSeconds)
+            {
+                _lastConsideredSwingStart = observation.ActionStartedAt;
+                _parryThisSwing = context.Random.NextBool(parryChance);
+            }
+
+            return _parryThisSwing;
         }
 
         private bool HasArrived(BossContext context) => _approachState.HasArrived(context);

@@ -116,6 +116,18 @@ namespace AdaptiveBossArena.Core.Perception
         /// <summary>True when this snapshot holds real data rather than a default value.</summary>
         public bool IsValid { get; init; }
 
+        /// <summary>
+        /// When the current action began, in the same clock as <see cref="Timestamp"/>.
+        /// </summary>
+        /// <remarks>
+        /// Identifies one action across the many frames it is observed over. The timestamp alone
+        /// cannot: it advances every frame, so anything keyed on it treats a single swing as a fresh
+        /// event sixty times a second — which turns a per-action probability into a near-certainty
+        /// for any watcher that rolls each frame. Discloses nothing extra; it is a subtraction of
+        /// two values already on this snapshot, both of which are things an onlooker can see.
+        /// </remarks>
+        public float ActionStartedAt => Timestamp - TimeInActionState;
+
         /// <summary>Convenience test for whether the player is currently attacking in any form.</summary>
         public bool IsAttacking =>
             ActionState == ObservableActionState.LightAttacking ||

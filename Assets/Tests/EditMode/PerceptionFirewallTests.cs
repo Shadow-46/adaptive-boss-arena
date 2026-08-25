@@ -190,5 +190,58 @@ namespace AdaptiveBossArena.Tests.EditMode
 
             Assert.AreEqual(64, source.SampleCount);
         }
+
+        [Test]
+        public void OneActionKeepsOneStartTimeAcrossEveryFrameItIsSeenIn()
+        {
+            // The identity a watcher needs to treat a swing as one event. Timestamp advances every
+            // frame, so anything keyed on it sees a single swing as sixty fresh events a second -
+            // and a per-event probability then compounds into a near-certainty. The boss's parry
+            // roll was exactly that shape, which a small baseline chance turned from dormant into
+            // "parries every heavy".
+            var early = new PlayerObservation
+            {
+                IsValid = true,
+                Timestamp = 10.1f,
+                TimeInActionState = 0.1f,
+                ActionState = ObservableActionState.HeavyAttacking
+            };
+
+            var late = new PlayerObservation
+            {
+                IsValid = true,
+                Timestamp = 10.9f,
+                TimeInActionState = 0.9f,
+                ActionState = ObservableActionState.HeavyAttacking
+            };
+
+            Assert.AreEqual(
+                early.ActionStartedAt, late.ActionStartedAt, 0.0001f,
+                "The same swing reported two different start times.");
+        }
+
+        [Test]
+        public void ASecondActionReportsADifferentStartTime()
+        {
+            var first = new PlayerObservation
+            {
+                IsValid = true,
+                Timestamp = 10.9f,
+                TimeInActionState = 0.9f,
+                ActionState = ObservableActionState.HeavyAttacking
+            };
+
+            var second = new PlayerObservation
+            {
+                IsValid = true,
+                Timestamp = 11.0f,
+                TimeInActionState = 0.0f,
+                ActionState = ObservableActionState.HeavyAttacking
+            };
+
+            // Two swings back to back. If these collapsed to one start time the boss would decide
+            // once and apply that decision to every swing that followed.
+            Assert.AreNotEqual(first.ActionStartedAt, second.ActionStartedAt);
+        }
     }
 }
