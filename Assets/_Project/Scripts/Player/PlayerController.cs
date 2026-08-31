@@ -377,18 +377,73 @@ namespace AdaptiveBossArena.Player
             _animator?.Recoil(damage.HitDirection);
             ApplyKnockback(damage);
 
-            // Hyper-armour lets a committed swing carry through the hit: the damage lands, but the
-            // interruption is refused, so a greatsword's heavy is not stopped by chip damage.
-            float staggerSeconds = StaggerDurations.For(damage.Stagger);
-            if (staggerSeconds > 0f && !ResistsIncomingStagger())
-            {
-                _context.RequestStagger(staggerSeconds);
-
-                // Composure broken: the focus built from clean defence is lost with it.
-                _focus?.Reset();
-            }
+            ResolveIncomingStagger(damage);
 
             return DamageResult.Applied(applied, !_health.IsAlive);
+        }
+
+        /// <summary>
+        /// Decides whether a landed hit interrupts the player, through their posture pool.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Every hit used to interrupt outright: the attack's stagger strength went straight to a
+        /// stagger request and the posture pool was never consulted, while the boss's identical
+        /// situation ran through <see cref="Combat.Vitals.PoisePool"/>. That pool discards poise
+        /// damage while already broken and refills to full on recovery, so the boss cannot be
+        /// chain-staggered — and the player could, by every hit, indefinitely. It is why being hit
+        /// read as being stuck with no way out.
+        /// </para>
+        /// <para>
+        /// Now the same rules govern both. A hit costs posture; only emptying the pool interrupts,
+        /// and the interruption that follows carries its own immunity. Absorbing a hit is not the
+        /// same as ignoring it — the flash, recoil and knockback above all still play, so a blow
+        /// that does not stop the player still lands visibly.
+        /// </para>
+        /// </remarks>
+        /// <param name="damage">The hit that landed.</param>
+        private void ResolveIncomingStagger(in DamageInfo damage)
+        {
+            if (damage.Stagger == StaggerStrength.None)
+            {
+                return;
+            }
+
+            // A Break-strength blow stops the player whatever their posture: it is the tier reserved
+            // for something that should never be walked through. It empties the pool rather than
+            // bypassing it, so it still goes through the one path — and so the interruption it
+            // causes carries the same immunity every other break does. Bypassing would let two of
+            // them in a row chain, which is the exact failure this method exists to remove.
+            float postureCost = damage.Stagger == StaggerStrength.Break
+                ? _posture.Maximum
+                : damage.PoiseDamage;
+
+            if (!_posture.ApplyPoiseDamage(postureCost))
+            {
+                return;
+            }
+
+            // Hyper-armour refuses the interruption and nothing else, which is what its own
+            // documentation promises: the posture was still spent above, so a greatsword pushing
+            // through a flurry arrives at the end of it one hit from breaking rather than untouched.
+            // Refusing the whole resolution would have quietly turned hyper-armour into posture
+            // immunity, a buff nobody asked for and which only appeared because posture had never
+            // been on the path of an unblocked hit before.
+            if (ResistsIncomingStagger())
+            {
+                return;
+            }
+
+            BreakPosture();
+        }
+
+        /// <summary>Interrupts the player for the full break duration.</summary>
+        private void BreakPosture()
+        {
+            _context.RequestStagger(StaggerDurations.BreakSeconds, StaggerReason.PoiseBreak);
+
+            // Composure broken: the focus built from clean defence is lost with it.
+            _focus?.Reset();
         }
 
         /// <summary>True when the equipped weapon's hyper-armour carries the current swing through a hit.</summary>
@@ -865,8 +920,7 @@ namespace AdaptiveBossArena.Player
 
             if (_posture.ApplyPoiseDamage(postureCost))
             {
-                _context.RequestStagger(StaggerDurations.BreakSeconds, StaggerReason.PoiseBreak);
-                _focus?.Reset();
+                BreakPosture();
             }
 
             _hitFlash?.Play();
@@ -1049,8 +1103,7 @@ namespace AdaptiveBossArena.Player
 
             if (_posture.ApplyPoiseDamage(postureDamage))
             {
-                _context.RequestStagger(StaggerDurations.BreakSeconds, StaggerReason.PoiseBreak);
-                _focus?.Reset();
+                BreakPosture();
             }
         }
 
