@@ -54,6 +54,10 @@ namespace AdaptiveBossArena.Core.Combat
         /// <summary>How hard this hit should interrupt the target's current action.</summary>
         public StaggerStrength Stagger { get; init; }
 
+        /// <summary>Where the victim's body is sent: shoved, floored or thrown.</summary>
+        /// <remarks>A request the victim's reaction gate may downgrade; see <see cref="ImpactReaction"/>.</remarks>
+        public ImpactReaction Reaction { get; init; }
+
         /// <summary>
         /// Seconds of hit-stop to freeze both parties for on a successful hit.
         /// </summary>
