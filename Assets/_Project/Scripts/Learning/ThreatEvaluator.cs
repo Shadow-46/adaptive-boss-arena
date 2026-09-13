@@ -78,10 +78,15 @@ namespace AdaptiveBossArena.Learning
                 return false;
             }
 
+            // Airborne counts: a thrown body cannot dodge or guard, and anyone watching can see it. A
+            // body on the floor does not, although it is just as helpless - it cannot be hurt there,
+            // and treating it as an opening would have the boss swing at it on a rule rather than
+            // discover by whiffing that it gains nothing.
             bool isCommittedAction =
                 observation.ActionState == Core.Perception.ObservableActionState.HeavyAttacking ||
                 observation.ActionState == Core.Perception.ObservableActionState.Healing ||
-                observation.ActionState == Core.Perception.ObservableActionState.Staggered;
+                observation.ActionState == Core.Perception.ObservableActionState.Staggered ||
+                observation.ActionState == Core.Perception.ObservableActionState.Airborne;
 
             return isCommittedAction && observation.TimeInActionState >= minimumCommitmentSeconds;
         }

@@ -98,4 +98,33 @@ namespace AdaptiveBossArena.Core.Combat
         /// <summary>Full poise break, opening a long punish window.</summary>
         Break = 3
     }
+
+    /// <summary>What a landed hit does to the victim's body, beyond damage and posture.</summary>
+    /// <remarks>
+    /// <para>
+    /// Separate from <see cref="StaggerStrength"/> because the two answer different questions. Stagger
+    /// is whether the victim's action is interrupted; this is where their body ends up. A slam that
+    /// puts the player on the floor and a jab that merely stops their swing both interrupt, but only
+    /// one should cost them their footing.
+    /// </para>
+    /// <para>
+    /// A request, not a verdict. The victim's reaction gate may downgrade it - a second launch while
+    /// airborne, or a knockdown moments after getting up, arrives as a plain knockback - so that no
+    /// sequence of hits can hold a character on the floor indefinitely.
+    /// </para>
+    /// </remarks>
+    public enum ImpactReaction
+    {
+        /// <summary>No change of footing. The hit's knockback speed, if any, still shoves.</summary>
+        None = 0,
+
+        /// <summary>A shove along the blow, deliberately stronger than an ordinary hit's.</summary>
+        Knockback = 1,
+
+        /// <summary>Put on the floor, then a get-up. The victim cannot be hurt while down.</summary>
+        Knockdown = 2,
+
+        /// <summary>Thrown into the air; landing becomes a knockdown.</summary>
+        Launch = 3
+    }
 }

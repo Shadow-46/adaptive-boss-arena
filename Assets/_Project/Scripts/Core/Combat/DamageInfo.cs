@@ -141,6 +141,7 @@ namespace AdaptiveBossArena.Core.Combat
                 KnockbackSpeed = source.KnockbackSpeed,
                 PoiseDamage = source.PoiseDamage,
                 Stagger = source.Stagger,
+                Reaction = source.Reaction,
                 HitStopSeconds = source.HitStopSeconds,
                 IgnoresInvulnerability = source.IgnoresInvulnerability,
                 Unblockable = source.Unblockable,

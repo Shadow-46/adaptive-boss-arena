@@ -73,6 +73,10 @@ namespace AdaptiveBossArena.Combat
         [Tooltip("Speed imparted to the target away from the impact, in world units per second.")]
         private float _knockbackSpeed = 4f;
 
+        [SerializeField]
+        [Tooltip("Where the target's body goes: shoved, floored or thrown. Reserved for big, readable attacks.")]
+        private ImpactReaction _impactReaction = ImpactReaction.None;
+
         [Header("Timing (seconds)")]
         [SerializeField]
         [Range(0.02f, 2f)]
@@ -221,6 +225,9 @@ namespace AdaptiveBossArena.Combat
         /// <summary>Knockback speed imparted to the target.</summary>
         public float KnockbackSpeed => _knockbackSpeed;
 
+        /// <summary>Where this hit sends the target's body.</summary>
+        public ImpactReaction ImpactReaction => _impactReaction;
+
         /// <summary>Wind-up duration in seconds.</summary>
         public float StartupSeconds => _startupSeconds;
 
@@ -324,6 +331,7 @@ namespace AdaptiveBossArena.Combat
             PoiseDamage = _poiseDamage,
             Stagger = _stagger,
             KnockbackSpeed = _knockbackSpeed,
+            Reaction = _impactReaction,
             HitStopSeconds = _hitStopSeconds,
             Unblockable = _unblockable,
             Unparryable = _unparryable,

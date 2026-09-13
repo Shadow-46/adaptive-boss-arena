@@ -48,7 +48,25 @@ namespace AdaptiveBossArena.Core.Perception
         /// becomes active is not, and exposing it would let the boss time feints perfectly rather
         /// than guessing like everyone else.
         /// </remarks>
-        Guarding = 9
+        Guarding = 9,
+
+        /// <summary>
+        /// Thrown off their feet and not yet landed.
+        /// </summary>
+        /// <remarks>
+        /// Appended, never inserted: these values are compared and recorded by number. A body in the
+        /// air is as plain to see as one standing, so the boss may know it.
+        /// </remarks>
+        Airborne = 10,
+
+        /// <summary>
+        /// On the floor, or getting up from it.
+        /// </summary>
+        /// <remarks>
+        /// What is visible is the body on the ground. Whether it can be hurt there is not exposed:
+        /// the boss has to learn that by swinging at it, the way a person would.
+        /// </remarks>
+        KnockedDown = 11
     }
 
     /// <summary>
@@ -137,6 +155,8 @@ namespace AdaptiveBossArena.Core.Perception
         /// <summary>Convenience test for whether the player is currently unable to act.</summary>
         public bool IsIncapacitated =>
             ActionState == ObservableActionState.Staggered ||
+            ActionState == ObservableActionState.Airborne ||
+            ActionState == ObservableActionState.KnockedDown ||
             ActionState == ObservableActionState.Dead;
     }
 }

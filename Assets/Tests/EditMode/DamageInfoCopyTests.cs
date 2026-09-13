@@ -47,6 +47,7 @@ namespace AdaptiveBossArena.Tests.EditMode
             KnockbackSpeed = 9f,
             PoiseDamage = 55f,
             Stagger = StaggerStrength.Break,
+            Reaction = ImpactReaction.Launch,
             HitStopSeconds = 0.12f,
             IgnoresInvulnerability = true,
             Unblockable = true,
