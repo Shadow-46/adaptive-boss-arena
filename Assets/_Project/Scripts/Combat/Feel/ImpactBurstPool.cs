@@ -40,9 +40,26 @@ namespace AdaptiveBossArena.Combat.Feel
         private ImpactBurst[] _bursts;
         private int _next;
 
-        private void Awake()
+        /// <summary>
+        /// Builds the pool around the material its sparks are drawn with.
+        /// </summary>
+        /// <remarks>
+        /// The material is handed in, from an asset the scene references, rather than built here from
+        /// a shader looked up by name. A build only includes shaders something in it references, so a
+        /// name lookup is a shader the build was free to strip. Building one here remains only as a
+        /// fallback, and it says so when used.
+        /// </remarks>
+        /// <param name="material">The spark material, normally the generated asset.</param>
+        public void Construct(Material material)
         {
-            Material material = CreateParticleMaterial();
+            if (material == null)
+            {
+                Debug.LogWarning(
+                    "[Adaptive Boss Arena] Impact bursts were given no material and built one at runtime. " +
+                    "Its shader may be stripped from a build; re-run the scene setup.");
+
+                material = CreateParticleMaterial();
+            }
 
             _bursts = new ImpactBurst[_capacity];
 

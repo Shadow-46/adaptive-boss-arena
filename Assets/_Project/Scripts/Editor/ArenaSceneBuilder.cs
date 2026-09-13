@@ -557,7 +557,7 @@ namespace AdaptiveBossArena.Editor
 
             // Pools the ground hazards the boss's heavy attacks leave behind. The boss finds it by
             // type at start; its absence simply means no scars, so tests and stripped scenes are fine.
-            managersRoot.AddComponent<Combat.HazardField>();
+            managersRoot.AddComponent<Combat.HazardField>().SetMaterial(MaterialLibrary.GetOrCreateHazardDisc());
         }
 
         /// <summary>
@@ -595,7 +595,9 @@ namespace AdaptiveBossArena.Editor
                 channels.Overbalance, channels.WeaponSwingCue);
 
             var effectsDirector = Object.FindAnyObjectByType<CombatEffectsDirector>();
-            effectsDirector?.Bind(channels.PerfectDodge, channels.BossPhase, channels.Overbalance);
+            effectsDirector?.Bind(
+                channels.PerfectDodge, channels.BossPhase, channels.Overbalance,
+                MaterialLibrary.GetOrCreateImpactSparks());
         }
 
         /// <summary>Places a generated combatant prefab at its spawn point.</summary>

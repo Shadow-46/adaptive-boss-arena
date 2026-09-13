@@ -61,6 +61,10 @@ namespace AdaptiveBossArena.Game
         [Tooltip("Raised when the boss overbalances, used to kick up dust at its feet.")]
         private VoidEventChannel _overbalanceChannel;
 
+        [SerializeField]
+        [Tooltip("Material impact sparks are drawn with. Assigned by the scene generator, so its shader ships.")]
+        private Material _impactMaterial;
+
         private ImpactBurstPool _bursts;
         private ICombatEventBus _events;
         private IScreenShake _shake;
@@ -71,6 +75,7 @@ namespace AdaptiveBossArena.Game
         private void Awake()
         {
             _bursts = gameObject.AddComponent<ImpactBurstPool>();
+            _bursts.Construct(_impactMaterial);
         }
 
         private void Start()
@@ -280,11 +285,20 @@ namespace AdaptiveBossArena.Game
         /// <param name="perfectDodge">Perfect dodge channel.</param>
         /// <param name="bossPhase">Boss phase index channel.</param>
         /// <param name="overbalance">Boss overbalance channel.</param>
-        public void Bind(VoidEventChannel perfectDodge, IntEventChannel bossPhase, VoidEventChannel overbalance)
+        /// <param name="impactMaterial">Material the impact sparks are drawn with.</param>
+        public void Bind(
+            VoidEventChannel perfectDodge,
+            IntEventChannel bossPhase,
+            VoidEventChannel overbalance,
+            Material impactMaterial)
         {
             _perfectDodgeChannel = perfectDodge;
             _bossPhaseChannel = bossPhase;
             _overbalanceChannel = overbalance;
+            _impactMaterial = impactMaterial;
         }
+
+        /// <summary>The material impact sparks are drawn with.</summary>
+        public Material ImpactMaterial => _impactMaterial;
     }
 }

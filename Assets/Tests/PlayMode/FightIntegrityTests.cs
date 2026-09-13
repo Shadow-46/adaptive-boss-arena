@@ -220,6 +220,28 @@ namespace AdaptiveBossArena.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator SparksAndHazardsDrawWithMaterialsTheBuildCannotStrip()
+        {
+            // Both used to build their materials at runtime from a shader looked up by name. A build
+            // only includes shaders something references, so nothing guaranteed those shaders shipped:
+            // a WebGL build could have dropped them and every spark and scar would silently vanish.
+            // The materials are now generated assets the scene references.
+            var effects = Object.FindAnyObjectByType<Game.CombatEffectsDirector>();
+            var hazards = Object.FindAnyObjectByType<HazardField>();
+
+            Assert.IsNotNull(effects, "No combat effects director in the arena.");
+            Assert.IsNotNull(hazards, "No hazard field in the arena.");
+
+            Assert.IsNotNull(effects.ImpactMaterial, "Impact sparks have no material asset assigned.");
+            Assert.IsNotNull(hazards.DiscMaterial, "Hazard discs have no material asset assigned.");
+
+            Assert.IsTrue(effects.ImpactMaterial.shader.isSupported, "The spark shader is not supported.");
+            Assert.IsTrue(hazards.DiscMaterial.shader.isSupported, "The hazard shader is not supported.");
+
+            yield return null;
+        }
+
+        [UnityTest]
         public IEnumerator TheBossInTheSceneCarriesItsWeakPoint()
         {
             Assert.IsNotNull(_boss, "No boss in the arena scene.");

@@ -256,6 +256,94 @@ namespace AdaptiveBossArena.Editor
         }
 
         /// <summary>
+        /// Gets or creates the additive material impact sparks are drawn with.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// A real asset rather than a material built at runtime, which is what it used to be. A runtime
+        /// material finds its shader by name, and a build only includes shaders something in it
+        /// references: nothing referenced the particle shader, so a WebGL build was free to strip it
+        /// and every spark would have silently failed to render. Referenced from the scene through
+        /// this asset, the shader is guaranteed to ship.
+        /// </para>
+        /// <para>
+        /// Additive, so sparks read as light rather than as coloured paper and pick up bloom.
+        /// </para>
+        /// </remarks>
+        /// <returns>The spark material, or null when no suitable shader exists.</returns>
+        public static Material GetOrCreateImpactSparks()
+        {
+            const string materialName = "ImpactSparks";
+            string path = EditorMenus.GeneratedMaterialFolder + "/" + materialName + ".mat";
+
+            var existing = AssetDatabase.LoadAssetAtPath<Material>(path);
+
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+
+            if (shader == null)
+            {
+                Debug.LogWarning("[Adaptive Boss Arena] The URP particle shader is missing; impact sparks will not render.");
+                return null;
+            }
+
+            var material = new Material(shader) { name = materialName };
+
+            material.SetFloat("_Surface", 1f);
+            material.SetFloat("_Blend", 1f);
+            material.SetFloat("_ZWrite", 0f);
+            material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            material.EnableKeyword("_EMISSION");
+            material.SetOverrideTag("RenderType", "Transparent");
+            material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+
+            AssetAuthoring.EnsureFolderExists(EditorMenus.GeneratedMaterialFolder);
+            AssetDatabase.CreateAsset(material, path);
+
+            return material;
+        }
+
+        /// <summary>
+        /// Gets or creates the alpha-blended material ground hazards are drawn with.
+        /// </summary>
+        /// <remarks>
+        /// An asset for the same reason as <see cref="GetOrCreateImpactSparks"/>: a shader found by
+        /// name at runtime is one a build may strip. Alpha-blended rather than additive, so a scar
+        /// reads as a stain darkening the floor rather than as light.
+        /// </remarks>
+        /// <returns>The hazard material, or null when no suitable shader exists.</returns>
+        public static Material GetOrCreateHazardDisc()
+        {
+            const string materialName = "HazardDisc";
+            string path = EditorMenus.GeneratedMaterialFolder + "/" + materialName + ".mat";
+
+            var existing = AssetDatabase.LoadAssetAtPath<Material>(path);
+
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            Material material = CreateTransparentUnlit(materialName);
+
+            if (material == null)
+            {
+                return null;
+            }
+
+            AssetAuthoring.EnsureFolderExists(EditorMenus.GeneratedMaterialFolder);
+            AssetDatabase.CreateAsset(material, path);
+
+            return material;
+        }
+
+        /// <summary>
         /// Builds an unlit alpha-blended material for the render pipeline in use.
         /// </summary>
         /// <remarks>

@@ -22,12 +22,35 @@ namespace AdaptiveBossArena.Combat
         [Tooltip("How many hazards may be active at once. Beyond this the oldest is recycled.")]
         private int _capacity = 8;
 
+        [SerializeField]
+        [Tooltip("Material the hazard discs are drawn with. Assigned by the scene generator, so its shader ships.")]
+        private Material _discMaterial;
+
         private HazardZone[] _zones;
         private int _next;
 
+        /// <summary>The material the hazard discs are drawn with.</summary>
+        public Material DiscMaterial => _discMaterial;
+
+        /// <summary>Assigns the disc material. Used by the scene generator.</summary>
+        /// <param name="material">The generated hazard material.</param>
+        public void SetMaterial(Material material) => _discMaterial = material;
+
         private void Awake()
         {
-            Material material = CreateDiscMaterial();
+            // See ImpactBurstPool.Construct: a shader found by name at runtime is one a build may
+            // strip, so the generated asset is used and runtime creation is only a reported fallback.
+            Material material = _discMaterial;
+
+            if (material == null)
+            {
+                Debug.LogWarning(
+                    "[Adaptive Boss Arena] Hazard discs have no material and built one at runtime. Its " +
+                    "shader may be stripped from a build; re-run the scene setup.");
+
+                material = CreateDiscMaterial();
+            }
+
             _zones = new HazardZone[_capacity];
 
             for (int i = 0; i < _capacity; i++)
