@@ -718,7 +718,7 @@ namespace AdaptiveBossArena.AI
             }
 
             AttackDefinition attack = context.PendingAttack;
-            float reach = attack.Range + attack.LungeSpeed * attack.StartupSeconds;
+            float reach = attack.EffectiveReach;
 
             return context.DistanceToPlayer <= reach;
         }

@@ -118,7 +118,7 @@ namespace AdaptiveBossArena.AI
         /// </remarks>
         private static float RangeSuitability(AttackDefinition attack, float distance)
         {
-            float effectiveReach = attack.Range + attack.LungeSpeed * attack.StartupSeconds;
+            float effectiveReach = attack.EffectiveReach;
             float mismatch = Mathf.Abs(effectiveReach - distance);
 
             return Mathf.Max(0f, IdealRangeWeight - mismatch * RangeFalloff);

@@ -233,7 +233,7 @@ namespace AdaptiveBossArena.AI.States
 
             AttackDefinition next = PickFollowUp(context);
             bool inReach = next != null && context.HasPerceivedPlayer &&
-                           context.DistanceToPlayer <= next.Range + next.LungeSpeed * next.StartupSeconds;
+                           context.DistanceToPlayer <= next.EffectiveReach;
 
             if (!inReach)
             {

@@ -253,6 +253,17 @@ namespace AdaptiveBossArena.Combat
         /// <summary>Forward impulse applied during startup.</summary>
         public float LungeSpeed => _lungeSpeed;
 
+        /// <summary>
+        /// How far from its target the attacker can start this attack and still connect.
+        /// </summary>
+        /// <remarks>
+        /// The hit range plus the ground a lunge covers during its wind-up. This used to be written out by
+        /// hand in four places across the boss's selection, approach, combo and attack logic. Any change to
+        /// how a lunge travels would have had to find all four, and missing one would leave the boss
+        /// choosing attacks it could not land, or refusing ones it could, with nothing to show which.
+        /// </remarks>
+        public float EffectiveReach => _range + _lungeSpeed * StartupSeconds;
+
         /// <summary>Freeze duration applied on a successful hit.</summary>
         public float HitStopSeconds => _hitStopSeconds;
 

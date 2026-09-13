@@ -121,8 +121,7 @@ namespace AdaptiveBossArena.AI.States
                 return true;
             }
 
-            float reach = context.PendingAttack.Range +
-                          context.PendingAttack.LungeSpeed * context.PendingAttack.StartupSeconds;
+            float reach = context.PendingAttack.EffectiveReach;
 
             return context.DistanceToPlayer <= reach;
         }
