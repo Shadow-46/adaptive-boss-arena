@@ -654,7 +654,15 @@ namespace AdaptiveBossArena.Editor
                         // How far a blow carries the player. Long enough that a heavy hit visibly
                         // throws them, short enough that control returns within a stride.
                         .Float("_impulseHalfLifeSeconds", 0.12f)
-                        .Float("_bodyMass", 1f);
+                        .Float("_bodyMass", 1f)
+
+                        // Weight. The knight used to reach top speed in 0.06 s, stop in 0.08 s and
+                        // turn at 1080 degrees a second - no mass at all. These still answer the stick
+                        // at once from rest, but momentum now has to be built, shed and turned.
+                        .Float("_accelerationSeconds", 0.12f)
+                        .Float("_decelerationSeconds", 0.16f)
+                        .Float("_turnSpeedDegreesPerSecond", 720f)
+                        .Float("_turnSpeedFloor", 0.35f);
                 }
 
                 writer.ReferenceArray("_weapons", weapons)

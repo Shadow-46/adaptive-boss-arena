@@ -56,6 +56,12 @@ namespace AdaptiveBossArena.Player
         private float _impulseHalfLifeSeconds = 0.12f;
 
         [SerializeField]
+        [Tooltip("Fraction of top speed kept when reversing direction outright at a sprint. Lower " +
+                 "makes the knight heavier to turn.")]
+        [Range(0f, 1f)]
+        private float _turnSpeedFloor = 0.35f;
+
+        [SerializeField]
         [Tooltip("Relative mass in body contact. Compared against the boss's to decide who gives ground.")]
         [Min(0.01f)]
         private float _bodyMass = 1f;
@@ -203,6 +209,9 @@ namespace AdaptiveBossArena.Player
 
         /// <summary>Half-life of an imposed shove such as knockback.</summary>
         public float ImpulseHalfLifeSeconds => _impulseHalfLifeSeconds;
+
+        /// <summary>Fraction of top speed kept when reversing outright at a sprint.</summary>
+        public float TurnSpeedFloor => _turnSpeedFloor;
 
         /// <summary>Relative mass in body contact.</summary>
         public float BodyMass => _bodyMass;

@@ -96,7 +96,13 @@ namespace AdaptiveBossArena.Player.Movement
         public void ApplyMoveInput(Vector2 moveInput, float deltaTime)
         {
             Vector3 desiredDirection = ToWorldDirection(moveInput);
-            Vector3 targetVelocity = desiredDirection * _config.MoveSpeed;
+
+            // Turning while carrying speed sheds some of it first, so a reversal at a sprint slows
+            // through the turn instead of swinging velocity round for free.
+            float momentumFactor = MomentumRules.TargetSpeedFactor(
+                _planarVelocity, desiredDirection, _config.MoveSpeed, _config.TurnSpeedFloor);
+
+            Vector3 targetVelocity = desiredDirection * (_config.MoveSpeed * momentumFactor);
 
             bool isAccelerating = desiredDirection.sqrMagnitude > 0f;
             float durationSeconds = isAccelerating

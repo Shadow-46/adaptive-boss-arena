@@ -19,11 +19,12 @@ MonoBehaviour:
   _staminaRegenPerSecond: 28
   _staminaRegenDelaySeconds: 0.6
   _moveSpeed: 7
-  _accelerationSeconds: 0.06
-  _decelerationSeconds: 0.08
+  _accelerationSeconds: 0.12
+  _decelerationSeconds: 0.16
   _impulseHalfLifeSeconds: 0.12
+  _turnSpeedFloor: 0.35
   _bodyMass: 1
-  _turnSpeedDegreesPerSecond: 1080
+  _turnSpeedDegreesPerSecond: 720
   _dashDistance: 4.5
   _dashDurationSeconds: 0.18
   _dashCooldownSeconds: 0.25
