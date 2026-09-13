@@ -175,9 +175,12 @@ namespace AdaptiveBossArena.Game
                 ? (_triangleTotal / _countedFrames).ToString(invariant)
                 : "n/a";
 
+            // The quality level is reported so a capture proves which render tier it measured. A
+            // desktop build that fell back to the web tier would otherwise post flattering numbers for
+            // graphics it was not drawing.
             return string.Format(
                 invariant,
-                "[PERF] platform={0} p50={1:F2}ms p95={2:F2}ms max={3:F2}ms frames={4} drawcalls={5} tris={6} seconds={7:F1}",
+                "[PERF] platform={0} quality={8} p50={1:F2}ms p95={2:F2}ms max={3:F2}ms frames={4} drawcalls={5} tris={6} seconds={7:F1}",
                 Application.platform,
                 _sampler.PercentileMilliseconds(0.5f),
                 _sampler.PercentileMilliseconds(0.95f),
@@ -185,7 +188,8 @@ namespace AdaptiveBossArena.Game
                 _sampler.Count,
                 drawCalls,
                 triangles,
-                _captured);
+                _captured,
+                QualitySettings.names[QualitySettings.GetQualityLevel()].Replace(' ', '_'));
         }
 
         private void ReadCaptureRequest()

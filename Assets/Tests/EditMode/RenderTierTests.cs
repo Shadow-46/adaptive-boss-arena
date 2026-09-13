@@ -107,6 +107,15 @@ namespace AdaptiveBossArena.Tests.EditMode
                 "The Windows build starts in the web tier and would never show the full graphics.");
         }
 
+        [Test]
+        public void BothBuildTargetsPassTheirTierCheck()
+        {
+            // The same check the build script runs before building. If it ever fails here, a build
+            // would refuse to start - which is the intended outcome, but should be caught now.
+            Assert.IsNull(BuildScript.TierProblemFor(BuildTarget.WebGL));
+            Assert.IsNull(BuildScript.TierProblemFor(BuildTarget.StandaloneWindows64));
+        }
+
         private static bool Excludes(SerializedProperty level, string platform)
         {
             SerializedProperty excluded = level.FindPropertyRelative("excludedTargetPlatforms");
