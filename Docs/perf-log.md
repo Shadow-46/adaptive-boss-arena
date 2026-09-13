@@ -38,3 +38,5 @@ is deterministic enough to compare across stages.
 | 2026-09-13 | S0 baseline | af805de | WebGL (local) | not measured | not measured | — | 113 | 15.0k | 15.7 MB | hidden pane throttled to ~1 fps; counts valid |
 | 2026-09-13 | P1 | 6440c9d | Windows 1280×720 | 6.94 | 6.95 | 13.89 | 135 | 18.5k | — | vsync-locked; no regression |
 | 2026-09-13 | P1 | 6440c9d | WebGL (local) | not measured | not measured | — | — | — | 15.7 MB | fresh load verified; deployed |
+| 2026-09-13 | G1 | fa21a19 | Windows 1280×720 (desktop tier, Ultra) | 6.94 | 6.95 | 62.49 | 294 | 36.9k | 34 MB zip | SSAO+4096 shadows+MSAA4; one 62 ms spike, p95 unaffected |
+| 2026-09-13 | G1 | fa21a19 | WebGL (local, web tier) | not measured | not measured | — | — | — | 15.7 MB | ships web pipeline only, no SSAO shader compiled; deployed |
