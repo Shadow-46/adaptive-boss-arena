@@ -26,11 +26,12 @@ MonoBehaviour:
   _bodyMass: 1
   _turnSpeedDegreesPerSecond: 720
   _dashDistance: 4.5
-  _dashDurationSeconds: 0.18
+  _dashDurationSeconds: 0.4
   _dashCooldownSeconds: 0.25
   _dashStaminaCost: 22
-  _invulnerabilityFraction: 0.75
-  _dashExitSpeedFraction: 0.35
+  _invulnerabilitySeconds: 0.135
+  _dashSteerFraction: 0.2
+  _dashCancelFraction: 0.7
   _weapons:
   - {fileID: 11400000, guid: 2431a21a84cf23d4abd5c018405a4040, type: 2}
   - {fileID: 11400000, guid: 052f41240908e9146a0bfdd63dad6973, type: 2}

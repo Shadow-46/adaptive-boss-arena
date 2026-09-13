@@ -662,7 +662,14 @@ namespace AdaptiveBossArena.Editor
                         .Float("_accelerationSeconds", 0.12f)
                         .Float("_decelerationSeconds", 0.16f)
                         .Float("_turnSpeedDegreesPerSecond", 720f)
-                        .Float("_turnSpeedFloor", 0.35f);
+                        .Float("_turnSpeedFloor", 0.35f)
+
+                        // The dodge is a roll: 0.4 s that bursts out and settles over the same 4.5 m.
+                        // The invincibility stays the absolute 0.135 s the boss was tuned against.
+                        .Float("_dashDurationSeconds", 0.4f)
+                        .Float("_invulnerabilitySeconds", 0.135f)
+                        .Float("_dashSteerFraction", 0.2f)
+                        .Float("_dashCancelFraction", 0.7f);
                 }
 
                 writer.ReferenceArray("_weapons", weapons)

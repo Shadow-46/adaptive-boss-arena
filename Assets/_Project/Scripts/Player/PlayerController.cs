@@ -546,6 +546,10 @@ namespace AdaptiveBossArena.Player
             AddGroundedTransitions(_idleState);
             AddGroundedTransitions(_moveState);
 
+            // The roll's slow tail can be cancelled into a buffered attack. Ranked above the roll's
+            // own exits, so an attack pressed during the tail comes out of the roll rather than waiting
+            // for it to finish and then starting from standing.
+            _machine.AddTransition(_dashState, _attackState, WantsToCancelRollIntoAttack, AttackTransitionPriority);
             _machine.AddTransition(_dashState, _moveState, DashFinishedWithInput);
             _machine.AddTransition(_dashState, _idleState, DashFinished);
 
@@ -610,6 +614,9 @@ namespace AdaptiveBossArena.Player
             context.InputBuffer.TryConsume(PlayerInputAction.Dash, _time.CombatTime);
 
         private bool DashFinished(PlayerContext context) => _dashState.IsComplete(context);
+
+        private bool WantsToCancelRollIntoAttack(PlayerContext context) =>
+            _dashState.CanCancel(context) && WantsToAttack(context);
 
         private bool DashFinishedWithInput(PlayerContext context) =>
             _dashState.IsComplete(context) && context.HasMoveInput;

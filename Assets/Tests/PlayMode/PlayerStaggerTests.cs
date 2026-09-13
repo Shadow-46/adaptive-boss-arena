@@ -119,6 +119,93 @@ namespace AdaptiveBossArena.Tests.PlayMode
                 "The recoil had faded before the freeze it belongs to was over.");
         }
 
+        /// <summary>Starts a roll directly, so the test does not depend on simulated input.</summary>
+        private Player.States.PlayerDashState ForceRoll(out PlayerContext context)
+        {
+            var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+
+            context = (PlayerContext)typeof(PlayerController).GetField("_context", flags).GetValue(_player);
+            var machine = (Core.StateMachine.StateMachine<PlayerContext>)
+                typeof(PlayerController).GetField("_machine", flags).GetValue(_player);
+            var roll = (Player.States.PlayerDashState)
+                typeof(PlayerController).GetField("_dashState", flags).GetValue(_player);
+
+            machine.ForceState(roll);
+
+            return roll;
+        }
+
+        [UnityTest]
+        public IEnumerator TheRollKeepsItsDistanceAndItsInvincibilityWindow()
+        {
+            // The dodge became a longer roll. Two numbers the boss was tuned against must not move
+            // with it: how far a dodge carries the player, and when its invincibility ends.
+            Assert.IsNotNull(_player);
+            yield return WaitForTheFightToStart();
+
+            PlayerContext context = ForceRollAwayFromTheBoss();
+            Vector3 start = _player.transform.position;
+            float startedAt = context.Time.CombatTime;
+            float lastInvincible = 0f;
+
+            while (context.Time.CombatTime - startedAt < context.Config.DashDurationSeconds + 0.05f)
+            {
+                if (context.IsInvulnerable)
+                {
+                    lastInvincible = context.Time.CombatTime - startedAt;
+                }
+
+                yield return null;
+            }
+
+            Vector3 travelled = _player.transform.position - start;
+            travelled.y = 0f;
+
+            Assert.AreEqual(context.Config.DashDistance, travelled.magnitude, 0.6f,
+                "The roll no longer carries the player its configured distance.");
+            Assert.AreEqual(0.135f, lastInvincible, 0.03f,
+                "The roll's invincibility no longer ends where the boss was tuned to expect.");
+        }
+
+        [UnityTest]
+        public IEnumerator ABufferedAttackComesOutOfTheRollsTail()
+        {
+            Assert.IsNotNull(_player);
+            yield return WaitForTheFightToStart();
+
+            PlayerContext context = ForceRollAwayFromTheBoss();
+            float startedAt = context.Time.CombatTime;
+
+            // Pressed during the tail, where the roll allows a cancel.
+            while (context.Time.CombatTime - startedAt < context.Config.DashDurationSeconds * 0.75f)
+            {
+                yield return null;
+            }
+
+            context.InputBuffer.Record(Player.Controls.PlayerInputAction.LightAttack, context.Time.CombatTime);
+
+            for (int i = 0; i < 3; i++)
+            {
+                yield return null;
+            }
+
+            Assert.IsTrue(context.Attacks.IsRunning, "An attack pressed in the roll's tail did not come out.");
+            Assert.Less(context.Time.CombatTime - startedAt, context.Config.DashDurationSeconds + 0.02f,
+                "The attack waited for the roll to finish instead of cancelling it.");
+        }
+
+        private PlayerContext ForceRollAwayFromTheBoss()
+        {
+            var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+            var context = (PlayerContext)typeof(PlayerController).GetField("_context", flags).GetValue(_player);
+
+            // Faces away from the boss toward open floor, so neither the boss nor a wall shortens it.
+            context.Motor.SnapToDirection(Vector3.back);
+            ForceRoll(out _);
+
+            return context;
+        }
+
         [UnityTest]
         public IEnumerator ASingleHitDoesNotStopThePlayer()
         {

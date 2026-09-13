@@ -88,16 +88,20 @@ namespace AdaptiveBossArena.Player
         private float _dashStaminaCost = 22f;
 
         [SerializeField]
-        [Range(0f, 1f)]
-        [Tooltip("Fraction of the dash, measured from its start, during which the player is " +
-                 "invulnerable. Below one so that dashing into an attack late still gets punished.")]
-        private float _invulnerabilityFraction = 0.75f;
+        [Min(0f)]
+        [Tooltip("Seconds of invulnerability from the start of a dodge. Absolute rather than a fraction " +
+                 "of the roll, so lengthening the roll can never lengthen the invincibility with it.")]
+        private float _invulnerabilitySeconds = 0.135f;
 
         [SerializeField]
         [Range(0f, 1f)]
-        [Tooltip("Fraction of dash speed retained when the dash ends. Above zero so the character " +
-                 "flows out of a dash instead of hitting a wall of friction.")]
-        private float _dashExitSpeedFraction = 0.35f;
+        [Tooltip("Fraction of the roll, from its start, during which the stick can still steer it.")]
+        private float _dashSteerFraction = 0.2f;
+
+        [SerializeField]
+        [Range(0f, 1f)]
+        [Tooltip("Fraction of the roll after which a buffered attack may cancel the rest of it.")]
+        private float _dashCancelFraction = 0.7f;
 
         [Header("Weapons")]
         [SerializeField]
@@ -231,14 +235,19 @@ namespace AdaptiveBossArena.Player
         /// <summary>Stamina consumed per dash.</summary>
         public float DashStaminaCost => _dashStaminaCost;
 
-        /// <summary>Duration of dash invulnerability, in seconds.</summary>
-        public float InvulnerabilitySeconds => _dashDurationSeconds * _invulnerabilityFraction;
+        /// <summary>Duration of dodge invulnerability, in seconds from the start of the roll.</summary>
+        /// <remarks>
+        /// Capped at the roll's own length, so a roll tuned shorter than its invincibility never
+        /// leaves the player invincible after it has ended.
+        /// </remarks>
+        public float InvulnerabilitySeconds => Mathf.Min(_invulnerabilitySeconds, _dashDurationSeconds);
 
-        /// <summary>Average dash speed implied by its distance and duration.</summary>
-        public float DashSpeed => _dashDurationSeconds <= 0f ? 0f : _dashDistance / _dashDurationSeconds;
+        /// <summary>Fraction of the roll during which the stick can still steer it.</summary>
+        public float DashSteerFraction => _dashSteerFraction;
 
-        /// <summary>Fraction of dash speed carried into the state that follows a dash.</summary>
-        public float DashExitSpeedFraction => _dashExitSpeedFraction;
+        /// <summary>Fraction of the roll after which a buffered attack may cancel it.</summary>
+        public float DashCancelFraction => _dashCancelFraction;
+
 
         /// <summary>Weapons the player can switch between.</summary>
         public WeaponDefinition[] Weapons => _weapons;
