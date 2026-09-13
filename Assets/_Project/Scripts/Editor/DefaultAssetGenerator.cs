@@ -209,6 +209,88 @@ namespace AdaptiveBossArena.Editor
                 "DefaultPlayerAnimation", "animation.player", isBoss: false);
             CreateAnimationConfig(
                 "DefaultBossAnimation", "animation.boss", isBoss: true);
+
+            AssignRigs();
+        }
+
+        /// <summary>Which attack state each of the player's attacks plays.</summary>
+        /// <remarks>
+        /// The three-hit chains take the library's three-part sword combo in order, so a chain reads as
+        /// one continuous string of blows rather than the same swing three times. Heavies and specials
+        /// fall back by damage type and need no entry.
+        /// </remarks>
+        private static readonly (string Attack, string State)[] PlayerClipBindings =
+        {
+            ("PlayerLight1", "Light1"), ("PlayerLight2", "Light2"), ("PlayerLight3", "Light3"),
+            ("GreatswordLight1", "Light1"), ("GreatswordLight2", "Light3"),
+            ("EnergyLight1", "Light1"), ("EnergyLight2", "Light2"), ("EnergyLight3", "Light3"), ("EnergyLight4", "Light1"),
+            ("EnergyHeavy", "Dash")
+        };
+
+        /// <summary>Which attack state each of the boss's attacks plays.</summary>
+        /// <remarks>
+        /// Chosen so the attack reads from the body, which is how its telegraph now works for everything
+        /// except the slams and waves: a wide sweep swings wide, the jab is a short hook, the charge is a
+        /// driving lunge, and the ground-strikers all bring the weapon down overhead.
+        /// </remarks>
+        private static readonly (string Attack, string State)[] BossClipBindings =
+        {
+            ("BossSweep", "Light2"), ("BossSlam", "Overhead"), ("BossCharge", "Dash"),
+            ("BossShockwave", "Overhead"), ("BossJab", "Hook"), ("BossPerilousOverhead", "Heavy"),
+            ("BossPhaseShockwave", "Overhead")
+        };
+
+        /// <summary>
+        /// Points both characters at the imported rig, its controller, a scale and their clip bindings.
+        /// </summary>
+        /// <remarks>
+        /// References, not tuning, so they are written on every run: a missing reference is a broken
+        /// asset that should heal itself. When the imported art is absent the fields are left empty and
+        /// the generated primitive bodies are built exactly as before.
+        /// </remarks>
+        private static void AssignRigs()
+        {
+            GameObject rig = Art.AnimatorControllerBuilder.LoadRigModel();
+            UnityEditor.Animations.AnimatorController controller = rig != null ? Art.AnimatorControllerBuilder.Build() : null;
+
+            // The mannequin stands about as tall as the knight. The brute is a head and a half taller and
+            // correspondingly broader, which is what makes one skeleton read as two very different bodies.
+            AssignRig("DefaultPlayerAnimation", rig, controller, 1f, PlayerClipBindings);
+            AssignRig("DefaultBossAnimation", rig, controller, 1.55f, BossClipBindings);
+        }
+
+        private static void AssignRig(
+            string configName,
+            GameObject rig,
+            RuntimeAnimatorController controller,
+            float scale,
+            (string Attack, string State)[] bindings)
+        {
+            var config = AssetDatabase.LoadAssetAtPath<CharacterAnimationConfig>($"{ConfigFolder}/{configName}.asset");
+
+            if (config == null)
+            {
+                return;
+            }
+
+            var serialized = new SerializedObject(config);
+            serialized.FindProperty("_rigPrefab").objectReferenceValue = controller != null ? rig : null;
+            serialized.FindProperty("_animatorController").objectReferenceValue = controller;
+            serialized.FindProperty("_rigScale").floatValue = scale;
+
+            SerializedProperty list = serialized.FindProperty("_attackClips");
+            list.arraySize = bindings.Length;
+
+            for (int i = 0; i < bindings.Length; i++)
+            {
+                SerializedProperty entry = list.GetArrayElementAtIndex(i);
+                entry.FindPropertyRelative("_attack").objectReferenceValue =
+                    AssetDatabase.LoadAssetAtPath<AttackDefinition>($"{AttackFolder}/{bindings[i].Attack}.asset");
+                entry.FindPropertyRelative("_state").stringValue = bindings[i].State;
+            }
+
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(config);
         }
 
         /// <summary>Creates or retunes a single animation config.</summary>

@@ -468,7 +468,9 @@ namespace AdaptiveBossArena.AI
             float topSpeed = _context.Motor.CurrentTopSpeed;
             float speed01 = topSpeed > 0f ? _context.Motor.Speed / topSpeed : 0f;
 
-            _animator.SetMotionState(state, _context.Attacks.Phase, speed01);
+            _animator.SetMotionState(
+                state, _context.Attacks.Phase, speed01,
+                _context.Attacks.CurrentAttack, _context.Attacks.ElapsedSeconds);
         }
 
         /// <summary>Maps the boss's current situation onto a presentation state for the animator.</summary>

@@ -107,8 +107,12 @@ namespace AdaptiveBossArena.Editor
             var animationConfig =
                 GeneratedAssets.Config<CharacterAnimationConfig>("DefaultBossAnimation");
 
-            if (!SilhouetteBuilder.TryBuildRig(
-                    visualRoot.transform, animationConfig != null ? animationConfig.RigPrefab : null))
+            if (SilhouetteBuilder.TryBuildRig(
+                    visualRoot.transform, animationConfig, SilhouetteBuilder.BruteRigMaterial(), out Animator rig))
+            {
+                SilhouetteBuilder.AttachBruteCore(rig, BodyRadius * 0.34f);
+            }
+            else
             {
                 SilhouetteBuilder.BuildBrute(visualRoot.transform, BodyHeight, BodyRadius);
             }

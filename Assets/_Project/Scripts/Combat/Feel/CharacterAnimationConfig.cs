@@ -32,6 +32,24 @@ namespace AdaptiveBossArena.Combat.Feel
                  "over the pose. Left empty, the generated body is used.")]
         private GameObject _rigPrefab;
 
+        [SerializeField]
+        [Tooltip("Controller the rig plays through. Generated; states are crossfaded to by the bridge.")]
+        private RuntimeAnimatorController _animatorController;
+
+        [SerializeField]
+        [Tooltip("Uniform scale applied to the rig, so one mannequin can be a knight or a brute.")]
+        [Min(0.1f)]
+        private float _rigScale = 1f;
+
+        [SerializeField]
+        [Tooltip("Which attack state each attack plays. Attacks not listed fall back by damage type.")]
+        private AttackClipBinding[] _attackClips = System.Array.Empty<AttackClipBinding>();
+
+        [SerializeField]
+        [Tooltip("Where in each attack clip, as a fraction of its length, the blade lands.")]
+        [Range(0.05f, 0.95f)]
+        private float _clipContactFraction = 0.45f;
+
         [Header("Idle")]
         [SerializeField]
         [Tooltip("Vertical breathing amplitude while standing, in world units.")]
@@ -177,6 +195,46 @@ namespace AdaptiveBossArena.Combat.Feel
         /// </remarks>
         public GameObject RigPrefab => _rigPrefab;
 
+        /// <summary>Controller the rig plays through.</summary>
+        public RuntimeAnimatorController AnimatorController => _animatorController;
+
+        /// <summary>Uniform scale applied to the rig.</summary>
+        public float RigScale => _rigScale;
+
+        /// <summary>Where in each attack clip, as a fraction of its length, the blade lands.</summary>
+        public float ClipContactFraction => _clipContactFraction;
+
+        /// <summary>The attack state an attack plays.</summary>
+        /// <param name="attack">The attack in progress.</param>
+        /// <returns>The state name, falling back by damage type when the attack has no binding.</returns>
+        public string AttackStateFor(AttackDefinition attack)
+        {
+            if (attack == null)
+            {
+                return CharacterAnimatorParameters.DefaultLightState;
+            }
+
+            foreach (AttackClipBinding binding in _attackClips)
+            {
+                if (binding.Attack == attack && !string.IsNullOrEmpty(binding.State))
+                {
+                    return binding.State;
+                }
+            }
+
+            switch (attack.DamageType)
+            {
+                case Core.Combat.DamageType.Heavy:
+                    return CharacterAnimatorParameters.DefaultHeavyState;
+
+                case Core.Combat.DamageType.Special:
+                    return CharacterAnimatorParameters.DefaultSpecialState;
+
+                default:
+                    return CharacterAnimatorParameters.DefaultLightState;
+            }
+        }
+
         public float IdleBobAmplitude => _idleBobAmplitude;
 
         /// <summary>Breaths per second while idle.</summary>
@@ -256,5 +314,24 @@ namespace AdaptiveBossArena.Combat.Feel
 
         /// <summary>Scale easing half-life.</summary>
         public float ScaleHalfLife => _scaleHalfLife;
+    }
+
+    /// <summary>Which attack state one attack plays.</summary>
+    [System.Serializable]
+    public struct AttackClipBinding
+    {
+        [SerializeField]
+        [Tooltip("The attack.")]
+        private AttackDefinition _attack;
+
+        [SerializeField]
+        [Tooltip("The Animator state it plays.")]
+        private string _state;
+
+        /// <summary>The attack.</summary>
+        public AttackDefinition Attack => _attack;
+
+        /// <summary>The Animator state it plays.</summary>
+        public string State => _state;
     }
 }

@@ -111,7 +111,7 @@ namespace AdaptiveBossArena.Editor
                 GeneratedAssets.Config<CharacterAnimationConfig>("DefaultPlayerAnimation");
 
             if (!SilhouetteBuilder.TryBuildRig(
-                    visualRoot.transform, animationConfig != null ? animationConfig.RigPrefab : null))
+                    visualRoot.transform, animationConfig, SilhouetteBuilder.KnightRigMaterial(), out Animator rig))
             {
                 SilhouetteBuilder.BuildKnight(visualRoot.transform, CapsuleHeight, CapsuleRadius);
             }
@@ -137,7 +137,7 @@ namespace AdaptiveBossArena.Editor
                 new Color(0.6f, 0.85f, 1f),
                 width: 0.3f);
 
-            BuildWeaponSocket(visualRoot.transform);
+            BuildWeaponSocket(visualRoot.transform, rig);
         }
 
         /// <summary>Adds the empty mount a weapon model attaches to, at a placeholder hand position.</summary>
@@ -146,12 +146,28 @@ namespace AdaptiveBossArena.Editor
         /// hold a hilt so a dropped-in blade sits believably even before a rig exists to parent it to a
         /// real bone. See <see cref="Combat.Feel.WeaponSocket"/>.
         /// </remarks>
-        private static void BuildWeaponSocket(Transform visualRoot)
+        /// <param name="visualRoot">The character's visual root.</param>
+        /// <param name="rig">The rig's Animator when a rigged body was built, otherwise null.</param>
+        private static void BuildWeaponSocket(Transform visualRoot, Animator rig)
         {
             var socket = new GameObject("WeaponSocket");
-            socket.transform.SetParent(visualRoot, false);
-            socket.transform.localPosition =
-                new Vector3(CapsuleRadius * 1.2f, CapsuleHeight * 0.55f, CapsuleRadius * 1.1f);
+
+            // On a rig the blade goes in the right hand, so it follows every swing the clip plays. On
+            // the generated body there is no hand, so it sits where one would be.
+            Transform hand = rig != null && rig.isHuman ? rig.GetBoneTransform(HumanBodyBones.RightHand) : null;
+
+            if (hand != null)
+            {
+                socket.transform.SetParent(hand, false);
+                socket.transform.localPosition = Vector3.zero;
+            }
+            else
+            {
+                socket.transform.SetParent(visualRoot, false);
+                socket.transform.localPosition =
+                    new Vector3(CapsuleRadius * 1.2f, CapsuleHeight * 0.55f, CapsuleRadius * 1.1f);
+            }
+
             socket.AddComponent<WeaponSocket>();
         }
 

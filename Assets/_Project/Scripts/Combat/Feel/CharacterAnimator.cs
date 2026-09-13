@@ -107,7 +107,14 @@ namespace AdaptiveBossArena.Combat.Feel
         /// <param name="state">The action a watcher would see.</param>
         /// <param name="attackPhase">Phase of any attack in flight, driving the wind-up and lunge.</param>
         /// <param name="planarSpeed01">Horizontal speed as a fraction of top speed, for the run lean.</param>
-        public void SetMotionState(ObservableActionState state, AttackPhase attackPhase, float planarSpeed01)
+        /// <param name="attack">The attack in progress, or null. A rig uses it to pick and scrub its clip.</param>
+        /// <param name="attackElapsedSeconds">Time since that attack began.</param>
+        public void SetMotionState(
+            ObservableActionState state,
+            AttackPhase attackPhase,
+            float planarSpeed01,
+            AttackDefinition attack = null,
+            float attackElapsedSeconds = 0f)
         {
             _state = state;
             _attackPhase = attackPhase;
@@ -115,8 +122,11 @@ namespace AdaptiveBossArena.Combat.Feel
 
             // Forwarded so both presentation layers ride one push from the controller. No-op until a
             // rig is present.
-            _bridge?.SetMotionState(state, attackPhase, planarSpeed01);
+            _bridge?.SetMotionState(state, attackPhase, planarSpeed01, attack, attackElapsedSeconds);
         }
+
+        /// <summary>The animation tuning this character uses.</summary>
+        public CharacterAnimationConfig Config => _config;
 
         /// <summary>Throws the body along an incoming blow.</summary>
         /// <param name="worldHitDirection">Direction the blow travels, from attacker toward target.</param>
@@ -227,7 +237,10 @@ namespace AdaptiveBossArena.Combat.Feel
 
             position = _restPosition + offset;
             rotation = _restRotation * Quaternion.Euler(leanDegrees, 0f, IdleSway());
-            scale = Vector3.Scale(_restScale, scaleFactor);
+
+            // Squash and stretch are for the primitive body. Scaling a skinned mesh unevenly distorts
+            // its limbs rather than reading as weight, so a rig keeps only the additive shove and lean.
+            scale = SkeletonDrivesPose ? _restScale : Vector3.Scale(_restScale, scaleFactor);
         }
 
         /// <summary>Chooses the resting-state pose for the current action.</summary>

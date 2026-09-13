@@ -328,7 +328,9 @@ namespace AdaptiveBossArena.Player
                 ? _context.Motor.PlanarVelocity.magnitude / _config.MoveSpeed
                 : 0f;
 
-            _animator.SetMotionState(_context.ObservableState, _context.Attacks.Phase, speed01);
+            _animator.SetMotionState(
+                _context.ObservableState, _context.Attacks.Phase, speed01,
+                _context.Attacks.CurrentAttack, _context.Attacks.ElapsedSeconds);
         }
 
         /// <inheritdoc />

@@ -42,25 +42,109 @@ namespace AdaptiveBossArena.Editor
         /// </para>
         /// </remarks>
         /// <param name="visualRoot">Visual root to parent the model under.</param>
-        /// <param name="rigPrefab">The model, or null to build the generated body instead.</param>
+        /// <param name="config">The character's animation config, carrying the rig, its controller and scale.</param>
+        /// <param name="bodyMaterial">Material every surface of the rig is drawn with.</param>
+        /// <param name="animator">The rig's Animator, for finding bones by role.</param>
         /// <returns>True when a rig was instantiated and the generated body should be skipped.</returns>
-        public static bool TryBuildRig(Transform visualRoot, GameObject rigPrefab)
+        public static bool TryBuildRig(
+            Transform visualRoot,
+            Combat.Feel.CharacterAnimationConfig config,
+            Material bodyMaterial,
+            out Animator animator)
         {
-            if (rigPrefab == null)
+            animator = null;
+
+            if (config == null || config.RigPrefab == null)
             {
                 return false;
             }
 
-            var instance = (GameObject)UnityEditor.PrefabUtility.InstantiatePrefab(rigPrefab, visualRoot);
+            var instance = (GameObject)UnityEditor.PrefabUtility.InstantiatePrefab(config.RigPrefab, visualRoot);
             instance.transform.localPosition = Vector3.zero;
             instance.transform.localRotation = Quaternion.identity;
+            instance.transform.localScale = Vector3.one * config.RigScale;
 
             foreach (Collider collider in instance.GetComponentsInChildren<Collider>(true))
             {
                 Object.DestroyImmediate(collider);
             }
 
+            animator = instance.GetComponentInChildren<Animator>(true);
+
+            if (animator != null)
+            {
+                animator.runtimeAnimatorController = config.AnimatorController;
+
+                // The motors move the character; a clip must never. Root motion off, and animated even
+                // when off screen so a pose never snaps when the camera swings back to it.
+                animator.applyRootMotion = false;
+                animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            }
+
+            // The imported model's own materials are placeholders and are not imported, so every
+            // surface would otherwise render with the engine's default. The body takes the character's
+            // generated material, which knows the render pipeline and the art direction.
+            if (bodyMaterial != null)
+            {
+                foreach (Renderer renderer in instance.GetComponentsInChildren<Renderer>(true))
+                {
+                    var materials = new Material[renderer.sharedMaterials.Length == 0 ? 1 : renderer.sharedMaterials.Length];
+
+                    for (int i = 0; i < materials.Length; i++)
+                    {
+                        materials[i] = bodyMaterial;
+                    }
+
+                    renderer.sharedMaterials = materials;
+                }
+            }
+
             return true;
+        }
+
+        /// <summary>The material a rigged knight's body is drawn with: the same steel as the generated one.</summary>
+        /// <returns>The knight's armour material.</returns>
+        public static Material KnightRigMaterial() =>
+            MaterialLibrary.GetOrCreateSurface("KnightArmour", ArmourColor, metallic: 0.85f, smoothness: 0.45f);
+
+        /// <summary>The material a rigged brute's body is drawn with: the same hide as the generated one.</summary>
+        /// <returns>The brute's hide material.</returns>
+        public static Material BruteRigMaterial() =>
+            MaterialLibrary.GetOrCreateSurface("BruteHide", HideColor, metallic: 0.05f, smoothness: 0.18f);
+
+        /// <summary>
+        /// Mounts the brute's glowing core on a rigged body's chest bone.
+        /// </summary>
+        /// <remarks>
+        /// The core is the boss's facing indicator, the visible source of its phase aura and parry flash,
+        /// and marks where its weak point is. A rigged body has no core of its own, so it is carried over
+        /// onto the chest - where it moves with the body instead of floating where a primitive torso was.
+        /// </remarks>
+        /// <param name="animator">The rigged brute's Animator.</param>
+        /// <param name="size">Diameter of the core, in world units.</param>
+        public static void AttachBruteCore(Animator animator, float size)
+        {
+            Transform chest = animator != null && animator.isHuman ? animator.GetBoneTransform(HumanBodyBones.Chest) : null;
+
+            if (chest == null)
+            {
+                return;
+            }
+
+            Material core = MaterialLibrary.GetOrCreateSurface(
+                "BruteCore", Color.black, metallic: 0f, smoothness: 0.6f, emission: CoreGlow);
+
+            var sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            sphere.name = "Core";
+            Object.DestroyImmediate(sphere.GetComponent<Collider>());
+            sphere.transform.SetParent(chest, false);
+
+            // Local scale is divided out of the chest's world scale, so the core keeps its size however
+            // the rig is scaled.
+            float parentScale = Mathf.Max(0.0001f, chest.lossyScale.x);
+            sphere.transform.localScale = Vector3.one * (size / parentScale);
+            sphere.transform.position = chest.position + chest.root.forward * (size * 0.9f);
+            sphere.GetComponent<MeshRenderer>().sharedMaterial = core;
         }
 
         /// <summary>Steel plate. Metallic enough for the single light to catch an edge.</summary>

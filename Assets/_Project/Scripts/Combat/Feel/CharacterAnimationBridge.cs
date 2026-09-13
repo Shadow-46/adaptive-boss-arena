@@ -4,126 +4,147 @@ using UnityEngine;
 namespace AdaptiveBossArena.Combat.Feel
 {
     /// <summary>
-    /// Drives a skeletal <see cref="Animator"/> from the character's visible state, so a rigged model
-    /// dropped under the visual root animates from the same signals the procedural animator reads.
+    /// Drives a rigged character's Animator from the same state stream the procedural animator reads.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// This is the character-art seam. Today the characters are primitives with no <see cref="Animator"/>,
-    /// so every method here is a no-op and costs nothing. Import a humanoid rig with a controller that
-    /// exposes the parameters documented below, make it a child of the visual root, regenerate, and the
-    /// same state stream that leans and lunges the capsule now plays real clips — with no change to the
-    /// controller code, because both consumers are fed from one place (<see cref="CharacterAnimator"/>).
+    /// The character's state machine decides what it is doing; this only decides what that looks like.
+    /// It chooses one Animator state for the observable action - locomotion, roll, guard, stagger,
+    /// death, or the attack in progress - and crossfades to it when that changes. The generated
+    /// controller has no transitions of its own, so there is one source of truth for what a character
+    /// is doing and it is not the Animator.
     /// </para>
     /// <para>
-    /// Expected Animator parameters (all optional — a missing one is simply skipped by Unity):
-    /// <list type="bullet">
-    /// <item><description><c>Speed</c> (float): planar speed as a fraction of top speed, for the locomotion blend.</description></item>
-    /// <item><description><c>Grounded</c> (bool): always true in this arena; present so a standard locomotion controller works unmodified.</description></item>
-    /// <item><description><c>Attack</c>, <c>Heavy</c>, <c>Ability</c>, <c>Dash</c>, <c>Guard</c>, <c>Hit</c>, <c>Death</c> (triggers).</description></item>
-    /// </list>
-    /// </para>
-    /// <para>
-    /// It is presentation only and, like the procedural animator beside it, never reads input and
-    /// never tells the AI anything — it only receives what it is pushed.
+    /// Attacks are not left to play at the clip's own speed. The clip is scrubbed by the attack's
+    /// elapsed time through <see cref="AttackClipTimeWarp"/>, so the blade lands while the hitbox is
+    /// live, and freezes on the impact during hit-stop. Presentation only: nothing here feeds combat or
+    /// the boss.
     /// </para>
     /// </remarks>
     [DisallowMultipleComponent]
     public sealed class CharacterAnimationBridge : MonoBehaviour
     {
-        private static readonly int SpeedParam = Animator.StringToHash("Speed");
-        private static readonly int GroundedParam = Animator.StringToHash("Grounded");
-        private static readonly int LightAttackParam = Animator.StringToHash("Attack");
-        private static readonly int HeavyAttackParam = Animator.StringToHash("Heavy");
-        private static readonly int AbilityParam = Animator.StringToHash("Ability");
-        private static readonly int DashParam = Animator.StringToHash("Dash");
-        private static readonly int GuardParam = Animator.StringToHash("Guard");
-        private static readonly int HitParam = Animator.StringToHash("Hit");
-        private static readonly int DeathParam = Animator.StringToHash("Death");
+        private const float CrossFadeSeconds = 0.08f;
+
+        /// <summary>Clip time around the contact frame the live window plays, as a fraction of the clip.</summary>
+        private const float ContactSpanFraction = 0.08f;
+
+        private static readonly int SpeedParam = Animator.StringToHash(CharacterAnimatorParameters.Speed);
+        private static readonly int AttackTimeParam = Animator.StringToHash(CharacterAnimatorParameters.AttackTime);
 
         private Animator _animator;
+        private CharacterAnimationConfig _config;
 
-        private ObservableActionState _previousState = ObservableActionState.Idle;
-        private AttackPhase _previousPhase = AttackPhase.Inactive;
+        private string _currentState;
+        private AttackDefinition _currentAttack;
 
-        /// <summary>True when a skeletal rig is present and this bridge is actually driving it.</summary>
-        /// <remarks>
-        /// Read by <see cref="CharacterAnimator"/> so the procedural layer stands down from posing the
-        /// whole body when a rig is doing that job, leaving only its additive impact juice.
-        /// </remarks>
-        public bool HasSkeleton => _animator != null;
+        /// <summary>True while a rig with an Animator is present to drive.</summary>
+        public bool HasSkeleton => _animator != null && _animator.runtimeAnimatorController != null;
 
         private void Awake()
         {
-            // Resolved once. Art is added by regenerating the prefab, not at runtime, so a rig present
-            // at Awake is present for the whole encounter; a search each frame would buy nothing.
+            // Resolved once. Art is added by regenerating the prefab, not at runtime.
             _animator = GetComponentInChildren<Animator>(includeInactive: true);
+
+            var procedural = GetComponent<CharacterAnimator>();
+            _config = procedural != null ? procedural.Config : null;
         }
 
-        /// <summary>Pushes this frame's visible state to the rig, firing any one-shot triggers.</summary>
-        /// <param name="state">The action a watcher would see.</param>
-        /// <param name="attackPhase">Phase of any attack in flight.</param>
+        /// <summary>Pushes this frame's observable state, and the attack in progress if any.</summary>
+        /// <param name="state">What an onlooker would see the character doing.</param>
+        /// <param name="attackPhase">Phase of the attack in flight.</param>
         /// <param name="planarSpeed01">Horizontal speed as a fraction of top speed.</param>
-        public void SetMotionState(ObservableActionState state, AttackPhase attackPhase, float planarSpeed01)
+        /// <param name="attack">The attack in progress, or null.</param>
+        /// <param name="attackElapsedSeconds">Time since that attack began.</param>
+        public void SetMotionState(
+            ObservableActionState state,
+            AttackPhase attackPhase,
+            float planarSpeed01,
+            AttackDefinition attack,
+            float attackElapsedSeconds)
         {
-            if (_animator == null)
+            if (!HasSkeleton)
             {
                 return;
             }
 
             _animator.SetFloat(SpeedParam, Mathf.Clamp01(planarSpeed01));
-            _animator.SetBool(GroundedParam, true);
 
-            Fire(AnimatorDriveMap.TriggerFor(_previousState, state, _previousPhase, attackPhase));
+            bool attacking = attack != null && attackPhase != AttackPhase.Inactive && IsAttackState(state);
+            string target = attacking ? AttackStateFor(attack) : StateFor(state);
 
-            _previousState = state;
-            _previousPhase = attackPhase;
+            // A new link in a combo can play the same state as the last one, so a change of attack
+            // restarts the state even when its name has not changed.
+            bool newAttack = attacking && !ReferenceEquals(attack, _currentAttack);
+
+            if (target != _currentState || newAttack)
+            {
+                _animator.CrossFadeInFixedTime(target, CrossFadeSeconds);
+                _currentState = target;
+            }
+
+            _currentAttack = attacking ? attack : null;
+
+            if (attacking)
+            {
+                _animator.SetFloat(AttackTimeParam, WarpFor(attack).NormalizedTimeAt(attackElapsedSeconds));
+            }
         }
 
-        /// <summary>Fires the hit reaction. Called on any damage, blocked or not.</summary>
+        /// <summary>Kept for the procedural animator's recoil; the additive shove plays on the rig already.</summary>
         public void Recoil()
         {
-            if (_animator != null)
-            {
-                _animator.SetTrigger(HitParam);
-            }
         }
 
-        /// <summary>Clears carried state for a retry, so the next attempt starts from idle.</summary>
+        /// <summary>Returns the rig to its idle state for a retry.</summary>
         public void ResetState()
         {
-            _previousState = ObservableActionState.Idle;
-            _previousPhase = AttackPhase.Inactive;
+            _currentState = null;
+            _currentAttack = null;
 
-            if (_animator != null)
+            if (HasSkeleton)
             {
                 _animator.SetFloat(SpeedParam, 0f);
+                _animator.Play(CharacterAnimatorParameters.LocomotionState, 0, 0f);
             }
         }
 
-        /// <summary>Translates a drive trigger into the matching Animator trigger.</summary>
-        private void Fire(AnimatorDriveTrigger trigger)
+        private AttackClipTimeWarp WarpFor(AttackDefinition attack)
         {
-            switch (trigger)
+            float contact = _config != null ? _config.ClipContactFraction : 0.45f;
+
+            // Normalised clip space: a clip of length one, so no clip lengths need storing anywhere.
+            return new AttackClipTimeWarp(
+                attack.StartupSeconds, attack.ActiveSeconds, attack.RecoverySeconds,
+                1f, contact, ContactSpanFraction);
+        }
+
+        private string AttackStateFor(AttackDefinition attack) =>
+            _config != null ? _config.AttackStateFor(attack) : CharacterAnimatorParameters.DefaultLightState;
+
+        private static bool IsAttackState(ObservableActionState state) =>
+            state == ObservableActionState.LightAttacking ||
+            state == ObservableActionState.HeavyAttacking ||
+            state == ObservableActionState.UsingAbility;
+
+        private static string StateFor(ObservableActionState state)
+        {
+            switch (state)
             {
-                case AnimatorDriveTrigger.LightAttack:
-                    _animator.SetTrigger(LightAttackParam);
-                    break;
-                case AnimatorDriveTrigger.HeavyAttack:
-                    _animator.SetTrigger(HeavyAttackParam);
-                    break;
-                case AnimatorDriveTrigger.Ability:
-                    _animator.SetTrigger(AbilityParam);
-                    break;
-                case AnimatorDriveTrigger.Dash:
-                    _animator.SetTrigger(DashParam);
-                    break;
-                case AnimatorDriveTrigger.Guard:
-                    _animator.SetTrigger(GuardParam);
-                    break;
-                case AnimatorDriveTrigger.Death:
-                    _animator.SetTrigger(DeathParam);
-                    break;
+                case ObservableActionState.Dashing:
+                    return CharacterAnimatorParameters.RollState;
+
+                case ObservableActionState.Guarding:
+                    return CharacterAnimatorParameters.GuardState;
+
+                case ObservableActionState.Staggered:
+                    return CharacterAnimatorParameters.StaggerState;
+
+                case ObservableActionState.Dead:
+                    return CharacterAnimatorParameters.DeathState;
+
+                default:
+                    return CharacterAnimatorParameters.LocomotionState;
             }
         }
     }
