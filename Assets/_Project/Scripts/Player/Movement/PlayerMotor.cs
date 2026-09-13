@@ -69,6 +69,9 @@ namespace AdaptiveBossArena.Player.Movement
         /// <summary>Current horizontal velocity in world units per second.</summary>
         public Vector3 PlanarVelocity => _planarVelocity;
 
+        /// <summary>The imposed shove, such as knockback, still playing out on top of the character's own movement.</summary>
+        public Vector3 ImpulseVelocity => _motion.Impulse;
+
         /// <summary>Current horizontal speed in world units per second.</summary>
         public float Speed => _planarVelocity.magnitude;
 

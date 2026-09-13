@@ -144,6 +144,16 @@ namespace AdaptiveBossArena.AI
         [Range(0.02f, 0.6f)]
         private float _impulseHalfLifeSeconds = 0.08f;
 
+        [SerializeField]
+        [Tooltip("Fraction of a blow's knockback the boss shrugs off with its stance intact.")]
+        [Range(0f, 1f)]
+        private float _knockbackResistanceAtFullPoise = 0.85f;
+
+        [SerializeField]
+        [Tooltip("Fraction of a blow's knockback the boss shrugs off while its stance is broken.")]
+        [Range(0f, 1f)]
+        private float _knockbackResistanceWhenBroken;
+
         [Header("Perception")]
         [SerializeField]
         [Tooltip("Reaction and perception limits. Required; without it the boss would act on the " +
@@ -264,6 +274,12 @@ namespace AdaptiveBossArena.AI
 
         /// <summary>Half-life of an imposed shove such as knockback.</summary>
         public float ImpulseHalfLifeSeconds => _impulseHalfLifeSeconds;
+
+        /// <summary>Fraction of knockback shrugged off with a full stance.</summary>
+        public float KnockbackResistanceAtFullPoise => _knockbackResistanceAtFullPoise;
+
+        /// <summary>Fraction of knockback shrugged off while the stance is broken.</summary>
+        public float KnockbackResistanceWhenBroken => _knockbackResistanceWhenBroken;
 
         /// <summary>Reaction and perception limits.</summary>
         public ReactionProfile ReactionProfile => _reactionProfile;

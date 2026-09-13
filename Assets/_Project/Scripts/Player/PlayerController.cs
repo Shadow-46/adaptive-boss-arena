@@ -947,7 +947,9 @@ namespace AdaptiveBossArena.Player
                 return;
             }
 
-            _context.Motor.SetPlanarVelocity(direction.normalized * damage.KnockbackSpeed);
+            // Added, not assigned. Assigning was overwritten by the player's own movement input on
+            // the very next frame, so a heavy blow moved a player holding a direction by nothing.
+            _context.Motor.AddImpulse(direction.normalized * damage.KnockbackSpeed);
         }
 
         /// <summary>Relays pool changes onto the event channels the interface listens to.</summary>

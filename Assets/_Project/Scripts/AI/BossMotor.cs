@@ -52,6 +52,9 @@ namespace AdaptiveBossArena.AI
         /// <summary>Current horizontal velocity.</summary>
         public Vector3 PlanarVelocity => _planarVelocity;
 
+        /// <summary>The imposed shove, such as knockback, still playing out on top of the character's own movement.</summary>
+        public Vector3 ImpulseVelocity => _motion.Impulse;
+
         /// <summary>Current horizontal speed.</summary>
         public float Speed => _planarVelocity.magnitude;
 

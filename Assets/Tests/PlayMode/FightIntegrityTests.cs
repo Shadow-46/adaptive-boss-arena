@@ -122,6 +122,70 @@ namespace AdaptiveBossArena.Tests.PlayMode
             yield return null;
         }
 
+        /// <summary>Reads a combatant's private context, which nothing outside it needs publicly.</summary>
+        private static T ContextOf<T>(object controller)
+        {
+            FieldInfo field = controller.GetType().GetField(
+                "_context", BindingFlags.Instance | BindingFlags.NonPublic);
+
+            Assert.IsNotNull(field, $"{controller.GetType().Name} has no _context field.");
+
+            return (T)field.GetValue(controller);
+        }
+
+        /// <summary>A blow with a set knockback and no other side effects worth measuring.</summary>
+        private static DamageInfo Shove(CombatantTeam source, float knockback) => new DamageInfo
+        {
+            Amount = 1f,
+            Type = DamageType.Heavy,
+            SourceTeam = source,
+            SourceInstanceId = 7,
+            HitDirection = Vector3.forward,
+            KnockbackSpeed = knockback,
+            Stagger = StaggerStrength.None
+        };
+
+        [UnityTest]
+        public IEnumerator KnockbackOnThePlayerIsAShoveTheirOwnMovementCannotErase()
+        {
+            // Read during the frozen intro, when no motor ticks, so the value is exactly what the hit
+            // imposed. Knockback used to overwrite the player's velocity, and the next frame of their
+            // own movement input overwrote it back.
+            Assert.IsNotNull(_player);
+            var motor = ContextOf<PlayerContext>(_player).Motor;
+
+            _player.TakeDamage(Shove(CombatantTeam.Boss, 9f));
+
+            Assert.AreEqual(9f, motor.ImpulseVelocity.magnitude, 0.01f,
+                "A knockback did not become an imposed shove on the player.");
+
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator ABrokenBossIsThrownFurtherThanAFreshOne()
+        {
+            Assert.IsNotNull(_boss);
+            var motor = ContextOf<AI.BossContext>(_boss).Motor;
+
+            _boss.TakeDamage(Shove(CombatantTeam.Player, 10f));
+            float freshShove = motor.ImpulseVelocity.magnitude;
+
+            Assert.Greater(freshShove, 0f, "The boss ignored knockback entirely, as it used to.");
+
+            _boss.ApplyDeflectPosture(_boss.Poise.Maximum * 2f);
+            Assert.IsTrue(_boss.Poise.IsBroken, "Setup failed: the boss's stance did not break.");
+
+            _boss.TakeDamage(Shove(CombatantTeam.Player, 10f));
+            float brokenShove = motor.ImpulseVelocity.magnitude - freshShove;
+
+            Assert.Greater(
+                brokenShove, freshShove * 3f,
+                "Breaking the boss's stance did not make it markedly easier to push.");
+
+            yield return null;
+        }
+
         [UnityTest]
         public IEnumerator TheBossInTheSceneCarriesItsWeakPoint()
         {

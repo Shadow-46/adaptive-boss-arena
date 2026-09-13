@@ -934,7 +934,12 @@ namespace AdaptiveBossArena.Editor
                         .Float("_parryCooldownSeconds", 1.2f)
 
                         // The boss is heavy and sheds a shove faster than the player does.
-                        .Float("_impulseHalfLifeSeconds", 0.08f);
+                        .Float("_impulseHalfLifeSeconds", 0.08f)
+
+                        // A fresh stance absorbs most of a blow; a broken one is thrown by all of it.
+                        // Weight becomes something the player wears down rather than a fixed wall.
+                        .Float("_knockbackResistanceAtFullPoise", 0.85f)
+                        .Float("_knockbackResistanceWhenBroken", 0f);
                 }
 
                 SerializedProperty phases = writer.Array("_phases", 4);

@@ -539,7 +539,31 @@ namespace AdaptiveBossArena.AI
                 _context.RequestStagger(PoiseBreakStaggerSeconds, StaggerReason.PoiseBreak);
             }
 
+            // After the poise damage, so the blow that breaks the stance is also the one that throws
+            // the boss. The boss used to ignore knockback entirely.
+            ApplyKnockback(damage);
+
             return DamageResult.Applied(applied, !_health.IsAlive);
+        }
+
+        /// <summary>Pushes the boss along a blow, by as much as its stance lets through.</summary>
+        private void ApplyKnockback(in DamageInfo damage)
+        {
+            Vector3 direction = damage.HitDirection;
+            direction.y = 0f;
+
+            if (damage.KnockbackSpeed <= 0f || direction.sqrMagnitude < Mathf.Epsilon)
+            {
+                return;
+            }
+
+            float shove = KnockbackResistance.ShoveMultiplier(
+                _poise.Normalized,
+                _poise.IsBroken,
+                _config.KnockbackResistanceAtFullPoise,
+                _config.KnockbackResistanceWhenBroken);
+
+            _context.Motor.AddImpulse(direction.normalized * (damage.KnockbackSpeed * shove));
         }
 
         /// <summary>
