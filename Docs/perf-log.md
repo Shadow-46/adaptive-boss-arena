@@ -44,3 +44,5 @@ is deterministic enough to compare across stages.
 | 2026-09-13 | P2 | 6338ceb | WebGL (local, web tier) | not measured | not measured | — | — | — | 15.7 MB | tier verified in log; deployed |
 | 2026-09-13 | G2 | 2c88fdf | Windows 1280×720 (desktop tier, Ultra) | 6.94 | 6.95 | 20.83 | 231 | 153.4k | — | two skinned characters; tris over the WebGL 150k budget by 2% — watch in G3 |
 | 2026-09-13 | G2 | 2c88fdf | WebGL (local, web tier) | not measured | not measured | — | — | — | 16.3 MB | tier verified in log, rigs render in browser; deployed |
+| 2026-09-13 | P3 | 333da1c | Windows 1280×720 (desktop tier, Ultra) | 6.94 | 6.95 | 13.89 | 233 | 153.5k | — | knockdowns, launches, wall impacts: no cost |
+| 2026-09-13 | P3 | 333da1c | WebGL (local, web tier) | not measured | not measured | — | — | — | 16 MB | tier verified in log; knockdown, get-up and wall impact seen in a live run; deployed |
