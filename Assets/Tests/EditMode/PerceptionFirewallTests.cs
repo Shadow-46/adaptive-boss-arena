@@ -100,6 +100,41 @@ namespace AdaptiveBossArena.Tests.EditMode
         }
 
         [Test]
+        public void AKnockdownReachesTheBossOnlyAfterTheLatency()
+        {
+            // The two footing states are new information on the boss's side of the firewall, so they
+            // get the same guarantee as every other action: seen late, never on the frame it happens.
+            var player = new TimestampEncodingPlayer();
+            var source = new DelayedPerceptionSource(player, Latency);
+
+            float time = 0f;
+            for (int i = 0; i < 100; i++)
+            {
+                source.Sample(time);
+                time += SampleInterval;
+            }
+
+            player.State = ObservableActionState.KnockedDown;
+            float flooredAt = time;
+
+            while (time - flooredAt < Latency + SampleInterval * 2f)
+            {
+                source.Sample(time);
+                Assert.IsTrue(source.TryGetPerceived(out PlayerObservation seen));
+
+                if (seen.ActionState == ObservableActionState.KnockedDown)
+                {
+                    Assert.GreaterOrEqual(time - flooredAt, Latency - 0.0001f, "The boss saw the knockdown early.");
+                    return;
+                }
+
+                time += SampleInterval;
+            }
+
+            Assert.Fail("The boss never saw the knockdown at all.");
+        }
+
+        [Test]
         public void TryGetPerceivedAt_LooksFurtherIntoThePast()
         {
             var player = new TimestampEncodingPlayer();
