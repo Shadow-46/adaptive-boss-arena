@@ -231,6 +231,7 @@ namespace AdaptiveBossArena.Player
             }
 
             _time = ServiceRegistry.Current.Get<ITimeService>();
+            _animator?.SetTime(_time);
             _events = ServiceRegistry.Current.Get<ICombatEventBus>();
             ServiceRegistry.Current.TryGet(out _screenShake);
             IScreenShake screenShake = _screenShake;

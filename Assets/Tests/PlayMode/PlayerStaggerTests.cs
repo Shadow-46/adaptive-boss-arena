@@ -88,6 +88,38 @@ namespace AdaptiveBossArena.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator ARecoilHoldsForTheWholeFreezeItCausedInsteadOfFadingThroughIt()
+        {
+            // The recoil's envelope used to count down on real time. A heavy hit's freeze lasts about
+            // as long as the recoil does, so by the time the world resumed the shove was already
+            // gone - the freeze and the impact played one after the other and neither read as a hit.
+            Assert.IsNotNull(_player, "No player in the arena scene.");
+            yield return WaitForTheFightToStart();
+
+            var body = _player.GetComponentInChildren<Combat.Feel.CharacterAnimator>();
+            Assert.IsNotNull(body, "The player has no procedural animator.");
+
+            Assert.IsTrue(
+                Core.Services.ServiceRegistry.Current.TryGet(out Core.Services.ITimeService time),
+                "No time service.");
+
+            Vector3 before = body.transform.localPosition;
+
+            time.RequestHitStop(0.5f);
+            _player.TakeDamage(BossBlow(1f));
+
+            // Well past the 0.22 s the recoil lasts in real time, but inside the freeze.
+            yield return new WaitForSecondsRealtime(0.3f);
+
+            Vector3 shove = body.transform.localPosition - before;
+            shove.y = 0f;
+
+            Assert.Greater(
+                shove.magnitude, 0.15f,
+                "The recoil had faded before the freeze it belongs to was over.");
+        }
+
+        [UnityTest]
         public IEnumerator ASingleHitDoesNotStopThePlayer()
         {
             Assert.IsNotNull(_player, "No player in the arena scene.");

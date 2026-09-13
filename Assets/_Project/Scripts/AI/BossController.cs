@@ -204,6 +204,7 @@ namespace AdaptiveBossArena.AI
             }
 
             _time = ServiceRegistry.Current.Get<ITimeService>();
+            _animator?.SetTime(_time);
             _events = ServiceRegistry.Current.Get<ICombatEventBus>();
             var random = ServiceRegistry.Current.Get<IRandomProvider>();
             ServiceRegistry.Current.TryGet(out _screenShake);

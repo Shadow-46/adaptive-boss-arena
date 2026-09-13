@@ -23,8 +23,15 @@ namespace AdaptiveBossArena.Combat.Feel
     /// anything. Presentation only.
     /// </para>
     /// <para>
-    /// Everything is eased on <see cref="Time.unscaledDeltaTime"/> so a lunge holds and reads through
+    /// The pose is eased on <see cref="Time.unscaledDeltaTime"/> so a lunge holds and reads through
     /// the hit-stop it triggers rather than freezing mid-air with the world.
+    /// </para>
+    /// <para>
+    /// Impacts are the exception, and deliberately so. A recoil lands at full strength on the frame
+    /// of contact, its envelope counts down on combat time, and so it holds for the whole freeze and
+    /// springs back when the world resumes. It used to count down on real time too, which meant most
+    /// of a recoil had already faded by the time a heavy hit's freeze released - the freeze and the
+    /// shove happened one after the other instead of together, and neither read as an impact.
     /// </para>
     /// </remarks>
     [DisallowMultipleComponent]
@@ -47,6 +54,12 @@ namespace AdaptiveBossArena.Combat.Feel
 
         private Vector3 _recoilLocalDir;
         private float _recoilRemaining;
+
+        /// <summary>Set when a blow lands, so the next pose skips easing and shows it at once.</summary>
+        private bool _snapToImpact;
+
+        /// <summary>The combat clock impact envelopes count down on. Null falls back to scaled engine time.</summary>
+        private Core.Services.ITimeService _time;
 
         private float _flourishRemaining;
 
@@ -73,6 +86,16 @@ namespace AdaptiveBossArena.Combat.Feel
         /// <summary>Assigns the tuning asset. Used by the prefab generator.</summary>
         /// <param name="config">Animation magnitudes.</param>
         public void SetConfig(CharacterAnimationConfig config) => _config = config;
+
+        /// <summary>
+        /// Assigns the combat clock that impacts hold on during hit-stop.
+        /// </summary>
+        /// <remarks>
+        /// Injected by the owning controller rather than looked up, because nothing outside the
+        /// composition root may reach for the service registry.
+        /// </remarks>
+        /// <param name="time">The combat time service.</param>
+        public void SetTime(Core.Services.ITimeService time) => _time = time;
 
         /// <summary>
         /// Pushes the character's visible state for this frame.
@@ -111,6 +134,7 @@ namespace AdaptiveBossArena.Combat.Feel
 
             _recoilLocalDir = MathUtil.SafeNormalize(local);
             _recoilRemaining = _config.RecoilDurationSeconds;
+            _snapToImpact = true;
 
             // The additive shove reads on a rigged model too, so it is kept even when the skeleton
             // owns the pose; the rig's own Hit clip plays alongside it.
@@ -131,6 +155,7 @@ namespace AdaptiveBossArena.Combat.Feel
         {
             _recoilRemaining = 0f;
             _flourishRemaining = 0f;
+            _snapToImpact = false;
             _state = ObservableActionState.Idle;
             _attackPhase = AttackPhase.Inactive;
 
@@ -151,9 +176,18 @@ namespace AdaptiveBossArena.Combat.Feel
             float deltaTime = Time.unscaledDeltaTime;
             _bobTime += deltaTime;
 
-            AdvanceImpulses(deltaTime);
+            AdvanceImpulses(_time != null ? _time.DeltaTime : Time.deltaTime);
 
             ComposeTarget(out Vector3 targetPosition, out Quaternion targetRotation, out Vector3 targetScale);
+
+            if (_snapToImpact)
+            {
+                // The contact frame shows the whole blow at once. Easing into it would spend the
+                // freeze travelling toward the recoil instead of holding it.
+                _snapToImpact = false;
+                transform.localPosition = targetPosition;
+                transform.localScale = targetScale;
+            }
 
             transform.localPosition = MathUtil.Damp(
                 transform.localPosition, targetPosition, _config.PositionHalfLife, deltaTime);
@@ -163,7 +197,7 @@ namespace AdaptiveBossArena.Combat.Feel
                 transform.localRotation, targetRotation, DampFactor(_config.RotationHalfLife, deltaTime));
         }
 
-        /// <summary>Decays the transient recoil and flourish envelopes.</summary>
+        /// <summary>Decays the transient recoil and flourish envelopes on combat time.</summary>
         private void AdvanceImpulses(float deltaTime)
         {
             _recoilRemaining = Mathf.Max(0f, _recoilRemaining - deltaTime);
