@@ -386,14 +386,15 @@ namespace AdaptiveBossArena.Editor
                 "BossSweep", "Wide Sweep", DamageType.BossMelee,
                 damage: 12f, startup: 0.45f, active: 0.12f, recovery: 0.45f,
                 range: 4f, arc: 120f, poise: 20f, knockback: 5f, hitStop: 0.06f, trauma: 0.25f,
-                telegraph: false);
+                telegraph: false, reaction: ImpactReaction.Knockback);
 
             AttackDefinition slam = CreateAttack(
                 "BossSlam", "Ground Slam", DamageType.BossMelee,
                 damage: 18f, startup: 0.62f, active: 0.14f, recovery: 0.70f,
                 range: 3.6f, arc: 360f, poise: 40f, knockback: 8f, hitStop: 0.10f, trauma: 0.45f,
                 shape: AttackShape.Sphere, stagger: StaggerStrength.Interrupt, telegraph: true,
-                leavesHazard: true, hazardRadius: 3f, hazardDamagePerTick: 3f, hazardDuration: 3.5f);
+                leavesHazard: true, hazardRadius: 3f, hazardDamagePerTick: 3f, hazardDuration: 3.5f,
+                reaction: ImpactReaction.Knockdown);
 
             // The gap-closer. Adopted in force against players the boss has learned keep their
             // distance, which is the design's stated answer to a kiting player.
@@ -401,14 +402,16 @@ namespace AdaptiveBossArena.Editor
                 "BossCharge", "Charge", DamageType.BossMelee,
                 damage: 15f, startup: 0.55f, active: 0.30f, recovery: 0.55f,
                 range: 2.6f, arc: 100f, poise: 35f, knockback: 9f, hitStop: 0.09f, trauma: 0.4f,
-                lungeSpeed: 16f, stagger: StaggerStrength.Interrupt, telegraph: false);
+                lungeSpeed: 16f, stagger: StaggerStrength.Interrupt, telegraph: false,
+                reaction: ImpactReaction.Knockdown);
 
             AttackDefinition shockwave = CreateAttack(
                 "BossShockwave", "Shockwave", DamageType.BossProjectile,
                 damage: 14f, startup: 0.70f, active: 0.45f, recovery: 0.60f,
                 range: 7f, arc: 360f, poise: 25f, knockback: 6f, hitStop: 0.07f, trauma: 0.35f,
                 shape: AttackShape.Sphere, telegraph: true,
-                leavesHazard: true, hazardRadius: 3.5f, hazardDamagePerTick: 3f, hazardDuration: 4f);
+                leavesHazard: true, hazardRadius: 3.5f, hazardDamagePerTick: 3f, hazardDuration: 4f,
+                reaction: ImpactReaction.Knockback);
 
             // Fast and cheap, with a short wind-up. On its own it is barely a threat; its purpose is
             // to be the quick beat a combo string opens or closes on, so a chain has a rhythm rather
@@ -426,7 +429,8 @@ namespace AdaptiveBossArena.Editor
                 "BossPerilousOverhead", "Perilous Overhead", DamageType.BossMelee,
                 damage: 26f, startup: 0.85f, active: 0.12f, recovery: 0.72f,
                 range: 3.4f, arc: 120f, poise: 45f, knockback: 7f, hitStop: 0.12f, trauma: 0.5f,
-                stagger: StaggerStrength.Interrupt, telegraph: true, unblockable: true);
+                stagger: StaggerStrength.Interrupt, telegraph: true, unblockable: true,
+                reaction: ImpactReaction.Knockdown);
 
             // The set-piece: an arena-wide, unblockable shockwave with a long, honest wind-up, thrown
             // on a phase transition and as the Resolve gambit. It scars the ground it lands on, so the
@@ -436,7 +440,8 @@ namespace AdaptiveBossArena.Editor
                 damage: 22f, startup: 0.95f, active: 0.40f, recovery: 0.70f,
                 range: 8.5f, arc: 360f, poise: 30f, knockback: 9f, hitStop: 0.12f, trauma: 0.6f,
                 shape: AttackShape.Sphere, telegraph: true, unblockable: true,
-                leavesHazard: true, hazardRadius: 4f, hazardDamagePerTick: 3f, hazardDuration: 4.5f);
+                leavesHazard: true, hazardRadius: 4f, hazardDamagePerTick: 3f, hazardDuration: 4.5f,
+                reaction: ImpactReaction.Launch);
 
             return new BossAttacks(sweep, slam, charge, shockwave, jab, perilous, phaseShockwave);
         }
@@ -468,7 +473,8 @@ namespace AdaptiveBossArena.Editor
             float hazardDamagePerTick = 4f,
             float hazardDuration = 3f,
             Vector3? offset = null,
-            Vector3? boxHalfExtents = null)
+            Vector3? boxHalfExtents = null,
+            ImpactReaction reaction = ImpactReaction.None)
         {
             var attack = AssetAuthoring.CreateOrLoad<AttackDefinition>(
                 $"{AttackFolder}/{assetName}.asset", out bool created);
@@ -487,6 +493,7 @@ namespace AdaptiveBossArena.Editor
                     .Float("_poiseDamage", poise)
                     .Enum("_stagger", stagger)
                     .Float("_knockbackSpeed", knockback)
+                    .Enum("_impactReaction", reaction)
                     .Float("_startupSeconds", startup)
                     .Float("_activeSeconds", active)
                     .Float("_recoverySeconds", recovery)
@@ -755,7 +762,19 @@ namespace AdaptiveBossArena.Editor
                         .Float("_dashDurationSeconds", 0.4f)
                         .Float("_invulnerabilitySeconds", 0.135f)
                         .Float("_dashSteerFraction", 0.2f)
-                        .Float("_dashCancelFraction", 0.7f);
+                        .Float("_dashCancelFraction", 0.7f)
+
+                        // Being floored. About 0.7 s in the air, 0.8 s down and 0.6 s rising: long
+                        // enough to read as a big hit, capped at 2.6 s however the boss follows up,
+                        // and 2.5 s of knockdown immunity after so it never happens twice in a row.
+                        .Float("_launchUpwardSpeed", 9f)
+                        .Float("_maximumAirborneSeconds", 1.2f)
+                        .Float("_knockdownSeconds", 0.8f)
+                        .Float("_getUpSeconds", 0.6f)
+                        .Float("_knockdownImmunitySeconds", 2.5f)
+                        .Float("_knockbackReactionMultiplier", 1.6f)
+                        .Float("_wallImpactSpeed", 7f)
+                        .Float("_wallImpactStaggerSeconds", 0.3f);
                 }
 
                 writer.ReferenceArray("_weapons", weapons)
