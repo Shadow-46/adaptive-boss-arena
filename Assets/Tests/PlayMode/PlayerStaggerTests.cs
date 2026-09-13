@@ -55,15 +55,49 @@ namespace AdaptiveBossArena.Tests.PlayMode
         private bool IsStaggered =>
             _player.CaptureObservation(0f).ActionState == ObservableActionState.Staggered;
 
+        /// <summary>Waits until the intro releases and the combat clock is actually running.</summary>
+        /// <remarks>
+        /// The encounter opens frozen for its ready-fight intro, so the player's state machine is not
+        /// ticking yet. A stagger requested then sits unconsumed and never becomes a state, which reads
+        /// exactly like a stagger that was never requested. Waiting for the clock rather than a fixed
+        /// frame count keeps this independent of how long the intro is tuned to run.
+        /// </remarks>
+        private static IEnumerator WaitForTheFightToStart()
+        {
+            const float GiveUpAfterSeconds = 15f;
+
+            float waited = 0f;
+
+            while (Time.timeScale <= 0f && waited < GiveUpAfterSeconds)
+            {
+                waited += Time.unscaledDeltaTime;
+
+                yield return null;
+            }
+
+            Assert.Less(waited, GiveUpAfterSeconds, "The fight never started.");
+        }
+
+        /// <summary>Lets the deferred stagger request become a state.</summary>
+        private static IEnumerator LetReactionsResolve()
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                yield return null;
+            }
+        }
+
         [UnityTest]
         public IEnumerator ASingleHitDoesNotStopThePlayer()
         {
             Assert.IsNotNull(_player, "No player in the arena scene.");
+            yield return WaitForTheFightToStart();
+
             Assert.Greater(_player.Posture.Current, 30f, "The player began with no posture to spend.");
 
             _player.TakeDamage(BossBlow(30f));
 
-            yield return null;
+            yield return LetReactionsResolve();
 
             Assert.IsFalse(
                 IsStaggered,
@@ -76,6 +110,7 @@ namespace AdaptiveBossArena.Tests.PlayMode
         public IEnumerator EnoughHitsInARowStillBreakThePlayer()
         {
             Assert.IsNotNull(_player, "No player in the arena scene.");
+            yield return WaitForTheFightToStart();
 
             // Absorbing hits must not mean ignoring them. A sustained flurry has to land eventually,
             // or the player simply cannot be pressured.
@@ -84,22 +119,25 @@ namespace AdaptiveBossArena.Tests.PlayMode
                 _player.TakeDamage(BossBlow(30f));
             }
 
-            yield return null;
+            Assert.IsTrue(_player.Posture.IsBroken, "A sustained flurry never broke the player's posture.");
 
-            Assert.IsTrue(IsStaggered, "A sustained flurry never broke the player's posture.");
+            yield return LetReactionsResolve();
+
+            Assert.IsTrue(IsStaggered, "The posture broke but the player was never interrupted.");
         }
 
         [UnityTest]
         public IEnumerator BeingHitWhileBrokenDoesNotHoldThePlayerThere()
         {
             Assert.IsNotNull(_player, "No player in the arena scene.");
+            yield return WaitForTheFightToStart();
 
             for (int i = 0; i < 5; i++)
             {
                 _player.TakeDamage(BossBlow(30f));
             }
 
-            yield return null;
+            yield return LetReactionsResolve();
             Assert.IsTrue(IsStaggered, "Setup failed: the player was not broken to begin with.");
 
             // The bug, exactly: keep hitting a player who is already down. Every one of these used
