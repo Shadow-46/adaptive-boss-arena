@@ -37,6 +37,7 @@ MonoBehaviour:
   _hazardRadius: 2.5
   _hazardDamagePerTick: 4
   _hazardDurationSeconds: 3
+  _trackingWindowFraction: 0.6
   _unblockable: 0
   _unparryable: 0
   _telegraphColor: {r: 0.55, g: 0.85, b: 1, a: 0.6}

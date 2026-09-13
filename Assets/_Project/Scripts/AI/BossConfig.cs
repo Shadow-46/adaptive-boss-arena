@@ -151,6 +151,12 @@ namespace AdaptiveBossArena.AI
         private float _accelerationSeconds = 0.25f;
 
         [SerializeField]
+        [Tooltip("Speed a lunge loses per second once its wind-up ends. At 120 the Charge's 16 m/s " +
+                 "stops in about a metre instead of sliding through its strike.")]
+        [Min(0f)]
+        private float _lungeBrakeDeceleration = 120f;
+
+        [SerializeField]
         [Tooltip("Fraction of a blow's knockback the boss shrugs off with its stance intact.")]
         [Range(0f, 1f)]
         private float _knockbackResistanceAtFullPoise = 0.85f;
@@ -288,6 +294,9 @@ namespace AdaptiveBossArena.AI
 
         /// <summary>Seconds the boss takes to reach or shed full speed.</summary>
         public float AccelerationSeconds => _accelerationSeconds;
+
+        /// <summary>Speed a lunge loses per second once its wind-up ends.</summary>
+        public float LungeBrakeDeceleration => _lungeBrakeDeceleration;
 
         /// <summary>Fraction of knockback shrugged off with a full stance.</summary>
         public float KnockbackResistanceAtFullPoise => _knockbackResistanceAtFullPoise;

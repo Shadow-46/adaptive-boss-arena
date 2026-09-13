@@ -89,6 +89,17 @@ namespace AdaptiveBossArena.AI
             _planarVelocity = Vector3.MoveTowards(_planarVelocity, target, rate * deltaTime);
         }
 
+        /// <summary>Sheds speed at a fixed rate, for stopping a lunge that has outrun normal movement.</summary>
+        /// <remarks>
+        /// Normal deceleration is scaled to walking speed, so a lunge travelling three times faster than
+        /// the boss walks slid metres through its own strike before it stopped.
+        /// </remarks>
+        /// <param name="deceleration">Speed lost per second.</param>
+        /// <param name="deltaTime">Elapsed scaled time.</param>
+        public void Brake(float deceleration, float deltaTime) =>
+            _planarVelocity = Vector3.MoveTowards(
+                _planarVelocity, Vector3.zero, Mathf.Max(0f, deceleration) * deltaTime);
+
         /// <summary>Brings the boss to rest.</summary>
         /// <param name="deltaTime">Elapsed scaled time.</param>
         public void Decelerate(float deltaTime) => MoveInDirection(Vector3.zero, deltaTime);

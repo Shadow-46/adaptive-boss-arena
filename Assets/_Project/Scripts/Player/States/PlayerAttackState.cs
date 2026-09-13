@@ -45,6 +45,7 @@ namespace AdaptiveBossArena.Player.States
         /// <inheritdoc />
         protected override void OnTick(PlayerContext context, float deltaTime)
         {
+            TrackTarget(context, deltaTime);
             ApplyAttackMovement(context, deltaTime);
 
             context.Motor.Tick(deltaTime);
@@ -79,6 +80,29 @@ namespace AdaptiveBossArena.Player.States
             context.ComboIndex = 0;
         }
 
+        /// <summary>Turns the swing toward its target during the early part of the wind-up only.</summary>
+        /// <remarks>
+        /// The swing still snaps to the stick as it begins: a light attack's wind-up is too short to
+        /// turn through at walking turn speed. With the stick held the player is aiming; with it neutral
+        /// the swing eases toward the boss. Either way tracking stops at the same point in the wind-up
+        /// as the boss's does, so both fighters' swings commit by one rule.
+        /// </remarks>
+        private static void TrackTarget(PlayerContext context, float deltaTime)
+        {
+            AttackDefinition attack = context.Attacks.CurrentAttack;
+
+            if (attack == null || !attack.CanTrack(context.Attacks.Phase, context.Attacks.ElapsedSeconds))
+            {
+                return;
+            }
+
+            Vector3 direction = context.HasMoveInput
+                ? context.Motor.ToWorldDirection(context.Input.MoveDirection)
+                : context.FacingTowardThreat;
+
+            context.Motor.FaceDirection(direction, deltaTime);
+        }
+
         /// <summary>Starts one attack and pays for it.</summary>
         private static void BeginAttack(PlayerContext context, AttackDefinition attack)
         {
@@ -90,9 +114,9 @@ namespace AdaptiveBossArena.Player.States
             context.SetObservableState(ObservableStateFor(attack.DamageType));
             context.Stamina.TrySpend(attack.StaminaCost);
 
-            // Facing is committed at the moment of the swing. Allowing it to keep tracking would let
-            // the player turn to follow a dodging opponent mid-attack, which removes the cost of
-            // choosing the wrong moment.
+            // Facing snaps to the stick as the swing begins. It may track a little longer, but only
+            // through the early wind-up (see TrackTarget): past that the swing is committed, so turning
+            // to follow a dodging opponent still costs the choice of moment.
             if (context.HasMoveInput)
             {
                 context.Motor.SnapToDirection(context.Motor.ToWorldDirection(context.Input.MoveDirection));

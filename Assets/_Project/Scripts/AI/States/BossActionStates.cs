@@ -110,12 +110,24 @@ namespace AdaptiveBossArena.AI.States
 
             if (attack != null && context.Attacks.Phase == AttackPhase.Startup)
             {
-                context.Motor.FaceDirection(ResolveAimDirection(context), deltaTime);
+                // Tracks early, then commits. The lunge keeps its speed for the whole wind-up, so its
+                // reach is unchanged, but once tracking locks it travels along the committed facing
+                // instead of re-homing every frame - which is what lets a late sidestep escape it.
+                if (attack.CanTrack(context.Attacks.Phase, context.Attacks.ElapsedSeconds))
+                {
+                    context.Motor.FaceDirection(ResolveAimDirection(context), deltaTime);
+                }
 
                 if (attack.LungeSpeed > 0f)
                 {
                     context.Motor.SetPlanarVelocity(context.Motor.Facing * attack.LungeSpeed);
                 }
+            }
+            else if (attack != null && attack.LungeSpeed > 0f && context.Motor.Speed > context.Motor.CurrentTopSpeed)
+            {
+                // A finished wind-up brakes hard rather than sliding metres through its own strike at
+                // the boss's gentle walking deceleration.
+                context.Motor.Brake(context.Config.LungeBrakeDeceleration, deltaTime);
             }
             else
             {

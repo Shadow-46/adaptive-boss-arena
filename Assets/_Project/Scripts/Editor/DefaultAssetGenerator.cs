@@ -953,7 +953,8 @@ namespace AdaptiveBossArena.Editor
                         // Four times the knight: leaning into the boss shoves it a little and throws
                         // the knight back a lot, and a charge drives the knight before it.
                         .Float("_bodyMass", 4f)
-                        .Float("_accelerationSeconds", 0.25f);
+                        .Float("_accelerationSeconds", 0.25f)
+                        .Float("_lungeBrakeDeceleration", 120f);
                 }
 
                 SerializedProperty phases = writer.Array("_phases", 4);

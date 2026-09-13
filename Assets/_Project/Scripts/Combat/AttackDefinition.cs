@@ -150,6 +150,13 @@ namespace AdaptiveBossArena.Combat
         [Tooltip("How long the hazard stays dangerous, in seconds.")]
         private float _hazardDurationSeconds = 3f;
 
+        [Header("Tracking")]
+        [SerializeField]
+        [Tooltip("Fraction of the wind-up during which the attacker may still turn to follow its target. " +
+                 "After it the swing is committed, which is what a late dodge beats.")]
+        [Range(0f, 1f)]
+        private float _trackingWindowFraction = 0.6f;
+
         [Header("Defence")]
         [SerializeField]
         [Tooltip("When true, a raised guard does not stop this attack — it must be dodged. A dash " +
@@ -263,6 +270,16 @@ namespace AdaptiveBossArena.Combat
         /// choosing attacks it could not land, or refusing ones it could, with nothing to show which.
         /// </remarks>
         public float EffectiveReach => _range + _lungeSpeed * StartupSeconds;
+
+        /// <summary>Fraction of the wind-up during which the attacker may still turn to follow its target.</summary>
+        public float TrackingWindowFraction => _trackingWindowFraction;
+
+        /// <summary>Whether the attacker may still turn at this point in the swing.</summary>
+        /// <param name="phase">The swing's current phase.</param>
+        /// <param name="elapsedSeconds">Time since the swing began.</param>
+        /// <returns>True while tracking is allowed.</returns>
+        public bool CanTrack(AttackPhase phase, float elapsedSeconds) =>
+            AttackTracking.CanTrack(phase, elapsedSeconds, _startupSeconds, _trackingWindowFraction);
 
         /// <summary>Freeze duration applied on a successful hit.</summary>
         public float HitStopSeconds => _hitStopSeconds;
