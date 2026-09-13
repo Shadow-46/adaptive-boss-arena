@@ -21,6 +21,7 @@ MonoBehaviour:
   _poiseDamage: 25
   _stagger: 1
   _knockbackSpeed: 6
+  _impactReaction: 1
   _startupSeconds: 0.7
   _activeSeconds: 0.45
   _recoverySeconds: 0.6

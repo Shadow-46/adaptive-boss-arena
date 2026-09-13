@@ -22,6 +22,14 @@ MonoBehaviour:
   _accelerationSeconds: 0.12
   _decelerationSeconds: 0.16
   _impulseHalfLifeSeconds: 0.12
+  _launchUpwardSpeed: 9
+  _maximumAirborneSeconds: 1.2
+  _knockdownSeconds: 0.8
+  _getUpSeconds: 0.6
+  _knockdownImmunitySeconds: 2.5
+  _knockbackReactionMultiplier: 1.6
+  _wallImpactSpeed: 7
+  _wallImpactStaggerSeconds: 0.3
   _turnSpeedFloor: 0.35
   _bodyMass: 1
   _turnSpeedDegreesPerSecond: 720
