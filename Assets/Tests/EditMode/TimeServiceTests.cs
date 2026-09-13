@@ -39,6 +39,57 @@ namespace AdaptiveBossArena.Tests.EditMode
         }
 
         [Test]
+        public void HitStop_LeavesThePhysicsStepAtItsBaseSize()
+        {
+            // The step used to follow the time scale down to about 1.7e-6 s. Harmless while nothing
+            // used Rigidbodies; a ragdoll handed that step would stop resolving its joints.
+            var service = new TimeService(Frame);
+            service.RequestHitStop(0.1f);
+
+            service.Tick(Frame);
+
+            Assert.AreEqual(Frame, service.FixedDeltaTime, Tolerance);
+            Assert.AreEqual(Frame, Time.fixedDeltaTime, Tolerance);
+        }
+
+        [Test]
+        public void Pause_NeverHandsTheEngineAZeroPhysicsStep()
+        {
+            // Pausing used to write exactly zero, which the engine does not accept as a step.
+            var service = new TimeService(Frame);
+
+            service.SetPaused(true);
+
+            Assert.AreEqual(Frame, service.FixedDeltaTime, Tolerance);
+            Assert.Greater(Time.fixedDeltaTime, 0f);
+        }
+
+        [Test]
+        public void SlowMotion_ShrinksThePhysicsStepWithTheClock()
+        {
+            // Kept from the original behaviour: in slow-motion physics stays as smooth on screen as
+            // at full speed, rather than turning visibly coarse.
+            var service = new TimeService(Frame);
+            service.RequestSlowMotion(0.5f, 1f);
+
+            service.Tick(Frame);
+
+            Assert.AreEqual(Frame * 0.5f, service.FixedDeltaTime, Tolerance);
+        }
+
+        [Test]
+        public void DeepSlowMotion_CannotShrinkThePhysicsStepPastItsFloor()
+        {
+            var service = new TimeService(Frame);
+            service.RequestSlowMotion(0.01f, 1f);
+
+            service.Tick(Frame);
+
+            Assert.AreEqual(0.01f, service.TimeScale, Tolerance);
+            Assert.AreEqual(Frame * 0.25f, service.FixedDeltaTime, Tolerance);
+        }
+
+        [Test]
         public void WithNoEffects_TimeRunsAtNormalSpeed()
         {
             var service = new TimeService();
