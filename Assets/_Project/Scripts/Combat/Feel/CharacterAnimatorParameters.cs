@@ -16,6 +16,15 @@ namespace AdaptiveBossArena.Combat.Feel
         /// <summary>Normalised clip time for the attack state playing, set from the attack's timeline.</summary>
         public const string AttackTime = "AttackTime";
 
+        /// <summary>
+        /// Normalised progress through rising from the floor, scrubbing the get-up clip.
+        /// </summary>
+        /// <remarks>
+        /// Held at zero while lying down, which is the clip's first frame: the one clip serves as both the
+        /// body on the floor and the rise from it, so the two can never disagree about the pose.
+        /// </remarks>
+        public const string ReactionTime = "ReactionTime";
+
         /// <summary>Idle, walk, jog and sprint, blended by speed.</summary>
         public const string LocomotionState = "Locomotion";
 
@@ -27,6 +36,12 @@ namespace AdaptiveBossArena.Combat.Feel
 
         /// <summary>A broken stance.</summary>
         public const string StaggerState = "Stagger";
+
+        /// <summary>Thrown through the air.</summary>
+        public const string AirborneState = "Airborne";
+
+        /// <summary>On the floor, and rising from it.</summary>
+        public const string KnockedDownState = "KnockedDown";
 
         /// <summary>Defeat.</summary>
         public const string DeathState = "Death";

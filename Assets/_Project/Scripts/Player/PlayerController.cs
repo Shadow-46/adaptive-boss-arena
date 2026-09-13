@@ -339,9 +339,11 @@ namespace AdaptiveBossArena.Player
                 ? _context.Motor.PlanarVelocity.magnitude / _config.MoveSpeed
                 : 0f;
 
+            float rising = _machine.CurrentState == _getUpState ? _getUpState.Progress(_context) : 0f;
+
             _animator.SetMotionState(
                 _context.ObservableState, _context.Attacks.Phase, speed01,
-                _context.Attacks.CurrentAttack, _context.Attacks.ElapsedSeconds);
+                _context.Attacks.CurrentAttack, _context.Attacks.ElapsedSeconds, rising);
         }
 
         /// <inheritdoc />

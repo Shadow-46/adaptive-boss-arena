@@ -109,12 +109,14 @@ namespace AdaptiveBossArena.Combat.Feel
         /// <param name="planarSpeed01">Horizontal speed as a fraction of top speed, for the run lean.</param>
         /// <param name="attack">The attack in progress, or null. A rig uses it to pick and scrub its clip.</param>
         /// <param name="attackElapsedSeconds">Time since that attack began.</param>
+        /// <param name="reactionProgress01">Progress through rising from the floor, for a rig's get-up clip.</param>
         public void SetMotionState(
             ObservableActionState state,
             AttackPhase attackPhase,
             float planarSpeed01,
             AttackDefinition attack = null,
-            float attackElapsedSeconds = 0f)
+            float attackElapsedSeconds = 0f,
+            float reactionProgress01 = 0f)
         {
             _state = state;
             _attackPhase = attackPhase;
@@ -122,7 +124,7 @@ namespace AdaptiveBossArena.Combat.Feel
 
             // Forwarded so both presentation layers ride one push from the controller. No-op until a
             // rig is present.
-            _bridge?.SetMotionState(state, attackPhase, planarSpeed01, attack, attackElapsedSeconds);
+            _bridge?.SetMotionState(state, attackPhase, planarSpeed01, attack, attackElapsedSeconds, reactionProgress01);
         }
 
         /// <summary>The animation tuning this character uses.</summary>

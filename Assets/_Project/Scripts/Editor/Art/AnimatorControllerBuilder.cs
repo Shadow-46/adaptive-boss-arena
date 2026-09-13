@@ -72,6 +72,7 @@ namespace AdaptiveBossArena.Editor.Art
             AnimatorController controller = LoadEmptiedOrCreate();
             controller.AddParameter(CharacterAnimatorParameters.Speed, AnimatorControllerParameterType.Float);
             controller.AddParameter(CharacterAnimatorParameters.AttackTime, AnimatorControllerParameterType.Float);
+            controller.AddParameter(CharacterAnimatorParameters.ReactionTime, AnimatorControllerParameterType.Float);
 
             AnimatorStateMachine machine = controller.layers[0].stateMachine;
 
@@ -83,6 +84,15 @@ namespace AdaptiveBossArena.Editor.Art
             AddClipState(machine, CharacterAnimatorParameters.GuardState, clips, "Sword_Block");
             AddClipState(machine, CharacterAnimatorParameters.StaggerState, clips, "Idle_Shield_Break");
             AddClipState(machine, CharacterAnimatorParameters.DeathState, clips, "Death01");
+            AddClipState(machine, CharacterAnimatorParameters.AirborneState, clips, "Hit_Knockback");
+
+            AnimatorState floored = AddClipState(machine, CharacterAnimatorParameters.KnockedDownState, clips, "LayToIdle");
+
+            if (floored != null)
+            {
+                floored.timeParameterActive = true;
+                floored.timeParameter = CharacterAnimatorParameters.ReactionTime;
+            }
 
             foreach (KeyValuePair<string, string> attack in AttackStates)
             {

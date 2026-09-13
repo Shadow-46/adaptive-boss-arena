@@ -31,6 +31,7 @@ namespace AdaptiveBossArena.Combat.Feel
 
         private static readonly int SpeedParam = Animator.StringToHash(CharacterAnimatorParameters.Speed);
         private static readonly int AttackTimeParam = Animator.StringToHash(CharacterAnimatorParameters.AttackTime);
+        private static readonly int ReactionTimeParam = Animator.StringToHash(CharacterAnimatorParameters.ReactionTime);
 
         private Animator _animator;
         private CharacterAnimationConfig _config;
@@ -56,12 +57,14 @@ namespace AdaptiveBossArena.Combat.Feel
         /// <param name="planarSpeed01">Horizontal speed as a fraction of top speed.</param>
         /// <param name="attack">The attack in progress, or null.</param>
         /// <param name="attackElapsedSeconds">Time since that attack began.</param>
+        /// <param name="reactionProgress01">Progress through rising from the floor; zero while lying down.</param>
         public void SetMotionState(
             ObservableActionState state,
             AttackPhase attackPhase,
             float planarSpeed01,
             AttackDefinition attack,
-            float attackElapsedSeconds)
+            float attackElapsedSeconds,
+            float reactionProgress01 = 0f)
         {
             if (!HasSkeleton)
             {
@@ -69,6 +72,7 @@ namespace AdaptiveBossArena.Combat.Feel
             }
 
             _animator.SetFloat(SpeedParam, Mathf.Clamp01(planarSpeed01));
+            _animator.SetFloat(ReactionTimeParam, Mathf.Clamp01(reactionProgress01));
 
             bool attacking = attack != null && attackPhase != AttackPhase.Inactive && IsAttackState(state);
             string target = attacking ? AttackStateFor(attack) : StateFor(state);
@@ -142,6 +146,12 @@ namespace AdaptiveBossArena.Combat.Feel
 
                 case ObservableActionState.Dead:
                     return CharacterAnimatorParameters.DeathState;
+
+                case ObservableActionState.Airborne:
+                    return CharacterAnimatorParameters.AirborneState;
+
+                case ObservableActionState.KnockedDown:
+                    return CharacterAnimatorParameters.KnockedDownState;
 
                 default:
                     return CharacterAnimatorParameters.LocomotionState;
