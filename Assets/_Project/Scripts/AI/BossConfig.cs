@@ -145,6 +145,12 @@ namespace AdaptiveBossArena.AI
         private float _impulseHalfLifeSeconds = 0.08f;
 
         [SerializeField]
+        [Tooltip("Seconds the boss takes to reach or shed full speed. Blunter than the player's: a heavy " +
+                 "body commits to where it is going.")]
+        [Min(0f)]
+        private float _accelerationSeconds = 0.25f;
+
+        [SerializeField]
         [Tooltip("Fraction of a blow's knockback the boss shrugs off with its stance intact.")]
         [Range(0f, 1f)]
         private float _knockbackResistanceAtFullPoise = 0.85f;
@@ -279,6 +285,9 @@ namespace AdaptiveBossArena.AI
 
         /// <summary>Half-life of an imposed shove such as knockback.</summary>
         public float ImpulseHalfLifeSeconds => _impulseHalfLifeSeconds;
+
+        /// <summary>Seconds the boss takes to reach or shed full speed.</summary>
+        public float AccelerationSeconds => _accelerationSeconds;
 
         /// <summary>Fraction of knockback shrugged off with a full stance.</summary>
         public float KnockbackResistanceAtFullPoise => _knockbackResistanceAtFullPoise;

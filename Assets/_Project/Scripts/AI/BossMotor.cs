@@ -21,9 +21,6 @@ namespace AdaptiveBossArena.AI
         /// <summary>Below this speed the boss is treated as stationary.</summary>
         private const float StationarySpeedThreshold = 0.05f;
 
-        /// <summary>Time the boss takes to reach or shed full speed. Blunter than the player's.</summary>
-        private const float AccelerationSeconds = 0.25f;
-
         private readonly CharacterController _controller;
         private readonly Transform _transform;
         private readonly BossConfig _config;
@@ -85,9 +82,9 @@ namespace AdaptiveBossArena.AI
                 ? direction.normalized * CurrentTopSpeed
                 : Vector3.zero;
 
-            float rate = AccelerationSeconds <= 0f
+            float rate = _config.AccelerationSeconds <= 0f
                 ? float.MaxValue
-                : CurrentTopSpeed / AccelerationSeconds;
+                : CurrentTopSpeed / _config.AccelerationSeconds;
 
             _planarVelocity = Vector3.MoveTowards(_planarVelocity, target, rate * deltaTime);
         }

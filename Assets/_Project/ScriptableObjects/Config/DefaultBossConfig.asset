@@ -25,6 +25,7 @@ MonoBehaviour:
   _moveSpeed: 5
   _turnSpeedDegreesPerSecond: 220
   _impulseHalfLifeSeconds: 0.08
+  _accelerationSeconds: 0.25
   _knockbackResistanceAtFullPoise: 0.85
   _knockbackResistanceWhenBroken: 0
   _bodyMass: 4
