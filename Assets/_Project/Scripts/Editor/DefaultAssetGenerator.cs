@@ -649,7 +649,11 @@ namespace AdaptiveBossArena.Editor
                     // Blocking has to lose ground faster than deflecting gains it, or turtling
                     // becomes the correct answer and the deflect window stops mattering.
                     writer.Float("_blockPostureCost", 22f)
-                        .Float("_deflectPostureDamage", 28f);
+                        .Float("_deflectPostureDamage", 28f)
+
+                        // How far a blow carries the player. Long enough that a heavy hit visibly
+                        // throws them, short enough that control returns within a stride.
+                        .Float("_impulseHalfLifeSeconds", 0.12f);
                 }
 
                 writer.ReferenceArray("_weapons", weapons)
@@ -927,7 +931,10 @@ namespace AdaptiveBossArena.Editor
                         .Float("_parryWindowSeconds", 0.18f)
                         .Float("_parryTailSeconds", 0.45f)
                         .Float("_parryPostureDamage", 24f)
-                        .Float("_parryCooldownSeconds", 1.2f);
+                        .Float("_parryCooldownSeconds", 1.2f)
+
+                        // The boss is heavy and sheds a shove faster than the player does.
+                        .Float("_impulseHalfLifeSeconds", 0.08f);
                 }
 
                 SerializedProperty phases = writer.Array("_phases", 4);

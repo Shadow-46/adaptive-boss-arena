@@ -138,6 +138,12 @@ namespace AdaptiveBossArena.AI
         [Tooltip("Turn rate in degrees per second. The main lever on how easily the boss is circled.")]
         private float _turnSpeedDegreesPerSecond = 220f;
 
+        [SerializeField]
+        [Tooltip("How long a shove such as knockback takes to lose half its speed. Shorter than the " +
+                 "player's: the boss is heavy, and sheds a blow faster.")]
+        [Range(0.02f, 0.6f)]
+        private float _impulseHalfLifeSeconds = 0.08f;
+
         [Header("Perception")]
         [SerializeField]
         [Tooltip("Reaction and perception limits. Required; without it the boss would act on the " +
@@ -255,6 +261,9 @@ namespace AdaptiveBossArena.AI
 
         /// <summary>Turn rate in degrees per second.</summary>
         public float TurnSpeedDegreesPerSecond => _turnSpeedDegreesPerSecond;
+
+        /// <summary>Half-life of an imposed shove such as knockback.</summary>
+        public float ImpulseHalfLifeSeconds => _impulseHalfLifeSeconds;
 
         /// <summary>Reaction and perception limits.</summary>
         public ReactionProfile ReactionProfile => _reactionProfile;

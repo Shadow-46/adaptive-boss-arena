@@ -50,6 +50,12 @@ namespace AdaptiveBossArena.Player
         private float _decelerationSeconds = 0.08f;
 
         [SerializeField]
+        [Tooltip("How long a shove such as knockback takes to lose half its speed. Longer carries the " +
+                 "player further on the same blow.")]
+        [Range(0.02f, 0.6f)]
+        private float _impulseHalfLifeSeconds = 0.12f;
+
+        [SerializeField]
         [Tooltip("Turn rate in degrees per second.")]
         private float _turnSpeedDegreesPerSecond = 1080f;
 
@@ -189,6 +195,9 @@ namespace AdaptiveBossArena.Player
 
         /// <summary>Time to come to rest.</summary>
         public float DecelerationSeconds => _decelerationSeconds;
+
+        /// <summary>Half-life of an imposed shove such as knockback.</summary>
+        public float ImpulseHalfLifeSeconds => _impulseHalfLifeSeconds;
 
         /// <summary>Turn rate in degrees per second.</summary>
         public float TurnSpeedDegreesPerSecond => _turnSpeedDegreesPerSecond;

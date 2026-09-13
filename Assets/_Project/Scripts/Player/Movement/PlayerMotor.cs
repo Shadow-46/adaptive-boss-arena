@@ -1,4 +1,6 @@
 using System;
+using AdaptiveBossArena.Combat.Movement;
+using AdaptiveBossArena.Core.Constants;
 using UnityEngine;
 
 namespace AdaptiveBossArena.Player.Movement
@@ -28,16 +30,6 @@ namespace AdaptiveBossArena.Player.Movement
     /// </remarks>
     public sealed class PlayerMotor
     {
-        /// <summary>
-        /// Constant downward velocity applied to keep the controller in contact with the floor.
-        /// </summary>
-        /// <remarks>
-        /// Not simulated gravity. The arena is flat and there is no jumping, so all this needs to do
-        /// is stop <see cref="CharacterController.isGrounded"/> from flickering, which would make
-        /// ground-dependent logic unreliable.
-        /// </remarks>
-        private const float GroundingSpeed = -2f;
-
         /// <summary>Below this speed the character is treated as stationary.</summary>
         private const float StationarySpeedThreshold = 0.05f;
 
@@ -47,6 +39,13 @@ namespace AdaptiveBossArena.Player.Movement
         private readonly Transform _cameraTransform;
 
         private Vector3 _planarVelocity;
+
+        /// <summary>
+        /// Carries what is imposed on the character — knockback, gravity — separately from what it is
+        /// doing, so steering can never overwrite a shove.
+        /// </summary>
+        private readonly MotionIntegrator _motion =
+            new MotionIntegrator(GameplayConstants.Gravity, GameplayConstants.GroundedSpeed);
 
         /// <summary>Creates a motor bound to a character controller.</summary>
         /// <param name="controller">The controller that performs movement and collision.</param>
@@ -117,8 +116,17 @@ namespace AdaptiveBossArena.Player.Movement
         public void SetPlanarVelocity(Vector3 velocity) =>
             _planarVelocity = new Vector3(velocity.x, 0f, velocity.z);
 
-        /// <summary>Stops the character immediately.</summary>
+        /// <summary>Stops the character's own movement immediately. Imposed shoves still play out.</summary>
         public void Halt() => _planarVelocity = Vector3.zero;
+
+        /// <summary>
+        /// Imposes a shove, such as knockback, that plays out on its own half-life.
+        /// </summary>
+        /// <remarks>
+        /// Unlike <see cref="SetPlanarVelocity"/>, nothing the character does afterwards overwrites it.
+        /// </remarks>
+        /// <param name="velocity">Horizontal velocity to add.</param>
+        public void AddImpulse(Vector3 velocity) => _motion.AddImpulse(velocity);
 
         /// <summary>Integrates the current velocity and resolves collisions.</summary>
         /// <param name="deltaTime">Elapsed scaled time.</param>
@@ -129,10 +137,10 @@ namespace AdaptiveBossArena.Player.Movement
                 return;
             }
 
-            Vector3 motion = _planarVelocity;
-            motion.y = GroundingSpeed;
+            Vector3 velocity = _motion.Step(
+                _planarVelocity, _config.ImpulseHalfLifeSeconds, _controller.isGrounded, deltaTime);
 
-            _controller.Move(motion * deltaTime);
+            _controller.Move(velocity * deltaTime);
         }
 
         /// <summary>Rotates toward the direction of travel.</summary>
@@ -189,6 +197,7 @@ namespace AdaptiveBossArena.Player.Movement
             _controller.enabled = true;
 
             _planarVelocity = Vector3.zero;
+            _motion.Reset();
         }
 
         /// <summary>

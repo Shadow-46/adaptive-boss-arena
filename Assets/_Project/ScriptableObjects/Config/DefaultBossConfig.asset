@@ -24,6 +24,7 @@ MonoBehaviour:
   _parryCooldownSeconds: 1.2
   _moveSpeed: 5
   _turnSpeedDegreesPerSecond: 220
+  _impulseHalfLifeSeconds: 0.08
   _reactionProfile: {fileID: 11400000, guid: c374e3bf32bdf5c49be748aa714d26b8, type: 2}
   _phases:
   - _name: Measured

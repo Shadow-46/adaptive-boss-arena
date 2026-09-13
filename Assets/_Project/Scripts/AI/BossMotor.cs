@@ -1,4 +1,6 @@
 using System;
+using AdaptiveBossArena.Combat.Movement;
+using AdaptiveBossArena.Core.Constants;
 using UnityEngine;
 
 namespace AdaptiveBossArena.AI
@@ -16,9 +18,6 @@ namespace AdaptiveBossArena.AI
     /// </remarks>
     public sealed class BossMotor
     {
-        /// <summary>Constant downward velocity keeping the controller grounded on the flat arena.</summary>
-        private const float GroundingSpeed = -2f;
-
         /// <summary>Below this speed the boss is treated as stationary.</summary>
         private const float StationarySpeedThreshold = 0.05f;
 
@@ -31,6 +30,10 @@ namespace AdaptiveBossArena.AI
 
         private Vector3 _planarVelocity;
         private float _speedMultiplier = 1f;
+
+        /// <summary>Carries imposed motion separately from steering. See the player's motor.</summary>
+        private readonly MotionIntegrator _motion =
+            new MotionIntegrator(GameplayConstants.Gravity, GameplayConstants.GroundedSpeed);
 
         /// <summary>Creates a motor bound to a character controller.</summary>
         /// <param name="controller">The controller performing movement and collision.</param>
@@ -90,13 +93,17 @@ namespace AdaptiveBossArena.AI
         /// <param name="deltaTime">Elapsed scaled time.</param>
         public void Decelerate(float deltaTime) => MoveInDirection(Vector3.zero, deltaTime);
 
-        /// <summary>Overrides velocity outright, used by lunging attacks and knockback.</summary>
+        /// <summary>Overrides the boss's own velocity outright, used by lunging attacks.</summary>
         /// <param name="velocity">Horizontal velocity to adopt.</param>
         public void SetPlanarVelocity(Vector3 velocity) =>
             _planarVelocity = new Vector3(velocity.x, 0f, velocity.z);
 
-        /// <summary>Stops the boss immediately.</summary>
+        /// <summary>Stops the boss's own movement immediately. Imposed shoves still play out.</summary>
         public void Halt() => _planarVelocity = Vector3.zero;
+
+        /// <summary>Imposes a shove, such as knockback, that steering cannot overwrite.</summary>
+        /// <param name="velocity">Horizontal velocity to add.</param>
+        public void AddImpulse(Vector3 velocity) => _motion.AddImpulse(velocity);
 
         /// <summary>Integrates velocity and resolves collisions.</summary>
         /// <param name="deltaTime">Elapsed scaled time.</param>
@@ -107,10 +114,10 @@ namespace AdaptiveBossArena.AI
                 return;
             }
 
-            Vector3 motion = _planarVelocity;
-            motion.y = GroundingSpeed;
+            Vector3 velocity = _motion.Step(
+                _planarVelocity, _config.ImpulseHalfLifeSeconds, _controller.isGrounded, deltaTime);
 
-            _controller.Move(motion * deltaTime);
+            _controller.Move(velocity * deltaTime);
         }
 
         /// <summary>
@@ -146,6 +153,7 @@ namespace AdaptiveBossArena.AI
             _controller.enabled = true;
 
             _planarVelocity = Vector3.zero;
+            _motion.Reset();
         }
     }
 }

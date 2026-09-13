@@ -21,6 +21,7 @@ MonoBehaviour:
   _moveSpeed: 7
   _accelerationSeconds: 0.06
   _decelerationSeconds: 0.08
+  _impulseHalfLifeSeconds: 0.12
   _turnSpeedDegreesPerSecond: 1080
   _dashDistance: 4.5
   _dashDurationSeconds: 0.18

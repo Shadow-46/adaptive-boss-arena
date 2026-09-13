@@ -30,6 +30,21 @@ namespace AdaptiveBossArena.Core.Constants
         /// <summary>Duration of one frame at the reference rate, useful for expressing frame counts.</summary>
         public const float OneFrame = FixedTimeStep;
 
+        /// <summary>Downward acceleration for any character in the air, in metres per second squared.</summary>
+        /// <remarks>
+        /// Stronger than real gravity on purpose. At 9.8 a launched character hangs long enough to look
+        /// like it is floating, which is the opposite of weight; the genre's heavy feel comes from falls
+        /// that are quick and land hard.
+        /// </remarks>
+        public const float Gravity = 25f;
+
+        /// <summary>Downward speed held while grounded, keeping the controller's floor contact stable.</summary>
+        /// <remarks>
+        /// Replaces the old constant grounding push, which was not gravity at all and so could never
+        /// have supported a launch or a fall.
+        /// </remarks>
+        public const float GroundedSpeed = -2f;
+
         /// <summary>
         /// How long an input is remembered and replayed once the character can act again.
         /// </summary>
