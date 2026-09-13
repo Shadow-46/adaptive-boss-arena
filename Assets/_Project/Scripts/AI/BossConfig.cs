@@ -154,6 +154,11 @@ namespace AdaptiveBossArena.AI
         [Range(0f, 1f)]
         private float _knockbackResistanceWhenBroken;
 
+        [SerializeField]
+        [Tooltip("Relative mass in body contact. Compared against the player's to decide who gives ground.")]
+        [Min(0.01f)]
+        private float _bodyMass = 4f;
+
         [Header("Perception")]
         [SerializeField]
         [Tooltip("Reaction and perception limits. Required; without it the boss would act on the " +
@@ -280,6 +285,9 @@ namespace AdaptiveBossArena.AI
 
         /// <summary>Fraction of knockback shrugged off while the stance is broken.</summary>
         public float KnockbackResistanceWhenBroken => _knockbackResistanceWhenBroken;
+
+        /// <summary>Relative mass in body contact.</summary>
+        public float BodyMass => _bodyMass;
 
         /// <summary>Reaction and perception limits.</summary>
         public ReactionProfile ReactionProfile => _reactionProfile;

@@ -56,6 +56,11 @@ namespace AdaptiveBossArena.Player
         private float _impulseHalfLifeSeconds = 0.12f;
 
         [SerializeField]
+        [Tooltip("Relative mass in body contact. Compared against the boss's to decide who gives ground.")]
+        [Min(0.01f)]
+        private float _bodyMass = 1f;
+
+        [SerializeField]
         [Tooltip("Turn rate in degrees per second.")]
         private float _turnSpeedDegreesPerSecond = 1080f;
 
@@ -198,6 +203,9 @@ namespace AdaptiveBossArena.Player
 
         /// <summary>Half-life of an imposed shove such as knockback.</summary>
         public float ImpulseHalfLifeSeconds => _impulseHalfLifeSeconds;
+
+        /// <summary>Relative mass in body contact.</summary>
+        public float BodyMass => _bodyMass;
 
         /// <summary>Turn rate in degrees per second.</summary>
         public float TurnSpeedDegreesPerSecond => _turnSpeedDegreesPerSecond;

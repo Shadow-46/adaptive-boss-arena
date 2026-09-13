@@ -653,7 +653,8 @@ namespace AdaptiveBossArena.Editor
 
                         // How far a blow carries the player. Long enough that a heavy hit visibly
                         // throws them, short enough that control returns within a stride.
-                        .Float("_impulseHalfLifeSeconds", 0.12f);
+                        .Float("_impulseHalfLifeSeconds", 0.12f)
+                        .Float("_bodyMass", 1f);
                 }
 
                 writer.ReferenceArray("_weapons", weapons)
@@ -939,7 +940,11 @@ namespace AdaptiveBossArena.Editor
                         // A fresh stance absorbs most of a blow; a broken one is thrown by all of it.
                         // Weight becomes something the player wears down rather than a fixed wall.
                         .Float("_knockbackResistanceAtFullPoise", 0.85f)
-                        .Float("_knockbackResistanceWhenBroken", 0f);
+                        .Float("_knockbackResistanceWhenBroken", 0f)
+
+                        // Four times the knight: leaning into the boss shoves it a little and throws
+                        // the knight back a lot, and a charge drives the knight before it.
+                        .Float("_bodyMass", 4f);
                 }
 
                 SerializedProperty phases = writer.Array("_phases", 4);

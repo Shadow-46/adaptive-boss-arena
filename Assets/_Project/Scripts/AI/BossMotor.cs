@@ -147,6 +147,24 @@ namespace AdaptiveBossArena.AI
                 _transform.rotation, target, _config.TurnSpeedDegreesPerSecond * deltaTime);
         }
 
+        /// <summary>
+        /// Moves the body by an offset imposed from outside, such as being pushed by another body.
+        /// </summary>
+        /// <remarks>
+        /// Goes through the controller rather than setting the position, so a body shoved toward a
+        /// wall stops at the wall instead of being pushed through it.
+        /// </remarks>
+        /// <param name="offset">Displacement to apply. The vertical component is ignored.</param>
+        public void Displace(Vector3 offset)
+        {
+            offset.y = 0f;
+
+            if (offset.sqrMagnitude > 0f && _controller.enabled)
+            {
+                _controller.Move(offset);
+            }
+        }
+
         /// <summary>Teleports the boss, for use when a fight restarts.</summary>
         /// <param name="position">Destination.</param>
         public void Teleport(Vector3 position)

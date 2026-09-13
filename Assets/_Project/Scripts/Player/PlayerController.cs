@@ -1,4 +1,5 @@
 using AdaptiveBossArena.Combat;
+using AdaptiveBossArena.Combat.Movement;
 using AdaptiveBossArena.Combat.Feel;
 using AdaptiveBossArena.Combat.Vitals;
 using AdaptiveBossArena.Core.Combat;
@@ -35,7 +36,7 @@ namespace AdaptiveBossArena.Player
     /// </remarks>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(CharacterController))]
-    public sealed class PlayerController : MonoBehaviour, IDamageable, IObservablePlayer
+    public sealed class PlayerController : MonoBehaviour, IDamageable, IObservablePlayer, IPushBody
     {
         /// <summary>Transition priority for death, which must beat every other condition.</summary>
         private const int DeathTransitionPriority = 1000;
@@ -1143,6 +1144,29 @@ namespace AdaptiveBossArena.Player
             }
 
             _context.RequestStagger(StaggerDurations.InterruptSeconds, StaggerReason.Parried);
+        }
+
+        /// <inheritdoc />
+        public Vector3 BodyPosition => transform.position;
+
+        /// <inheritdoc />
+        public float BodyRadius => _characterController != null
+            ? _characterController.radius * Mathf.Max(transform.lossyScale.x, transform.lossyScale.z)
+            : 0f;
+
+        /// <inheritdoc />
+        public float BodyMass => _config != null ? _config.BodyMass : 1f;
+
+        /// <inheritdoc />
+        public bool IsSolid => _isInitialised && _characterController != null && _characterController.enabled;
+
+        /// <inheritdoc />
+        public void Displace(Vector3 offset)
+        {
+            if (_isInitialised)
+            {
+                _context.Motor.Displace(offset);
+            }
         }
 
         /// <summary>Player posture, exposed for the guard bar.</summary>

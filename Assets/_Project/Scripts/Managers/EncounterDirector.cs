@@ -1,6 +1,7 @@
 using System.Text;
 using AdaptiveBossArena.AI;
 using AdaptiveBossArena.Combat;
+using AdaptiveBossArena.Combat.Movement;
 using AdaptiveBossArena.Core.Constants;
 using AdaptiveBossArena.Core.Events;
 using AdaptiveBossArena.Core.Services;
@@ -103,6 +104,9 @@ namespace AdaptiveBossArena.Game
 
         // Tallied across the current attempt for the post-fight dossier, reset when a new one begins.
         private int _deflectsThisAttempt;
+
+        /// <summary>Direction from the player to the boss last frame, so a pair that passed through each other is caught.</summary>
+        private Vector3 _lastBodyDirection;
 
         private int _parriedByBossThisAttempt;
         private int _perfectDodgesThisAttempt;
@@ -221,7 +225,42 @@ namespace AdaptiveBossArena.Game
             _player.SetThreat(_boss.transform);
             _player.SetThreatPostureBroken(_boss.Poise != null && _boss.Poise.IsBroken);
 
+            SeparateBodies();
             TryClash();
+        }
+
+        /// <summary>
+        /// Pushes the two fighters apart where their bodies overlap, the lighter one further.
+        /// </summary>
+        /// <remarks>
+        /// Run here, after both fighters have moved for the frame, because the director is the only
+        /// object that sees both and the only one allowed to act on the pair. It touches positions
+        /// only through <see cref="IPushBody"/>, so neither fighter learns anything about the other.
+        /// </remarks>
+        private void SeparateBodies()
+        {
+            IPushBody player = _player;
+            IPushBody boss = _boss;
+
+            if (!player.IsSolid || !boss.IsSolid)
+            {
+                return;
+            }
+
+            BodySeparation.Result result = BodySeparation.Resolve(
+                player.BodyPosition, player.BodyRadius, player.BodyMass,
+                boss.BodyPosition, boss.BodyRadius, boss.BodyMass,
+                _lastBodyDirection);
+
+            _lastBodyDirection = result.Direction;
+
+            if (!result.Overlapped)
+            {
+                return;
+            }
+
+            player.Displace(result.PushFirst);
+            boss.Displace(result.PushSecond);
         }
 
         /// <summary>

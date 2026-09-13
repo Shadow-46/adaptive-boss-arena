@@ -2,6 +2,7 @@ using System.Collections;
 using System.Reflection;
 using AdaptiveBossArena.AI;
 using AdaptiveBossArena.Combat;
+using AdaptiveBossArena.Combat.Movement;
 using AdaptiveBossArena.Core.Combat;
 using AdaptiveBossArena.Core.Events;
 using AdaptiveBossArena.Core.Services;
@@ -184,6 +185,38 @@ namespace AdaptiveBossArena.Tests.PlayMode
                 "Breaking the boss's stance did not make it markedly easier to push.");
 
             yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator AKnightPlacedInsideTheBossIsPushedOutOfIt()
+        {
+            // The controllers no longer block each other, so the only thing keeping the bodies apart
+            // is the director's separation. If that wiring broke, fighters would walk through each
+            // other with nothing in any other test to say so.
+            Assert.IsNotNull(_player);
+            Assert.IsNotNull(_boss);
+
+            yield return WaitForTheFightToStart();
+
+            IPushBody knight = _player;
+            IPushBody brute = _boss;
+
+            var motor = ContextOf<PlayerContext>(_player).Motor;
+            motor.Teleport(brute.BodyPosition + new Vector3(0.3f, 0f, 0f));
+
+            for (int i = 0; i < 5; i++)
+            {
+                yield return null;
+            }
+
+            Vector3 between = brute.BodyPosition - knight.BodyPosition;
+            between.y = 0f;
+
+            float contact = knight.BodyRadius + brute.BodyRadius;
+
+            Assert.GreaterOrEqual(
+                between.magnitude, contact * 0.9f,
+                "The knight is still standing inside the boss.");
         }
 
         [UnityTest]

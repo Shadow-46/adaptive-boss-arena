@@ -210,10 +210,13 @@ namespace AdaptiveBossArena.Editor
             AllowCollision(Layers.Projectile, Layers.PlayerHurtbox);
             AllowCollision(Layers.Projectile, Layers.Arena);
 
-            // Bodies collide with the world and with each other so neither can be walked through.
+            // Bodies collide with the world. They deliberately do not collide with each other: two
+            // character controllers meeting simply stop dead, so neither fighter could ever give
+            // ground. Contact between them is resolved by BodySeparation instead, which pushes both
+            // apart by mass.
             AllowCollision(Layers.Player, Layers.Arena);
             AllowCollision(Layers.Boss, Layers.Arena);
-            AllowCollision(Layers.Player, Layers.Boss);
+            Physics.IgnoreLayerCollision(Layers.Player, Layers.Boss, true);
         }
 
         /// <summary>Re-enables collision between a specific pair of layers.</summary>
