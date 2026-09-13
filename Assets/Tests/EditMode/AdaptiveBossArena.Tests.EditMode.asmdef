@@ -12,7 +12,9 @@
     "AdaptiveBossArena.AI",
     "AdaptiveBossArena.UI",
     "AdaptiveBossArena.Game",
-    "AdaptiveBossArena.Editor"
+    "AdaptiveBossArena.Editor",
+    "Unity.RenderPipelines.Core.Runtime",
+    "Unity.RenderPipelines.Universal.Runtime"
   ],
   "includePlatforms": [
     "Editor"

@@ -30,14 +30,72 @@ namespace AdaptiveBossArena.Editor
     public static class RenderPipelineConfigurator
     {
         private const string SettingsFolder = "Assets/_Project/Settings";
-        private const string PipelineAssetPath = SettingsFolder + "/UniversalRenderPipeline.asset";
-        private const string RendererAssetPath = SettingsFolder + "/UniversalRenderer.asset";
 
-        /// <summary>Shadow range, pulled in from the default 50 m to suit a ~15 m arena.</summary>
-        private const float ShadowDistanceMetres = 30f;
+        /// <summary>The web tier. Kept at its original path so every existing reference to it survives.</summary>
+        public const string PipelineAssetPath = SettingsFolder + "/UniversalRenderPipeline.asset";
 
-        /// <summary>Cascades across that range. One was giving the fighters very few texels.</summary>
-        private const int ShadowCascades = 4;
+        /// <summary>The web tier's renderer.</summary>
+        public const string RendererAssetPath = SettingsFolder + "/UniversalRenderer.asset";
+
+        /// <summary>The desktop tier: the full-graphics Windows build.</summary>
+        public const string DesktopPipelineAssetPath = SettingsFolder + "/UniversalRenderPipeline_Desktop.asset";
+
+        /// <summary>The desktop tier's renderer, which carries ambient occlusion.</summary>
+        public const string DesktopRendererAssetPath = SettingsFolder + "/UniversalRenderer_Desktop.asset";
+
+        /// <summary>How many quality levels, counted from the top, belong to the desktop tier.</summary>
+        /// <remarks>
+        /// Unity's default six levels are kept rather than replaced with two new ones, because the
+        /// quality settings asset has no public API for adding or removing levels. The top two become
+        /// the desktop tier and the rest the web tier.
+        /// </remarks>
+        public const int DesktopTierLevelCount = 2;
+
+        /// <summary>Build-target group name used in quality-level exclusions and defaults.</summary>
+        public const string StandalonePlatform = "Standalone";
+
+        /// <summary>Build-target group name used in quality-level exclusions and defaults.</summary>
+        public const string WebGLPlatform = "WebGL";
+
+        /// <summary>What a render tier asks of its pipeline.</summary>
+        private readonly struct TierSettings
+        {
+            public float ShadowDistance { get; init; }
+            public int ShadowCascades { get; init; }
+            public int MainShadowResolution { get; init; }
+            public int AdditionalShadowResolution { get; init; }
+            public int SoftShadowQuality { get; init; }
+            public int Msaa { get; init; }
+        }
+
+        /// <summary>
+        /// The web tier, exactly as the game shipped before tiers existed.
+        /// </summary>
+        /// <remarks>
+        /// Deliberately unchanged. Splitting the tiers was to give the desktop build more, not the
+        /// browser less, and the browser build's frame time cannot be measured from the automation
+        /// pane, so cutting it blind would be a guess.
+        /// </remarks>
+        private static readonly TierSettings WebTier = new TierSettings
+        {
+            ShadowDistance = 30f,
+            ShadowCascades = 4,
+            MainShadowResolution = 2048,
+            AdditionalShadowResolution = 1024,
+            SoftShadowQuality = 2,
+            Msaa = 1
+        };
+
+        /// <summary>The desktop tier: sharper shadows further out, and multisampled edges.</summary>
+        private static readonly TierSettings DesktopTier = new TierSettings
+        {
+            ShadowDistance = 40f,
+            ShadowCascades = 4,
+            MainShadowResolution = 4096,
+            AdditionalShadowResolution = 2048,
+            SoftShadowQuality = 3,
+            Msaa = 4
+        };
 
         /// <summary>
         /// Whether screen-space ambient occlusion is added to the renderer.
@@ -69,30 +127,36 @@ namespace AdaptiveBossArena.Editor
         {
             AssetAuthoring.EnsureFolderExists(SettingsFolder);
 
-            UniversalRenderPipelineAsset pipeline = LoadOrCreatePipelineAsset();
+            UniversalRenderPipelineAsset web = LoadOrCreatePipelineAsset(PipelineAssetPath, RendererAssetPath);
+            UniversalRenderPipelineAsset desktop =
+                LoadOrCreatePipelineAsset(DesktopPipelineAssetPath, DesktopRendererAssetPath);
 
-            if (pipeline == null)
+            if (web == null || desktop == null)
             {
                 Debug.LogError(
-                    "[Adaptive Boss Arena] Could not create the Universal Render Pipeline asset. " +
+                    "[Adaptive Boss Arena] Could not create the Universal Render Pipeline assets. " +
                     "Everything will render magenta until a pipeline is assigned.");
                 return;
             }
 
             // Both assignments are needed. The graphics setting is the project-wide default; the
-            // quality setting overrides it per quality level and, left empty, silently wins.
-            GraphicsSettings.defaultRenderPipeline = pipeline;
-            AssignToAllQualityLevels(pipeline);
+            // quality setting overrides it per quality level and, left empty, silently wins. The
+            // default is the web tier, the conservative one: anything that falls back to it runs
+            // everywhere.
+            GraphicsSettings.defaultRenderPipeline = web;
+            AssignQualityTiers(web, desktop);
 
-            TunePipeline(pipeline);
-            EnsureAmbientOcclusion();
+            TunePipeline(web, WebTier);
+            TunePipeline(desktop, DesktopTier);
+            EnsureAmbientOcclusion(RendererAssetPath, EnableAmbientOcclusion);
+            EnsureAmbientOcclusion(DesktopRendererAssetPath, true);
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
             Debug.Log(
-                $"[Adaptive Boss Arena] Universal Render Pipeline configured and assigned " +
-                $"('{PipelineAssetPath}').");
+                "[Adaptive Boss Arena] Universal Render Pipeline configured: web tier " +
+                $"'{PipelineAssetPath}', desktop tier '{DesktopPipelineAssetPath}'.");
         }
 
         /// <summary>
@@ -117,22 +181,23 @@ namespace AdaptiveBossArena.Editor
         /// these are serialized fields of a package type with no public setter.
         /// </para>
         /// </remarks>
-        private static void TunePipeline(UniversalRenderPipelineAsset pipeline)
+        private static void TunePipeline(UniversalRenderPipelineAsset pipeline, TierSettings tier)
         {
             var serialized = new SerializedObject(pipeline);
 
             // Shadows: soft, close, and split so the fighters get real resolution.
             SetIfPresent(serialized, "m_SoftShadowsSupported", true);
-            SetIfPresent(serialized, "m_SoftShadowQuality", 2);
-            SetIfPresent(serialized, "m_ShadowDistance", ShadowDistanceMetres);
-            SetIfPresent(serialized, "m_ShadowCascadeCount", ShadowCascades);
-            SetIfPresent(serialized, "m_MainLightShadowmapResolution", 2048);
+            SetIfPresent(serialized, "m_SoftShadowQuality", tier.SoftShadowQuality);
+            SetIfPresent(serialized, "m_ShadowDistance", tier.ShadowDistance);
+            SetIfPresent(serialized, "m_ShadowCascadeCount", tier.ShadowCascades);
+            SetIfPresent(serialized, "m_MainLightShadowmapResolution", tier.MainShadowResolution);
+            SetIfPresent(serialized, "m_MSAA", tier.Msaa);
 
             // The braziers could not cast at all: the light asks for shadows, the pipeline forbade
             // them regardless.
             SetIfPresent(serialized, "m_AdditionalLightsRenderingMode", 1);
             SetIfPresent(serialized, "m_AdditionalLightShadowsSupported", true);
-            SetIfPresent(serialized, "m_AdditionalLightsShadowmapResolution", 1024);
+            SetIfPresent(serialized, "m_AdditionalLightsShadowmapResolution", tier.AdditionalShadowResolution);
 
             // Four braziers, the boss's phase aura and the flash on every impact can easily want more
             // than four lights on one surface at once, and the ones past the limit simply vanish.
@@ -164,9 +229,9 @@ namespace AdaptiveBossArena.Editor
         /// the eye reads one object as resting on another, and without it everything in the arena
         /// floats very slightly — a large part of why generated geometry reads as a prototype.
         /// </remarks>
-        private static void EnsureAmbientOcclusion()
+        private static void EnsureAmbientOcclusion(string rendererAssetPath, bool enabled)
         {
-            var rendererData = AssetDatabase.LoadAssetAtPath<UniversalRendererData>(RendererAssetPath);
+            var rendererData = AssetDatabase.LoadAssetAtPath<UniversalRendererData>(rendererAssetPath);
 
             if (rendererData == null)
             {
@@ -187,7 +252,7 @@ namespace AdaptiveBossArena.Editor
             // Removal has to be handled as well as addition. The renderer asset is loaded rather than
             // recreated, so simply skipping the add would leave a feature added by an earlier run in
             // place for ever.
-            if (!EnableAmbientOcclusion)
+            if (!enabled)
             {
                 if (alreadyPresent)
                 {
@@ -360,22 +425,23 @@ namespace AdaptiveBossArena.Editor
             }
         }
 
-        /// <summary>Loads the pipeline asset, creating it and its renderer on first run.</summary>
-        private static UniversalRenderPipelineAsset LoadOrCreatePipelineAsset()
+        /// <summary>Loads a pipeline asset, creating it and its renderer on first run.</summary>
+        private static UniversalRenderPipelineAsset LoadOrCreatePipelineAsset(
+            string pipelineAssetPath, string rendererAssetPath)
         {
-            var existing = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(PipelineAssetPath);
+            var existing = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(pipelineAssetPath);
 
             if (existing != null)
             {
                 return existing;
             }
 
-            var rendererData = AssetDatabase.LoadAssetAtPath<UniversalRendererData>(RendererAssetPath);
+            var rendererData = AssetDatabase.LoadAssetAtPath<UniversalRendererData>(rendererAssetPath);
 
             if (rendererData == null)
             {
                 rendererData = ScriptableObject.CreateInstance<UniversalRendererData>();
-                AssetDatabase.CreateAsset(rendererData, RendererAssetPath);
+                AssetDatabase.CreateAsset(rendererData, rendererAssetPath);
             }
 
             UniversalRenderPipelineAsset pipeline = UniversalRenderPipelineAsset.Create(rendererData);
@@ -385,32 +451,129 @@ namespace AdaptiveBossArena.Editor
                 return null;
             }
 
-            pipeline.name = Path.GetFileNameWithoutExtension(PipelineAssetPath);
-            AssetDatabase.CreateAsset(pipeline, PipelineAssetPath);
+            pipeline.name = Path.GetFileNameWithoutExtension(pipelineAssetPath);
+            AssetDatabase.CreateAsset(pipeline, pipelineAssetPath);
 
             return pipeline;
         }
 
         /// <summary>
-        /// Assigns the pipeline to every quality level.
+        /// Splits the quality levels into a web tier and a desktop tier.
         /// </summary>
         /// <remarks>
-        /// A quality level with no pipeline assigned falls back to the built-in renderer regardless
-        /// of the project-wide default, so leaving even one unset produces a build that renders
-        /// magenta only at that quality setting.
+        /// <para>
+        /// Every level still gets a pipeline — a level left empty falls back to the built-in renderer
+        /// and renders magenta at that setting alone. The top <see cref="DesktopTierLevelCount"/>
+        /// levels get the desktop pipeline and are excluded from WebGL builds; the rest get the web
+        /// pipeline and are excluded from desktop builds.
+        /// </para>
+        /// <para>
+        /// The exclusion is what makes this safe. Ambient occlusion broke the WebGL build outright,
+        /// and a quality level that merely went unused in a browser would still carry its renderer —
+        /// and its occlusion pass — into the build. Excluding the desktop levels from WebGL keeps that
+        /// renderer out of the browser entirely.
+        /// </para>
+        /// <para>
+        /// Written through <see cref="SerializedObject"/> because per-platform exclusion and defaults
+        /// have no public API.
+        /// </para>
         /// </remarks>
-        private static void AssignToAllQualityLevels(UniversalRenderPipelineAsset pipeline)
+        private static void AssignQualityTiers(
+            UniversalRenderPipelineAsset web, UniversalRenderPipelineAsset desktop)
         {
-            int originalLevel = QualitySettings.GetQualityLevel();
-            string[] levels = QualitySettings.names;
+            SerializedObject quality = LoadQualitySettings();
+            SerializedProperty levels = quality?.FindProperty("m_QualitySettings");
 
-            for (int i = 0; i < levels.Length; i++)
+            if (levels == null)
             {
-                QualitySettings.SetQualityLevel(i, applyExpensiveChanges: false);
-                QualitySettings.renderPipeline = pipeline;
+                Debug.LogError(
+                    "[Adaptive Boss Arena] Quality levels could not be read, so the render tiers were not " +
+                    "assigned. Levels without a pipeline render magenta.");
+                return;
             }
 
-            QualitySettings.SetQualityLevel(originalLevel, applyExpensiveChanges: false);
+            int firstDesktopLevel = FirstDesktopLevel(levels.arraySize);
+
+            for (int i = 0; i < levels.arraySize; i++)
+            {
+                SerializedProperty level = levels.GetArrayElementAtIndex(i);
+                bool isDesktop = i >= firstDesktopLevel;
+
+                SerializedProperty pipeline = level.FindPropertyRelative("customRenderPipeline");
+
+                if (pipeline != null)
+                {
+                    pipeline.objectReferenceValue = isDesktop ? desktop : web;
+                }
+
+                SetExcludedPlatforms(
+                    level.FindPropertyRelative("excludedTargetPlatforms"),
+                    isDesktop ? WebGLPlatform : StandalonePlatform);
+            }
+
+            SetPlatformDefault(quality, WebGLPlatform, firstDesktopLevel - 1);
+            SetPlatformDefault(quality, StandalonePlatform, levels.arraySize - 1);
+
+            quality.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        /// <summary>The first quality level that belongs to the desktop tier.</summary>
+        /// <param name="levelCount">How many quality levels exist.</param>
+        /// <returns>The index of the first desktop-tier level, never below one.</returns>
+        public static int FirstDesktopLevel(int levelCount) =>
+            Mathf.Max(1, levelCount - DesktopTierLevelCount);
+
+        /// <summary>Loads the project's quality settings for serialized editing.</summary>
+        /// <returns>The settings, or null if the asset could not be loaded.</returns>
+        public static SerializedObject LoadQualitySettings()
+        {
+            Object[] assets = AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/QualitySettings.asset");
+
+            return assets != null && assets.Length > 0 ? new SerializedObject(assets[0]) : null;
+        }
+
+        private static void SetExcludedPlatforms(SerializedProperty excluded, string platform)
+        {
+            if (excluded == null)
+            {
+                return;
+            }
+
+            excluded.arraySize = 1;
+            excluded.GetArrayElementAtIndex(0).stringValue = platform;
+        }
+
+        /// <summary>Sets which quality level a platform starts at.</summary>
+        /// <remarks>
+        /// The per-platform defaults are a serialized map, which appears as an array of pairs.
+        /// </remarks>
+        private static void SetPlatformDefault(SerializedObject quality, string platform, int level)
+        {
+            SerializedProperty defaults = quality.FindProperty("m_PerPlatformDefaultQuality");
+
+            if (defaults == null)
+            {
+                Debug.LogWarning(
+                    $"[Adaptive Boss Arena] Per-platform quality defaults not found; '{platform}' keeps its " +
+                    "current default quality level.");
+                return;
+            }
+
+            for (int i = 0; i < defaults.arraySize; i++)
+            {
+                SerializedProperty pair = defaults.GetArrayElementAtIndex(i);
+
+                if (pair.FindPropertyRelative("first")?.stringValue == platform)
+                {
+                    pair.FindPropertyRelative("second").intValue = level;
+                    return;
+                }
+            }
+
+            defaults.arraySize += 1;
+            SerializedProperty added = defaults.GetArrayElementAtIndex(defaults.arraySize - 1);
+            added.FindPropertyRelative("first").stringValue = platform;
+            added.FindPropertyRelative("second").intValue = level;
         }
     }
 }
