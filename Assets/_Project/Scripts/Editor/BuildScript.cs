@@ -123,15 +123,42 @@ namespace AdaptiveBossArena.Editor
             Object pipeline = level.FindPropertyRelative("customRenderPipeline").objectReferenceValue;
             string pipelinePath = pipeline != null ? AssetDatabase.GetAssetPath(pipeline) : "(none)";
 
-            if (pipelinePath == expectedPipeline)
+            if (pipelinePath != expectedPipeline)
             {
-                return null;
+                string levelName = level.FindPropertyRelative("name").stringValue;
+
+                return $"{platform} starts on quality level {levelName}, which renders with {pipelinePath} " +
+                       $"instead of {expectedPipeline}";
             }
 
-            string levelName = level.FindPropertyRelative("name").stringValue;
+            return ShippedPipelineProblem(platform, expectedPipeline);
+        }
 
-            return $"{platform} starts on quality level {levelName}, which renders with {pipelinePath} " +
-                   $"instead of {expectedPipeline}";
+        /// <summary>
+        /// Checks the pipeline assets the engine will actually ship for a platform.
+        /// </summary>
+        /// <remarks>
+        /// The default-level check alone passed on two builds that shipped the wrong tier, because the
+        /// settings were right and the engine still packed the other platform's assets. This asks the
+        /// engine the question it answers when it builds, so a wrong-tier asset about to ship is caught
+        /// before the build rather than discovered in a browser.
+        /// </remarks>
+        private static string ShippedPipelineProblem(string platform, string expectedPipeline)
+        {
+            var shipped = new System.Collections.Generic.List<UnityEngine.Rendering.RenderPipelineAsset>();
+            QualitySettings.GetAllRenderPipelineAssetsForPlatform(platform, ref shipped);
+
+            foreach (UnityEngine.Rendering.RenderPipelineAsset asset in shipped)
+            {
+                string path = asset != null ? AssetDatabase.GetAssetPath(asset) : "(none)";
+
+                if (path != expectedPipeline)
+                {
+                    return $"a {platform} build would ship {path}, which belongs to the other render tier";
+                }
+            }
+
+            return shipped.Count == 0 ? $"a {platform} build would ship no render pipeline at all" : null;
         }
 
         /// <summary>Builds the WebGL player, configured to run from GitHub Pages.</summary>
@@ -161,6 +188,20 @@ namespace AdaptiveBossArena.Editor
             if (scenes.Length == 0)
             {
                 Fail("No enabled scenes in Build Settings — run 'Run Full Setup' first.");
+                return false;
+            }
+
+            // Switched before anything else, not left to BuildPlayer. The render pipeline decides
+            // which pipeline assets ship from the editor's active platform before BuildPlayer gets
+            // round to switching it, so a WebGL build started from a Windows-active editor shipped
+            // the desktop tier - ambient occlusion and all - and the next Windows build, started from
+            // WebGL, shipped the web tier. Every build carried the previous platform's graphics.
+            BuildTargetGroup group = BuildPipeline.GetBuildTargetGroup(target);
+
+            if (EditorUserBuildSettings.activeBuildTarget != target &&
+                !EditorUserBuildSettings.SwitchActiveBuildTarget(group, target))
+            {
+                Fail($"Could not switch the active platform to {target} before building.");
                 return false;
             }
 
