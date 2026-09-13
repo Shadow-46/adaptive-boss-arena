@@ -87,11 +87,11 @@ namespace AdaptiveBossArena.Tests.EditMode
         public void TheWebPageAsksForACaptureThroughItsQueryString()
         {
             // The only way to start a capture on the deployed WebGL build, which has no command line.
-            Assert.IsTrue(Game.PerfProbe.TryReadQuerySeconds(
+            Assert.IsTrue(PerfCaptureRequest.TryReadQuerySeconds(
                 "https://example.test/arena/?perf=60", out float seconds));
             Assert.AreEqual(60f, seconds, 0.001f);
 
-            Assert.IsTrue(Game.PerfProbe.TryReadQuerySeconds(
+            Assert.IsTrue(PerfCaptureRequest.TryReadQuerySeconds(
                 "https://example.test/?a=1&perf=12.5#top", out seconds));
             Assert.AreEqual(12.5f, seconds, 0.001f);
         }
@@ -99,10 +99,33 @@ namespace AdaptiveBossArena.Tests.EditMode
         [Test]
         public void APageWithoutTheQueryKeyDoesNotCapture()
         {
-            Assert.IsFalse(Game.PerfProbe.TryReadQuerySeconds("https://example.test/arena/", out _));
-            Assert.IsFalse(Game.PerfProbe.TryReadQuerySeconds("https://example.test/?perfx=5", out _));
-            Assert.IsFalse(Game.PerfProbe.TryReadQuerySeconds("https://example.test/?perf=0", out _));
-            Assert.IsFalse(Game.PerfProbe.TryReadQuerySeconds(string.Empty, out _));
+            Assert.IsFalse(PerfCaptureRequest.TryReadQuerySeconds("https://example.test/arena/", out _));
+            Assert.IsFalse(PerfCaptureRequest.TryReadQuerySeconds("https://example.test/?perfx=5", out _));
+            Assert.IsFalse(PerfCaptureRequest.TryReadQuerySeconds("https://example.test/?perf=0", out _));
+            Assert.IsFalse(PerfCaptureRequest.TryReadQuerySeconds(string.Empty, out _));
+        }
+
+        [Test]
+        public void ADesktopRunAsksForACaptureOnTheCommandLine()
+        {
+            PerfCaptureRequest request = PerfCaptureRequest.Read(
+                new[] { "game.exe", "-perfCapture", "60", "-perfLog", @"C:\logs\perf.txt", "-perfQuit" },
+                string.Empty);
+
+            Assert.IsTrue(request.IsRequested);
+            Assert.AreEqual(60f, request.Seconds, 0.001f);
+            Assert.AreEqual(@"C:\logs\perf.txt", request.LogPath);
+            Assert.IsTrue(request.QuitWhenDone);
+        }
+
+        [Test]
+        public void AnOrdinaryLaunchRequestsNothing()
+        {
+            // The shipped game must never skip its title screen or quit on its own.
+            PerfCaptureRequest request = PerfCaptureRequest.Read(new[] { "game.exe" }, string.Empty);
+
+            Assert.IsFalse(request.IsRequested);
+            Assert.IsFalse(request.QuitWhenDone);
         }
 
         [Test]

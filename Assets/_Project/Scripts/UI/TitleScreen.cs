@@ -1,3 +1,5 @@
+using System;
+using AdaptiveBossArena.Utilities.Statistics;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -51,6 +53,15 @@ namespace AdaptiveBossArena.UI
 
         private void Start()
         {
+            // A run launched to measure performance goes straight into the fight. The probe that
+            // measures lives in the arena, so a capture left waiting here measured a menu and never
+            // wrote its result. An ordinary launch requests nothing and is unaffected.
+            if (PerfCaptureRequest.Read(Environment.GetCommandLineArgs(), Application.absoluteURL).IsRequested)
+            {
+                StartGame();
+                return;
+            }
+
             if (_quitButton != null && !PauseMenu.CanQuit)
             {
                 _quitButton.SetActive(false);

@@ -34,11 +34,6 @@ namespace AdaptiveBossArena.Game
     [DisallowMultipleComponent]
     public sealed class PerfProbe : MonoBehaviour
     {
-        private const string CaptureFlag = "-perfCapture";
-        private const string LogFlag = "-perfLog";
-        private const string QuitFlag = "-perfQuit";
-        private const string CaptureQueryKey = "perf";
-
         /// <summary>Upper bound on captured frames: ten minutes at 240 Hz.</summary>
         private const int SampleCapacity = 144000;
 
@@ -195,86 +190,12 @@ namespace AdaptiveBossArena.Game
 
         private void ReadCaptureRequest()
         {
-            string[] arguments = Environment.GetCommandLineArgs();
+            PerfCaptureRequest request =
+                PerfCaptureRequest.Read(Environment.GetCommandLineArgs(), Application.absoluteURL);
 
-            for (int i = 0; i < arguments.Length; i++)
-            {
-                string argument = arguments[i];
-                string next = i + 1 < arguments.Length ? arguments[i + 1] : null;
-
-                if (argument == CaptureFlag && TryParseSeconds(next, out float seconds))
-                {
-                    _captureSeconds = seconds;
-                }
-                else if (argument == LogFlag && !string.IsNullOrEmpty(next))
-                {
-                    _logPath = next;
-                }
-                else if (argument == QuitFlag)
-                {
-                    _quitWhenDone = true;
-                }
-            }
-
-            if (_captureSeconds <= 0f && TryReadQuerySeconds(Application.absoluteURL, out float querySeconds))
-            {
-                _captureSeconds = querySeconds;
-            }
-        }
-
-        /// <summary>Reads the capture length from a page URL's query string.</summary>
-        /// <remarks>
-        /// Parsed by hand because a WebGL build has no <c>System.Web</c>, and only one key is needed.
-        /// </remarks>
-        /// <param name="url">The page URL, which is empty outside a browser.</param>
-        /// <param name="seconds">The requested capture length.</param>
-        /// <returns>True when the query asked for a capture.</returns>
-        public static bool TryReadQuerySeconds(string url, out float seconds)
-        {
-            seconds = 0f;
-
-            if (string.IsNullOrEmpty(url))
-            {
-                return false;
-            }
-
-            int queryStart = url.IndexOf('?');
-
-            if (queryStart < 0)
-            {
-                return false;
-            }
-
-            string query = url.Substring(queryStart + 1);
-            int fragment = query.IndexOf('#');
-
-            if (fragment >= 0)
-            {
-                query = query.Substring(0, fragment);
-            }
-
-            foreach (string pair in query.Split('&'))
-            {
-                int equals = pair.IndexOf('=');
-
-                if (equals <= 0 || pair.Substring(0, equals) != CaptureQueryKey)
-                {
-                    continue;
-                }
-
-                return TryParseSeconds(pair.Substring(equals + 1), out seconds);
-            }
-
-            return false;
-        }
-
-        private static bool TryParseSeconds(string text, out float seconds)
-        {
-            seconds = 0f;
-
-            return !string.IsNullOrEmpty(text) &&
-                   float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out seconds) &&
-                   seconds > 0f;
+            _captureSeconds = request.Seconds;
+            _logPath = request.LogPath;
+            _quitWhenDone = request.QuitWhenDone;
         }
 
         private void OnGUI()
