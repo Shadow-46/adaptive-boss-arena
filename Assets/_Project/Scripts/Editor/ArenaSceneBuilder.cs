@@ -545,6 +545,9 @@ namespace AdaptiveBossArena.Editor
 
             managersRoot.AddComponent<GameBootstrapper>();
             managersRoot.AddComponent<AdaptationDebugOverlay>();
+
+            // F3 panel, and the unattended capture every stage of the overhaul is measured with.
+            managersRoot.AddComponent<PerfProbe>();
             managersRoot.AddComponent<EncounterDirector>();
             managersRoot.AddComponent<AudioService>();
             managersRoot.AddComponent<CombatAudioDirector>();
