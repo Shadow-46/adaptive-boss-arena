@@ -318,6 +318,7 @@ namespace AdaptiveBossArena.Player
             UpdateThreatFacing();
             TrySwapWeapon();
             _machine.Tick(deltaTime);
+            ResolveWallImpact();
 
             DriveAnimation();
         }
@@ -1003,6 +1004,27 @@ namespace AdaptiveBossArena.Player
             _context.PublishCombatEvent(CombatEventKind.Blocked, damage.HitDirection);
 
             return DamageResult.Applied(applied, !_health.IsAlive);
+        }
+
+        /// <summary>
+        /// Staggers a player shoved hard into a wall.
+        /// </summary>
+        /// <remarks>
+        /// Reads only the imposed shove, never the player's own running or rolling, so walking into a
+        /// pillar is harmless and being knocked into one is not. Goes through the reaction gate's rule
+        /// like every stagger: a thrown or floored player is not interrupted by the wall they land by.
+        /// </remarks>
+        private void ResolveWallImpact()
+        {
+            if (_context.Motor.WallImpactSpeed < _config.WallImpactSpeed ||
+                !_health.IsAlive ||
+                !_context.Reactions.AdmitsStagger)
+            {
+                return;
+            }
+
+            _context.PublishCombatEvent(CombatEventKind.WallImpact);
+            _context.RequestStagger(_config.WallImpactStaggerSeconds, StaggerReason.Hit);
         }
 
         /// <summary>Pushes the character away from an impact.</summary>

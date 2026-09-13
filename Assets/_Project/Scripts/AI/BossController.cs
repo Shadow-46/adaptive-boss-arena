@@ -408,6 +408,7 @@ namespace AdaptiveBossArena.AI
             _context.TickCooldowns(deltaTime);
             _poise.Tick(deltaTime);
             _machine.Tick(deltaTime);
+            ResolveWallImpact();
 
             // Learning is advanced after the state machine, so the habits it derives describe a
             // frame that has already been played rather than one in progress.
@@ -1056,6 +1057,36 @@ namespace AdaptiveBossArena.AI
             }
 
             _context.RequestStagger(StaggerDurations.InterruptSeconds, StaggerReason.Parried);
+        }
+
+        /// <summary>
+        /// Punishes a lunge that ended in a wall.
+        /// </summary>
+        /// <remarks>
+        /// Only a lunge counts. The boss walking into a pillar is not a mistake anyone could exploit,
+        /// but a charge the player sidestepped into the wall is exactly the read the fight rewards. The
+        /// interruption goes through the deferred stagger request, as every other one does.
+        /// </remarks>
+        private void ResolveWallImpact()
+        {
+            AttackDefinition attack = _context.Attacks.CurrentAttack;
+
+            if (_context.Motor.WallImpactSpeed < _config.WallImpactSpeed ||
+                _context.StaggerRequested ||
+                !_context.Attacks.IsRunning ||
+                attack == null ||
+                attack.LungeSpeed <= 0f)
+            {
+                return;
+            }
+
+            _context.PublishCombatEvent(CombatEventKind.WallImpact);
+
+            bool broken = _poise.ApplyPoiseDamage(_config.WallImpactPoiseDamage);
+
+            _context.RequestStagger(
+                broken ? PoiseBreakStaggerSeconds : StaggerDurations.InterruptSeconds,
+                broken ? StaggerReason.PoiseBreak : StaggerReason.Hit);
         }
 
         /// <inheritdoc />

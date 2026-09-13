@@ -1066,7 +1066,12 @@ namespace AdaptiveBossArena.Editor
                         // the knight back a lot, and a charge drives the knight before it.
                         .Float("_bodyMass", 4f)
                         .Float("_accelerationSeconds", 0.25f)
-                        .Float("_lungeBrakeDeceleration", 120f);
+                        .Float("_lungeBrakeDeceleration", 120f)
+
+                        // A charge the player sidesteps into a wall is the brute's own mistake, and
+                        // costs it an interruption and about a third of its stance.
+                        .Float("_wallImpactSpeed", 9f)
+                        .Float("_wallImpactPoiseDamage", 45f);
                 }
 
                 SerializedProperty phases = writer.Array("_phases", 4);

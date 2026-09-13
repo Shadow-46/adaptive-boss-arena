@@ -157,6 +157,17 @@ namespace AdaptiveBossArena.AI
         private float _lungeBrakeDeceleration = 120f;
 
         [SerializeField]
+        [Tooltip("Speed into a wall, mid-lunge, at or above which the boss hurts itself. Above its " +
+                 "walking speed, so only a committed charge baited into a wall counts.")]
+        [Min(0f)]
+        private float _wallImpactSpeed = 9f;
+
+        [SerializeField]
+        [Tooltip("Poise a lunge into a wall costs the boss.")]
+        [Min(0f)]
+        private float _wallImpactPoiseDamage = 45f;
+
+        [SerializeField]
         [Tooltip("Fraction of a blow's knockback the boss shrugs off with its stance intact.")]
         [Range(0f, 1f)]
         private float _knockbackResistanceAtFullPoise = 0.85f;
@@ -297,6 +308,12 @@ namespace AdaptiveBossArena.AI
 
         /// <summary>Speed a lunge loses per second once its wind-up ends.</summary>
         public float LungeBrakeDeceleration => _lungeBrakeDeceleration;
+
+        /// <summary>Lunge speed into a wall that hurts the boss.</summary>
+        public float WallImpactSpeed => _wallImpactSpeed;
+
+        /// <summary>Poise lost to a lunge into a wall.</summary>
+        public float WallImpactPoiseDamage => _wallImpactPoiseDamage;
 
         /// <summary>Fraction of knockback shrugged off with a full stance.</summary>
         public float KnockbackResistanceAtFullPoise => _knockbackResistanceAtFullPoise;

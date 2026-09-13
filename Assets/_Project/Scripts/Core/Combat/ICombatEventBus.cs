@@ -70,7 +70,16 @@ namespace AdaptiveBossArena.Core.Combat
         /// publishing this with the attacker would credit a parried player with a deflect and the
         /// boss would then adapt to a statistic that never happened.
         /// </remarks>
-        Parried = 15
+        Parried = 15,
+
+        /// <summary>
+        /// A combatant was driven into a wall hard enough to be hurt by it.
+        /// </summary>
+        /// <remarks>
+        /// Actor is the one who hit the wall. Statistics only: the stagger or lost poise it causes is
+        /// decided where it happened, never by a listener.
+        /// </remarks>
+        WallImpact = 16
     }
 
     /// <summary>
