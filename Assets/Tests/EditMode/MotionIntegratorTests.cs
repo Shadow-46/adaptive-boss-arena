@@ -148,5 +148,38 @@ namespace AdaptiveBossArena.Tests.EditMode
 
             return distance;
         }
+
+        [Test]
+        public void ALaunchRisesAndComesBackDown()
+        {
+            var motion = new MotionIntegrator(Gravity, Grounded);
+            motion.Launch(9f);
+
+            float height = 0f, peak = 0f, airtime = 0f;
+
+            // Airborne from the first step: the ground the body left must not cancel the launch.
+            do
+            {
+                height += motion.Step(Vector3.zero, HalfLife, height <= 0f && airtime > 0f, Frame).y * Frame;
+                peak = Mathf.Max(peak, height);
+                airtime += Frame;
+            }
+            while (height > 0f && airtime < 5f);
+
+            // v^2 / 2g and 2v / g, within a frame's worth of integration error.
+            Assert.AreEqual(9f * 9f / (2f * Gravity), peak, 0.1f);
+            Assert.AreEqual(2f * 9f / Gravity, airtime, 0.05f);
+        }
+
+        [Test]
+        public void AWallStopsTheShoveItWasCarrying()
+        {
+            var motion = new MotionIntegrator(Gravity, Grounded);
+            motion.AddImpulse(new Vector3(8f, 0f, 0f));
+
+            motion.StopImpulse();
+
+            Assert.AreEqual(0f, motion.Step(Vector3.zero, HalfLife, true, Frame).x, 0.001f);
+        }
     }
 }

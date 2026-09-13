@@ -69,6 +69,23 @@ namespace AdaptiveBossArena.Combat.Movement
             _impulse.z += velocity.z;
         }
 
+        /// <summary>Throws the body upward, replacing whatever vertical speed it had.</summary>
+        /// <remarks>
+        /// Replaces rather than adds: a body standing on the floor carries the small downward contact
+        /// speed, and adding to that would make the same launch a little lower every time.
+        /// </remarks>
+        /// <param name="upwardSpeed">Initial upward speed, in metres per second.</param>
+        public void Launch(float upwardSpeed)
+        {
+            _verticalVelocity = Mathf.Max(0f, upwardSpeed);
+        }
+
+        /// <summary>Discards the imposed shove, as when a wall stops the body it was carrying.</summary>
+        public void StopImpulse()
+        {
+            _impulse = Vector3.zero;
+        }
+
         /// <summary>Clears every imposed velocity, for a teleport or a retry.</summary>
         public void Reset()
         {

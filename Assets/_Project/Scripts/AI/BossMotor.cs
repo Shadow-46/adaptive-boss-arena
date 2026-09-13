@@ -128,8 +128,35 @@ namespace AdaptiveBossArena.AI
             Vector3 velocity = _motion.Step(
                 _planarVelocity, _config.ImpulseHalfLifeSeconds, _controller.isGrounded, deltaTime);
 
-            _controller.Move(velocity * deltaTime);
+            Vector3 horizontal = _planarVelocity + _motion.Impulse;
+            horizontal.y = 0f;
+
+            CollisionFlags flags = _controller.Move(velocity * deltaTime);
+
+            // Speed into a wall is read before the wall takes it away, so an impact can be judged by
+            // how hard it was rather than by the zero speed left afterwards.
+            WallImpactSpeed = (flags & CollisionFlags.Sides) != 0 ? horizontal.magnitude : 0f;
+
+            if (WallImpactSpeed > 0f)
+            {
+                _motion.StopImpulse();
+            }
         }
+
+        /// <summary>
+        /// Horizontal speed of everything the body was carrying when the last step ran into a wall, or zero.
+        /// </summary>
+        /// <remarks>
+        /// Reported rather than acted on. What a hard wall impact means - a stagger, lost poise - is a
+        /// combat decision, and the motor only moves bodies.
+        /// </remarks>
+        public float WallImpactSpeed { get; private set; }
+
+        /// <summary>Whether the body was standing on something after its last step.</summary>
+        public bool IsGrounded => _controller.isGrounded;
+
+        /// <summary>Upward or downward speed, in metres per second.</summary>
+        public float VerticalVelocity => _motion.VerticalVelocity;
 
         /// <summary>
         /// Rotates toward a direction at the configured turn rate.
