@@ -36,3 +36,5 @@ is deterministic enough to compare across stages.
 |---|---|---|---|---|---|---|---|---|---|---|
 | 2026-09-13 | S0 baseline | af805de | Windows 1280×720 | 6.94 | 6.95 | 20.83 | 155 | 21.8k | — | vsync-locked 144 Hz; 8639 frames / 60 s |
 | 2026-09-13 | S0 baseline | af805de | WebGL (local) | not measured | not measured | — | 113 | 15.0k | 15.7 MB | hidden pane throttled to ~1 fps; counts valid |
+| 2026-09-13 | P1 | 6440c9d | Windows 1280×720 | 6.94 | 6.95 | 13.89 | 135 | 18.5k | — | vsync-locked; no regression |
+| 2026-09-13 | P1 | 6440c9d | WebGL (local) | not measured | not measured | — | — | — | 15.7 MB | fresh load verified; deployed |
