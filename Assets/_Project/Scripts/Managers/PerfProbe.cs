@@ -61,6 +61,11 @@ namespace AdaptiveBossArena.Game
         private float _captureSeconds;
         private string _logPath;
         private bool _quitWhenDone;
+        private string _shotPath;
+        private bool _shotTaken;
+
+        /// <summary>Seconds into the sampled fight the screenshot is taken, once the fighters have closed.</summary>
+        private const float ShotAfterSeconds = 4f;
         private float _settleRemaining = SettleSeconds;
         private float _captured;
         private bool _captureFinished;
@@ -117,9 +122,60 @@ namespace AdaptiveBossArena.Game
 
             _captured += Time.unscaledDeltaTime;
 
+            if (!_shotTaken && !string.IsNullOrEmpty(_shotPath) && _captured >= ShotAfterSeconds)
+            {
+                _shotTaken = true;
+                StartCoroutine(SaveFrame(_shotPath));
+            }
+
             if (_captured >= _captureSeconds)
             {
                 FinishCapture();
+            }
+        }
+
+        /// <summary>
+        /// Writes the finished frame's pixels to a file: width and height, then raw RGBA rows.
+        /// </summary>
+        /// <remarks>
+        /// Raw rather than PNG, because encoding images and the screen-capture helper both live in engine
+        /// modules this project does not include, and adding one to every shipped build for a debugging
+        /// aid would be the wrong trade. Reading the frame back needs only the core module.
+        /// </remarks>
+        private static System.Collections.IEnumerator SaveFrame(string path)
+        {
+            yield return new WaitForEndOfFrame();
+
+            int width = Screen.width;
+            int height = Screen.height;
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+
+            texture.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+            texture.Apply();
+
+            Color32[] pixels = texture.GetPixels32();
+            var bytes = new byte[8 + pixels.Length * 4];
+
+            System.BitConverter.GetBytes(width).CopyTo(bytes, 0);
+            System.BitConverter.GetBytes(height).CopyTo(bytes, 4);
+
+            for (int i = 0; i < pixels.Length; i++)
+            {
+                bytes[8 + i * 4] = pixels[i].r;
+                bytes[9 + i * 4] = pixels[i].g;
+                bytes[10 + i * 4] = pixels[i].b;
+                bytes[11 + i * 4] = pixels[i].a;
+            }
+
+            Destroy(texture);
+
+            try
+            {
+                File.WriteAllBytes(path, bytes);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning("[Adaptive Boss Arena] Could not write frame capture: " + exception.Message);
             }
         }
 
@@ -200,6 +256,7 @@ namespace AdaptiveBossArena.Game
             _captureSeconds = request.Seconds;
             _logPath = request.LogPath;
             _quitWhenDone = request.QuitWhenDone;
+            _shotPath = request.ShotPath;
         }
 
         private void OnGUI()

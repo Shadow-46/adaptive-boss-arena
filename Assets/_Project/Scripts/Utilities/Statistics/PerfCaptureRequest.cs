@@ -23,6 +23,7 @@ namespace AdaptiveBossArena.Utilities.Statistics
         private const string CaptureFlag = "-perfCapture";
         private const string LogFlag = "-perfLog";
         private const string QuitFlag = "-perfQuit";
+        private const string ShotFlag = "-perfShot";
         private const string CaptureQueryKey = "perf";
 
         /// <summary>How long to sample, in seconds. Zero when no capture was requested.</summary>
@@ -30,6 +31,13 @@ namespace AdaptiveBossArena.Utilities.Statistics
 
         /// <summary>File the report line is appended to, or null.</summary>
         public string LogPath { get; init; }
+
+        /// <summary>File a screenshot of the fight is saved to, or null.</summary>
+        /// <remarks>
+        /// A capture measures the frame; this shows it. Every test can pass while a character renders at
+        /// the wrong scale or holds its blade backwards, and only an image of the running build says so.
+        /// </remarks>
+        public string ShotPath { get; init; }
 
         /// <summary>Whether the application should quit once the capture is written.</summary>
         public bool QuitWhenDone { get; init; }
@@ -45,6 +53,7 @@ namespace AdaptiveBossArena.Utilities.Statistics
         {
             float seconds = 0f;
             string logPath = null;
+            string shotPath = null;
             bool quit = false;
 
             if (arguments != null)
@@ -66,6 +75,10 @@ namespace AdaptiveBossArena.Utilities.Statistics
                         case QuitFlag:
                             quit = true;
                             break;
+
+                        case ShotFlag when !string.IsNullOrEmpty(next):
+                            shotPath = next;
+                            break;
                     }
                 }
             }
@@ -75,7 +88,7 @@ namespace AdaptiveBossArena.Utilities.Statistics
                 seconds = querySeconds;
             }
 
-            return new PerfCaptureRequest { Seconds = seconds, LogPath = logPath, QuitWhenDone = quit };
+            return new PerfCaptureRequest { Seconds = seconds, LogPath = logPath, QuitWhenDone = quit, ShotPath = shotPath };
         }
 
         /// <summary>Reads the capture length from a page URL's query string.</summary>

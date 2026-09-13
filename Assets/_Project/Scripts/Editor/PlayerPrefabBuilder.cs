@@ -160,6 +160,7 @@ namespace AdaptiveBossArena.Editor
             {
                 socket.transform.SetParent(hand, false);
                 socket.transform.localPosition = Vector3.zero;
+                socket.transform.rotation = GripRotation(rig, hand);
             }
             else
             {
@@ -169,6 +170,45 @@ namespace AdaptiveBossArena.Editor
             }
 
             socket.AddComponent<WeaponSocket>();
+        }
+
+        /// <summary>
+        /// How a blade sits in a closed right hand, derived from the rig's own finger bones.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// A hand bone's axes are whatever the model's author chose, so mounting the blade with no
+        /// rotation pointed it wherever the bone's forward axis happened to go - out sideways from the
+        /// palm, as the first capture of the rigged knight showed. Guessing a fixed rotation would only be
+        /// right for one rig.
+        /// </para>
+        /// <para>
+        /// The grip is read off the skeleton instead. A sword held in a fist runs across the knuckles,
+        /// from the little finger's side out past the index finger, so that line is the blade's forward;
+        /// and the blade's flat faces along the fingers. Weapons are built along +Z, which is why the
+        /// result is a look rotation. Without finger bones the hand's own orientation is kept.
+        /// </para>
+        /// </remarks>
+        private static Quaternion GripRotation(Animator rig, Transform hand)
+        {
+            Transform index = rig.GetBoneTransform(HumanBodyBones.RightIndexProximal);
+            Transform little = rig.GetBoneTransform(HumanBodyBones.RightLittleProximal);
+            Transform middle = rig.GetBoneTransform(HumanBodyBones.RightMiddleProximal);
+
+            if (index == null || little == null || middle == null)
+            {
+                return hand.rotation;
+            }
+
+            Vector3 alongBlade = index.position - little.position;
+            Vector3 alongFingers = middle.position - hand.position;
+
+            if (alongBlade.sqrMagnitude < 1e-6f || alongFingers.sqrMagnitude < 1e-6f)
+            {
+                return hand.rotation;
+            }
+
+            return Quaternion.LookRotation(alongBlade.normalized, alongFingers.normalized);
         }
 
         /// <summary>Adds the trigger volume that receives boss attacks.</summary>
