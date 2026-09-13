@@ -43,7 +43,7 @@ namespace AdaptiveBossArena.Combat.Feel
         [SerializeField]
         [Range(0f, 1f)]
         [Tooltip("Opacity of the wind-up telegraph. Low enough not to dominate, high enough to read.")]
-        private float _telegraphAlpha = 0.28f;
+        private float _telegraphAlpha = 0.16f;
 
         [SerializeField]
         [Range(0f, 1f)]

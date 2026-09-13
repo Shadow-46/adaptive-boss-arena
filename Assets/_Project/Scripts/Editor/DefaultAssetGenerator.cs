@@ -374,6 +374,10 @@ namespace AdaptiveBossArena.Editor
 
         private static BossAttacks CreateBossAttacks()
         {
+            // Ground warnings are reserved for the attacks that strike the ground or cannot be blocked:
+            // the slam, both shockwaves and the perilous overhead. Every ordinary swing now reads from
+            // the animated body, the way the genre's bosses are read - a coloured wedge under a sweep
+            // taught the player to watch the floor instead of the boss.
             // 120 degrees, down from 160. At 4 m reach a 160-degree wedge covered nearly everything
             // in front of the boss, so the only answer to it was to back out of range - spacing
             // mattered but position did not. At 120 there is a flank to move to, which is the read
@@ -382,7 +386,7 @@ namespace AdaptiveBossArena.Editor
                 "BossSweep", "Wide Sweep", DamageType.BossMelee,
                 damage: 12f, startup: 0.45f, active: 0.12f, recovery: 0.45f,
                 range: 4f, arc: 120f, poise: 20f, knockback: 5f, hitStop: 0.06f, trauma: 0.25f,
-                telegraph: true);
+                telegraph: false);
 
             AttackDefinition slam = CreateAttack(
                 "BossSlam", "Ground Slam", DamageType.BossMelee,
@@ -397,7 +401,7 @@ namespace AdaptiveBossArena.Editor
                 "BossCharge", "Charge", DamageType.BossMelee,
                 damage: 15f, startup: 0.55f, active: 0.30f, recovery: 0.55f,
                 range: 2.6f, arc: 100f, poise: 35f, knockback: 9f, hitStop: 0.09f, trauma: 0.4f,
-                lungeSpeed: 16f, stagger: StaggerStrength.Interrupt, telegraph: true);
+                lungeSpeed: 16f, stagger: StaggerStrength.Interrupt, telegraph: false);
 
             AttackDefinition shockwave = CreateAttack(
                 "BossShockwave", "Shockwave", DamageType.BossProjectile,
@@ -413,7 +417,7 @@ namespace AdaptiveBossArena.Editor
                 "BossJab", "Jab", DamageType.BossMelee,
                 damage: 8f, startup: 0.28f, active: 0.08f, recovery: 0.32f,
                 range: 3f, arc: 70f, poise: 12f, knockback: 3f, hitStop: 0.05f, trauma: 0.18f,
-                telegraph: true);
+                telegraph: false);
 
             // The perilous overhead: a long, deliberately-telegraphed unblockable that punishes the
             // reflex to hold guard. Its slow wind-up is fair — there is time to read the red pulse and
@@ -455,7 +459,7 @@ namespace AdaptiveBossArena.Editor
             float lungeSpeed = 0f,
             AttackShape shape = AttackShape.Arc,
             StaggerStrength stagger = StaggerStrength.Flinch,
-            bool telegraph = true,
+            bool telegraph = false,
             Color? overlayColor = null,
             bool unblockable = false,
             bool unparryable = false,
