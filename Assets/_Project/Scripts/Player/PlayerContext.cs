@@ -208,6 +208,28 @@ namespace AdaptiveBossArena.Player
         /// <summary>What caused the interruption being requested.</summary>
         public StaggerReason RequestedStaggerReason { get; set; }
 
+        /// <summary>Decides which knockdowns and launches the player suffers.</summary>
+        /// <remarks>Set once by the controller; every reaction state moves the player's footing through it.</remarks>
+        public ReactionGate Reactions { get; set; }
+
+        /// <summary>Set when an admitted knockdown or launch should take the player's footing.</summary>
+        /// <remarks>
+        /// A flag consumed by the state machine on its next tick, never a state change made on the spot.
+        /// Damage resolves inside the attacker's timeline loop, and changing state from there would
+        /// cancel things mid-iteration.
+        /// </remarks>
+        public ImpactReaction RequestedReaction { get; set; }
+
+        /// <summary>Records an admitted knockdown or launch for the state machine to act on.</summary>
+        /// <param name="reaction">The reaction the gate granted.</param>
+        public void RequestReaction(ImpactReaction reaction)
+        {
+            if (reaction == ImpactReaction.Knockdown || reaction == ImpactReaction.Launch)
+            {
+                RequestedReaction = reaction;
+            }
+        }
+
         /// <summary>True when a dash could begin right now.</summary>
         public bool CanBeginDash =>
             DashCooldownRemaining <= 0f && Stamina.CanSpend(Config.DashStaminaCost);

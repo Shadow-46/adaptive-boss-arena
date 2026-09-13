@@ -55,6 +55,48 @@ namespace AdaptiveBossArena.Player
         [Range(0.02f, 0.6f)]
         private float _impulseHalfLifeSeconds = 0.12f;
 
+        [Header("Knockdowns and launches")]
+        [SerializeField]
+        [Tooltip("Upward speed a launch throws the player at. With gravity 25, 9 m/s is about 0.7 s in the air.")]
+        [Range(1f, 20f)]
+        private float _launchUpwardSpeed = 9f;
+
+        [SerializeField]
+        [Tooltip("Longest the player can stay airborne before landing is assumed. A hard ceiling on airtime, " +
+                 "so a body caught on geometry cannot hang in the air.")]
+        [Range(0.3f, 3f)]
+        private float _maximumAirborneSeconds = 1.2f;
+
+        [SerializeField]
+        [Tooltip("Time spent on the floor after a knockdown or a landing. The player cannot be hurt here.")]
+        [Range(0.1f, 3f)]
+        private float _knockdownSeconds = 0.8f;
+
+        [SerializeField]
+        [Tooltip("Time spent rising. Fully invulnerable, and posture refills when it ends.")]
+        [Range(0.1f, 2f)]
+        private float _getUpSeconds = 0.6f;
+
+        [SerializeField]
+        [Tooltip("After standing, knockdowns and launches arrive as knockback for this long, so none can chain.")]
+        [Range(0f, 10f)]
+        private float _knockdownImmunitySeconds = 2.5f;
+
+        [SerializeField]
+        [Tooltip("How much harder a knockback reaction shoves than the hit's ordinary knockback.")]
+        [Range(1f, 4f)]
+        private float _knockbackReactionMultiplier = 1.6f;
+
+        [SerializeField]
+        [Tooltip("Shove speed into a wall at or above which the impact staggers the player.")]
+        [Range(1f, 30f)]
+        private float _wallImpactSpeed = 7f;
+
+        [SerializeField]
+        [Tooltip("How long a hard wall impact staggers the player.")]
+        [Range(0.05f, 1.5f)]
+        private float _wallImpactStaggerSeconds = 0.3f;
+
         [SerializeField]
         [Tooltip("Fraction of top speed kept when reversing direction outright at a sprint. Lower " +
                  "makes the knight heavier to turn.")]
@@ -213,6 +255,30 @@ namespace AdaptiveBossArena.Player
 
         /// <summary>Half-life of an imposed shove such as knockback.</summary>
         public float ImpulseHalfLifeSeconds => _impulseHalfLifeSeconds;
+
+        /// <summary>Upward speed of a launch.</summary>
+        public float LaunchUpwardSpeed => _launchUpwardSpeed;
+
+        /// <summary>Ceiling on time spent airborne.</summary>
+        public float MaximumAirborneSeconds => _maximumAirborneSeconds;
+
+        /// <summary>Time spent on the floor.</summary>
+        public float KnockdownSeconds => _knockdownSeconds;
+
+        /// <summary>Time spent rising from the floor.</summary>
+        public float GetUpSeconds => _getUpSeconds;
+
+        /// <summary>How long after standing knockdowns and launches are downgraded.</summary>
+        public float KnockdownImmunitySeconds => _knockdownImmunitySeconds;
+
+        /// <summary>Multiplier on knockback for a hit whose reaction is knockback.</summary>
+        public float KnockbackReactionMultiplier => _knockbackReactionMultiplier;
+
+        /// <summary>Shove speed into a wall that staggers.</summary>
+        public float WallImpactSpeed => _wallImpactSpeed;
+
+        /// <summary>Stagger from a hard wall impact.</summary>
+        public float WallImpactStaggerSeconds => _wallImpactStaggerSeconds;
 
         /// <summary>Fraction of top speed kept when reversing outright at a sprint.</summary>
         public float TurnSpeedFloor => _turnSpeedFloor;

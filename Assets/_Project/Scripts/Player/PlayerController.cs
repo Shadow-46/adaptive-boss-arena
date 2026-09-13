@@ -44,6 +44,12 @@ namespace AdaptiveBossArena.Player
         /// <summary>Transition priority for being staggered.</summary>
         private const int StaggerTransitionPriority = 500;
 
+        /// <summary>
+        /// Knockdowns and launches outrank a stagger, which is the lesser of two reactions to one hit,
+        /// and rank below death.
+        /// </summary>
+        private const int ReactionTransitionPriority = 600;
+
         /// <summary>Transition priority for beginning a dash.</summary>
         private const int DashTransitionPriority = 100;
 
@@ -149,6 +155,9 @@ namespace AdaptiveBossArena.Player
         private PlayerRiposteState _riposteState;
         private PlayerStaggerState _staggerState;
         private PlayerDeadState _deadState;
+        private PlayerAirborneState _airborneState;
+        private PlayerKnockedDownState _knockedDownState;
+        private PlayerGetUpState _getUpState;
 
         private PoisePool _posture;
         private FocusMeter _focus;
@@ -259,6 +268,8 @@ namespace AdaptiveBossArena.Player
             _context = new PlayerContext(
                 _config, motor, _health, _stamina, _input, new InputBuffer(), _time, attacks, _events);
 
+            _context.Reactions = new ReactionGate(_config.KnockdownImmunitySeconds);
+
             attacks.Parried += OnOwnAttackParried;
 
             BuildStateMachine();
@@ -348,6 +359,13 @@ namespace AdaptiveBossArena.Player
                 return DamageResult.NoDamage(DamageOutcome.Ignored);
             }
 
+            // Before anything else, hazards included: nothing may touch a body on the floor or rising,
+            // or the knockdown's cap on lost control stops being a cap.
+            if (!_context.Reactions.CanBeHurt)
+            {
+                return DamageResult.NoDamage(DamageOutcome.Ignored);
+            }
+
             if (_context.IsInvulnerable && !damage.IgnoresInvulnerability)
             {
                 return ResolveEvasion();
@@ -379,9 +397,20 @@ namespace AdaptiveBossArena.Player
 
             _hitFlash?.Play();
             _animator?.Recoil(damage.HitDirection);
-            ApplyKnockback(damage);
 
-            ResolveIncomingStagger(damage);
+            ImpactReaction reaction = _context.Reactions.Admit(damage.Reaction, _time.CombatTime);
+            ApplyKnockback(damage, reaction == ImpactReaction.Knockback ? _config.KnockbackReactionMultiplier : 1f);
+
+            // A knockdown or launch is the whole reaction; stacking a posture stagger on top would
+            // only queue an interruption for the moment the player stands back up.
+            if (reaction == ImpactReaction.Knockdown || reaction == ImpactReaction.Launch)
+            {
+                _context.RequestReaction(reaction);
+            }
+            else if (_context.Reactions.AdmitsStagger)
+            {
+                ResolveIncomingStagger(damage);
+            }
 
             return DamageResult.Applied(applied, !_health.IsAlive);
         }
@@ -509,6 +538,7 @@ namespace AdaptiveBossArena.Player
             _context.ComboIndex = 0;
             _context.DashStartedAt = float.NegativeInfinity;
             _context.StaggerRequested = false;
+            _context.RequestedReaction = ImpactReaction.None;
             _context.IsGuarding = false;
             _context.RiposteConsumed = false;
             _context.IsThreatPostureBroken = false;
@@ -520,6 +550,10 @@ namespace AdaptiveBossArena.Player
 
             _input.SetEnabled(true);
             _machine.ForceState(_idleState);
+
+            // After the forced state change, whose exit from a get-up would otherwise leave the retry
+            // starting inside a fresh knockdown immunity.
+            _context.Reactions.Reset();
             _animator?.ResetPose();
 
             PublishVitals();
@@ -537,6 +571,9 @@ namespace AdaptiveBossArena.Player
             _healState = new PlayerHealState();
             _staggerState = new PlayerStaggerState();
             _deadState = new PlayerDeadState();
+            _airborneState = new PlayerAirborneState();
+            _knockedDownState = new PlayerKnockedDownState();
+            _getUpState = new PlayerGetUpState(() => _posture.ResetToFull());
 
             _machine = new StateMachine<PlayerContext>(_context, _idleState);
 
@@ -577,7 +614,15 @@ namespace AdaptiveBossArena.Player
             _machine.AddTransition(_staggerState, _moveState, StaggerFinishedWithInput);
             _machine.AddTransition(_staggerState, _idleState, StaggerFinished);
 
+            // Losing footing runs one way: air, floor, rising, standing. Nothing but death leaves it early.
+            _machine.AddTransition(_airborneState, _knockedDownState, HasLanded);
+            _machine.AddTransition(_knockedDownState, _getUpState, KnockdownFinished);
+            _machine.AddTransition(_getUpState, _moveState, GetUpFinishedWithInput);
+            _machine.AddTransition(_getUpState, _idleState, GetUpFinished);
+
             _machine.AddGlobalTransition(_deadState, IsDefeated, DeathTransitionPriority);
+            _machine.AddGlobalTransition(_airborneState, IsLaunchRequested, ReactionTransitionPriority);
+            _machine.AddGlobalTransition(_knockedDownState, IsKnockdownRequested, ReactionTransitionPriority);
             _machine.AddGlobalTransition(_staggerState, IsStaggerRequested, StaggerTransitionPriority);
         }
 
@@ -706,7 +751,7 @@ namespace AdaptiveBossArena.Player
 
         /// <summary>True when the boss's guard is broken and the punish has not been spent.</summary>
         private static bool CanRiposte(PlayerContext context) =>
-            context.IsThreatPostureBroken && !context.RiposteConsumed;
+            context.IsThreatPostureBroken && !context.RiposteConsumed && !context.Reactions.IsReacting;
 
         private bool RiposteFinished(PlayerContext context) => _riposteState.IsComplete(context);
 
@@ -816,7 +861,24 @@ namespace AdaptiveBossArena.Player
 
         private static bool IsDefeated(PlayerContext context) => !context.Health.IsAlive;
 
-        private static bool IsStaggerRequested(PlayerContext context) => context.StaggerRequested;
+        /// <summary>A stagger may only start on the player's feet; mid-air or on the floor it would cut the reaction short.</summary>
+        private static bool IsStaggerRequested(PlayerContext context) =>
+            context.StaggerRequested && context.Reactions.AdmitsStagger;
+
+        private static bool IsLaunchRequested(PlayerContext context) =>
+            context.RequestedReaction == ImpactReaction.Launch;
+
+        private static bool IsKnockdownRequested(PlayerContext context) =>
+            context.RequestedReaction == ImpactReaction.Knockdown;
+
+        private bool HasLanded(PlayerContext context) => _airborneState.HasLanded(context);
+
+        private bool KnockdownFinished(PlayerContext context) => _knockedDownState.IsComplete(context);
+
+        private bool GetUpFinished(PlayerContext context) => _getUpState.IsComplete(context);
+
+        private bool GetUpFinishedWithInput(PlayerContext context) =>
+            _getUpState.IsComplete(context) && context.HasMoveInput;
 
         /// <summary>
         /// Decides whether an avoided hit was merely dodged or dodged perfectly.
@@ -942,7 +1004,9 @@ namespace AdaptiveBossArena.Player
         }
 
         /// <summary>Pushes the character away from an impact.</summary>
-        private void ApplyKnockback(in DamageInfo damage)
+        /// <param name="damage">The hit.</param>
+        /// <param name="multiplier">Scale on the hit's knockback speed, above one for a knockback reaction.</param>
+        private void ApplyKnockback(in DamageInfo damage, float multiplier)
         {
             if (damage.KnockbackSpeed <= 0f)
             {
@@ -959,7 +1023,7 @@ namespace AdaptiveBossArena.Player
 
             // Added, not assigned. Assigning was overwritten by the player's own movement input on
             // the very next frame, so a heavy blow moved a player holding a direction by nothing.
-            _context.Motor.AddImpulse(direction.normalized * damage.KnockbackSpeed);
+            _context.Motor.AddImpulse(direction.normalized * (damage.KnockbackSpeed * multiplier));
         }
 
         /// <summary>Relays pool changes onto the event channels the interface listens to.</summary>
