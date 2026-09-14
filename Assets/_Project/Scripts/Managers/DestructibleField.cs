@@ -28,6 +28,12 @@ namespace AdaptiveBossArena.Game
     {
         private const uint DebrisSeed = 772026u;
 
+        /// <summary>Shake for the first stone a blow breaks, and for each one after it, capped.</summary>
+        private const float FirstBreakTrauma = 0.12f;
+
+        private const float ExtraBreakTrauma = 0.04f;
+        private const float MaximumBreakTrauma = 0.3f;
+
         [SerializeField]
         [Tooltip("Where broken pieces come from.")]
         private DebrisPool _pool;
@@ -48,6 +54,7 @@ namespace AdaptiveBossArena.Game
         private float _pieceSpeed = 4.5f;
 
         private readonly XorShiftRandomProvider _random = new XorShiftRandomProvider(DebrisSeed);
+        private IScreenShake _shake;
 
         private Destructible[] _destructibles = new Destructible[0];
         private ICombatEventBus _events;
@@ -68,6 +75,8 @@ namespace AdaptiveBossArena.Game
             {
                 _events.EventRecorded += OnCombatEvent;
             }
+
+            ServiceRegistry.Current?.TryGet(out _shake);
 
             _hazards = FindAnyObjectByType<HazardField>();
 
@@ -106,6 +115,13 @@ namespace AdaptiveBossArena.Game
                 {
                     broken++;
                 }
+            }
+
+            // Stone coming down is felt as well as seen, more for more of it - but capped, so a Cataclysmic
+            // Wave breaking half the parapet does not shake harder than the wave itself.
+            if (broken > 0)
+            {
+                _shake?.AddTrauma(Mathf.Min(MaximumBreakTrauma, FirstBreakTrauma + ExtraBreakTrauma * (broken - 1)));
             }
 
             return broken;
