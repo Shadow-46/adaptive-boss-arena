@@ -411,6 +411,9 @@ namespace AdaptiveBossArena.Game
             _player?.ResetForNewAttempt(playerSpawn);
             _boss?.ResetForNewAttempt(bossSpawn);
 
+            // Every attempt starts in the same room: broken stone whole again, its debris gone.
+            FindAnyObjectByType<DestructibleField>()?.RestoreAll();
+
             _time?.ClearTimeEffects();
             _time?.ResetCombatClock();
 

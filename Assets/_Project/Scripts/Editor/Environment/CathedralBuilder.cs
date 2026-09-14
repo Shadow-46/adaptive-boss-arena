@@ -1,3 +1,5 @@
+using AdaptiveBossArena.Combat;
+using AdaptiveBossArena.Combat.Feel;
 using AdaptiveBossArena.Core.Services;
 using AdaptiveBossArena.Game;
 using UnityEditor;
@@ -47,6 +49,13 @@ namespace AdaptiveBossArena.Editor.Environment
         private const float WindowHead = 13f;
         private const int DebrisCount = 34;
         private const int ShaftCount = 5;
+        private const float ParapetCrownHeight = 0.9f;
+        private const int ParapetCrownPieces = 5;
+
+        /// <summary>Live debris ceilings: the plan's physics budget of 40 bodies on WebGL, a generous 150 on desktop.</summary>
+        private const int WebDebrisCapacity = 40;
+
+        private const int DesktopDebrisCapacity = 150;
 
         private static readonly Color StoneTint = new Color(0.78f, 0.76f, 0.74f);
         private static readonly Color BrickTint = new Color(0.72f, 0.70f, 0.70f);
@@ -143,8 +152,36 @@ namespace AdaptiveBossArena.Editor.Environment
                     renderer.enabled = false;
                 }
 
-                Block(parapet, wall.name + "_Stone", wall.localScale, 2f, _brick, wall.position, wall.rotation);
+                BuildBreakableParapet(parapet, wall);
             }
+
+            // Beside the cathedral rather than inside it: the pool's pieces carry colliders, and the
+            // dressing is held to carrying none. Theirs are on the debris layer, which no fighter touches.
+            var destruction = new GameObject("Destruction");
+            destruction.transform.SetParent(arenaRoot, false);
+
+            DebrisPool pool = destruction.AddComponent<DebrisPool>();
+            pool.Bind(_brick, WebDebrisCapacity, DesktopDebrisCapacity);
+            destruction.AddComponent<DestructibleField>().Bind(pool);
+        }
+
+        /// <summary>
+        /// One segment of the parapet: a solid base, and a crown of stone on top that a slam or a body
+        /// driven into the wall knocks off. Both are dressing over the unchanged collider.
+        /// </summary>
+        private static void BuildBreakableParapet(Transform parent, Transform wall)
+        {
+            Vector3 size = wall.localScale;
+            float baseHeight = Mathf.Max(0.5f, size.y - ParapetCrownHeight);
+
+            Block(parent, wall.name + "_Stone", new Vector3(size.x, baseHeight, size.z), 2f, _brick,
+                wall.position + Vector3.down * (ParapetCrownHeight * 0.5f), wall.rotation);
+
+            var crownSize = new Vector3(size.x, ParapetCrownHeight, size.z);
+            GameObject crown = Block(parent, wall.name + "_Crown", crownSize, 2f, _brick,
+                wall.position + Vector3.up * (baseHeight * 0.5f), wall.rotation);
+
+            crown.AddComponent<Destructible>().Bind(crown.GetComponent<MeshRenderer>(), crownSize, ParapetCrownPieces);
         }
 
         private static void BuildColumns(Transform root, float radius)
@@ -424,7 +461,7 @@ namespace AdaptiveBossArena.Editor.Environment
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         }
 
-        private static void Block(
+        private static GameObject Block(
             Transform parent, string name, Vector3 size, float metresPerTile, Material material,
             Vector3 position, Quaternion rotation)
         {
@@ -434,6 +471,8 @@ namespace AdaptiveBossArena.Editor.Environment
 
             block.AddComponent<MeshFilter>().sharedMesh = TiledMeshes.Box(size, metresPerTile);
             block.AddComponent<MeshRenderer>().sharedMaterial = material;
+
+            return block;
         }
 
         private static Vector3 OnRing(float angleDegrees, float distance)

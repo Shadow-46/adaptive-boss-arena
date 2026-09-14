@@ -17,6 +17,15 @@ namespace AdaptiveBossArena.Combat
         private const string ShaderName = "Universal Render Pipeline/Unlit";
         private const string FallbackShaderName = "Sprites/Default";
 
+        /// <summary>
+        /// Raised with the centre and radius of every scar a ground impact leaves.
+        /// </summary>
+        /// <remarks>
+        /// Presentation listens - stone breaks where a slam lands. Nothing on the boss's side may, because
+        /// this fires on the frame of the impact with no perception delay.
+        /// </remarks>
+        public event System.Action<Vector3, float> Spawned;
+
         [SerializeField]
         [Range(2, 16)]
         [Tooltip("How many hazards may be active at once. Beyond this the oldest is recycled.")]
@@ -66,6 +75,10 @@ namespace AdaptiveBossArena.Combat
         /// <inheritdoc />
         public void Spawn(Vector3 center, float radius, float damagePerTick, float durationSeconds)
         {
+            // Announced before the pool check: a ground impact still breaks stone in a scene built
+            // without hazard discs.
+            Spawned?.Invoke(center, radius);
+
             if (_zones == null || _zones.Length == 0)
             {
                 return;
