@@ -49,6 +49,12 @@ namespace AdaptiveBossArena.Game
         /// <summary>Screen-shake trauma on an overbalance, a small jolt so the stumble lands physically.</summary>
         private const float OverbalanceTrauma = 0.2f;
 
+        /// <summary>
+        /// Shake for a body driven into the wall. Between a heavy hit's and a slam's: the wall is the
+        /// harder thing to be hit by, but it is not an attack and should not read as one.
+        /// </summary>
+        private const float WallImpactTrauma = 0.32f;
+
         [SerializeField]
         [Tooltip("Raised on a perfect dodge.")]
         private VoidEventChannel _perfectDodgeChannel;
@@ -181,6 +187,12 @@ namespace AdaptiveBossArena.Game
                     // would double the sparks on the single most important beat in the fight, which
                     // is the same mistake the comment there already guards against.
                     Burst(combatEvent.Position, -combatEvent.Direction, ImpactFlavour.Deflect);
+                    break;
+
+                case CombatEventKind.WallImpact:
+                    // Sparks thrown back off the wall, toward the fight, where the body met the stone.
+                    Burst(combatEvent.Position, -combatEvent.Direction, ImpactFlavour.Heavy);
+                    _shake?.AddTrauma(WallImpactTrauma);
                     break;
 
                 case CombatEventKind.PoiseBroken:
