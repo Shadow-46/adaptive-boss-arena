@@ -131,6 +131,9 @@ namespace AdaptiveBossArena.Player
         private CharacterController _characterController;
         private HitFlash _hitFlash;
         private CharacterAnimator _animator;
+
+        /// <summary>The rig's physical body, woken on death. Null for a primitive body.</summary>
+        private RagdollActivator _ragdoll;
         private WeaponSocket _weaponSocket;
 
         // Run-modifier state, applied by the encounter director at the start of a run. Defaults leave
@@ -217,6 +220,7 @@ namespace AdaptiveBossArena.Player
             _input = GetComponent<PlayerInputReader>();
             _hitFlash = GetComponentInChildren<HitFlash>();
             _animator = GetComponentInChildren<CharacterAnimator>();
+            _ragdoll = GetComponentInChildren<RagdollActivator>();
             _weaponSocket = GetComponentInChildren<WeaponSocket>();
 
             // Registered during Awake so the boss can resolve it in Start. This registration is the
@@ -557,6 +561,9 @@ namespace AdaptiveBossArena.Player
             // After the forced state change, whose exit from a get-up would otherwise leave the retry
             // starting inside a fresh knockdown immunity.
             _context.Reactions.Reset();
+            // The body goes back to the Animator before the pose is reset, or the reset would pose bones
+            // that physics still owns.
+            _ragdoll?.Restore();
             _animator?.ResetPose();
 
             PublishVitals();
@@ -1058,6 +1065,10 @@ namespace AdaptiveBossArena.Player
             _posture.Changed += args => _postureChannel?.Raise(args.Normalized);
             _focus.Changed += args => _focusChannel?.Raise(args.Normalized);
             _health.Died += _ => _deathChannel?.Raise();
+
+            // Thrown along the killing blow, so the fall reads as caused by it.
+            _health.Died += args => _ragdoll?.Activate(
+                args.FinalBlow.HitDirection.normalized * args.FinalBlow.KnockbackSpeed);
         }
 
         /// <summary>Publishes the starting values so bars are correct before the first change.</summary>

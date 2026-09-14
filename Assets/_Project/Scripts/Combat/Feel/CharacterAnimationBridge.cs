@@ -40,7 +40,12 @@ namespace AdaptiveBossArena.Combat.Feel
         private AttackDefinition _currentAttack;
 
         /// <summary>True while a rig with an Animator is present to drive.</summary>
-        public bool HasSkeleton => _animator != null && _animator.runtimeAnimatorController != null;
+        /// <remarks>
+        /// False while the Animator is switched off, which is what a ragdoll does on death: the corpse
+        /// belongs to physics, and a crossfade requested of a disabled Animator only logs warnings.
+        /// </remarks>
+        public bool HasSkeleton =>
+            _animator != null && _animator.enabled && _animator.runtimeAnimatorController != null;
 
         private void Awake()
         {

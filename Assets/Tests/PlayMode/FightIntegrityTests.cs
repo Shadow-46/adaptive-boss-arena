@@ -4,6 +4,7 @@ using AdaptiveBossArena.AI;
 using AdaptiveBossArena.Combat;
 using AdaptiveBossArena.Combat.Movement;
 using AdaptiveBossArena.Core.Combat;
+using AdaptiveBossArena.Core.Constants;
 using AdaptiveBossArena.Core.Events;
 using AdaptiveBossArena.Core.Services;
 using AdaptiveBossArena.Player;
@@ -544,7 +545,7 @@ namespace AdaptiveBossArena.Tests.PlayMode
             // The bodies and the arena dressing are made of primitives, and a Unity primitive ships
             // with a collider. Any that survived would sit inside the character controller or out on
             // the floor changing the fight, so every one of them has to have been stripped.
-            foreach (string rootName in new[] { "Dressing" })
+            foreach (string rootName in new[] { "Dressing", "Cathedral" })
             {
                 GameObject root = GameObject.Find(rootName);
 
@@ -562,9 +563,15 @@ namespace AdaptiveBossArena.Tests.PlayMode
             Transform visual = player.transform.Find("Visual");
 
             Assert.IsNotNull(visual, "The player has no visual root.");
-            Assert.IsEmpty(
-                visual.GetComponentsInChildren<Collider>(true),
-                "The player's body carries colliders, which would fight the character controller.");
+            // The ragdoll's bones are the one exception, and only while dormant and on their own layer:
+            // switched off, they cannot touch anything, and once woken on death that layer collides
+            // with the world and nothing a fighter is made of.
+            foreach (Collider collider in visual.GetComponentsInChildren<Collider>(true))
+            {
+                Assert.IsTrue(
+                    collider.gameObject.layer == Layers.Ragdoll && !collider.enabled,
+                    $"The player's body carries a live collider ({collider.name}), which would fight the character controller.");
+            }
 
             yield return null;
         }

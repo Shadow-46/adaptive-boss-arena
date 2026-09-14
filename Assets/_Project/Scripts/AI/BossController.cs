@@ -99,6 +99,9 @@ namespace AdaptiveBossArena.AI
         private CharacterController _characterController;
         private HitFlash _hitFlash;
         private CharacterAnimator _animator;
+
+        /// <summary>The rig's physical body, woken on death. Null for a primitive body.</summary>
+        private RagdollActivator _ragdoll;
         private PhaseAura _phaseAura;
 
         /// <summary>
@@ -193,6 +196,7 @@ namespace AdaptiveBossArena.AI
             _characterController = GetComponent<CharacterController>();
             _hitFlash = GetComponentInChildren<HitFlash>();
             _animator = GetComponentInChildren<CharacterAnimator>();
+            _ragdoll = GetComponentInChildren<RagdollActivator>();
             _phaseAura = GetComponentInChildren<PhaseAura>();
         }
 
@@ -654,6 +658,9 @@ namespace AdaptiveBossArena.AI
 
             ApplyPhase(0);
             _machine.ForceState(_idleState);
+            // The body goes back to the Animator before the pose is reset, or the reset would pose bones
+            // that physics still owns.
+            _ragdoll?.Restore();
             _animator?.ResetPose();
             _phaseAura?.ResetAura();
             _healthChannel?.Raise(_health.Normalized);
@@ -909,6 +916,10 @@ namespace AdaptiveBossArena.AI
             _health.Changed += args => _healthChannel?.Raise(args.Normalized);
             _poise.Changed += args => _postureChannel?.Raise(args.Normalized);
             _health.Died += _ => _defeatChannel?.Raise();
+
+            // Thrown along the killing blow, so the fall reads as caused by it.
+            _health.Died += args => _ragdoll?.Activate(
+                args.FinalBlow.HitDirection.normalized * args.FinalBlow.KnockbackSpeed);
         }
 
         /// <summary>Reports missing dependencies clearly rather than failing with a null reference.</summary>

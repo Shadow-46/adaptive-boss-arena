@@ -79,6 +79,10 @@ namespace AdaptiveBossArena.Editor
                 // when off screen so a pose never snaps when the camera swings back to it.
                 animator.applyRootMotion = false;
                 animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+
+                // Dormant until death. Built here so the knight and the brute get the same body from
+                // the same table, scaled by the same number that sizes the rig.
+                Art.RagdollBuilder.Build(animator, visualRoot.gameObject, config.RigScale);
             }
 
             // The imported model's own materials are placeholders and are not imported, so every
