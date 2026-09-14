@@ -25,10 +25,9 @@ namespace AdaptiveBossArena.Game
     {
         /// <summary>Everything about the room's mood for one phase.</summary>
         /// <remarks>
-        /// Deliberately light and ambient only. An earlier version also drove depth fog, which on a
-        /// small arena of untextured primitives — and under a URP forward path — fell to black beyond
-        /// the near fighters rather than reading as haze. The colour shift alone carries the mood, and
-        /// carries it without that failure mode.
+        /// Light and ambient only; the fog is not a separate palette but derived from these through
+        /// <see cref="HazeColor"/>. An earlier version drove fog colours of its own and fell to black
+        /// beyond the near fighters. A haze made from the room's own light, with a luminance floor, cannot.
         /// </remarks>
         private readonly struct Profile
         {
@@ -52,6 +51,15 @@ namespace AdaptiveBossArena.Game
 
         /// <summary>Half-life of the mood transition, in seconds. Slow, so it reads as a mood, not a switch.</summary>
         private const float TransitionHalfLife = 0.8f;
+
+        /// <summary>
+        /// Distance the haze begins. Beyond the far edge of the fighting floor from anywhere on it, so the
+        /// fighters and every telegraph stay perfectly clear and only the ruin fades.
+        /// </summary>
+        public const float FogStart = 14f;
+
+        /// <summary>Distance at which the haze is complete, roughly the far outer wall.</summary>
+        public const float FogEnd = 60f;
 
         private static readonly Profile[] Profiles =
         {
@@ -111,9 +119,11 @@ namespace AdaptiveBossArena.Game
         private void Start()
         {
             // Ambient must be Trilight for the three-band colours to apply, which the scene builder
-            // already sets; asserted here in case a future scene forgets. Fog is deliberately left
-            // off — see the note on Profile.
-            RenderSettings.fog = false;
+            // already sets; asserted here in case a future scene forgets, along with the fog.
+            RenderSettings.fog = true;
+            RenderSettings.fogMode = FogMode.Linear;
+            RenderSettings.fogStartDistance = FogStart;
+            RenderSettings.fogEndDistance = FogEnd;
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
 
             // Snap to the opening mood so the fight does not fade in from whatever the editor left set.
@@ -167,6 +177,7 @@ namespace AdaptiveBossArena.Game
             RenderSettings.ambientSkyColor = _sky;
             RenderSettings.ambientEquatorColor = _equator;
             RenderSettings.ambientGroundColor = _ground;
+            RenderSettings.fogColor = HazeColor.Derive(_equator, _lightColor, _lightIntensity);
         }
     }
 }
