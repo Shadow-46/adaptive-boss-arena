@@ -36,6 +36,15 @@ namespace AdaptiveBossArena.Core.Constants
         /// <summary>Travelling damage volumes.</summary>
         public const string Projectile = "Projectile";
 
+        /// <summary>
+        /// A dead fighter's physical body. Collides with the world and with debris, never with fighters or
+        /// hit volumes, so a corpse can neither block the living nor be struck.
+        /// </summary>
+        public const string Ragdoll = "Ragdoll";
+
+        /// <summary>Broken stone. Collides with the world, corpses and itself, never with fighters or hit volumes.</summary>
+        public const string Debris = "Debris";
+
         /// <summary>Every custom layer, in the order the configurator assigns them.</summary>
         public static readonly string[] All =
         {
@@ -46,7 +55,9 @@ namespace AdaptiveBossArena.Core.Constants
             BossHitbox,
             BossHurtbox,
             Arena,
-            Projectile
+            Projectile,
+            Ragdoll,
+            Debris
         };
     }
 
@@ -70,6 +81,8 @@ namespace AdaptiveBossArena.Core.Constants
         private static int _bossHurtbox;
         private static int _arena;
         private static int _projectile;
+        private static int _ragdoll;
+        private static int _debris;
 
         /// <summary>Index of the player body layer.</summary>
         public static int Player => Resolved(ref _player);
@@ -94,6 +107,12 @@ namespace AdaptiveBossArena.Core.Constants
 
         /// <summary>Index of the projectile layer.</summary>
         public static int Projectile => Resolved(ref _projectile);
+
+        /// <summary>Layer index for a dead fighter's physical body.</summary>
+        public static int Ragdoll => Resolved(ref _ragdoll);
+
+        /// <summary>Layer index for broken stone.</summary>
+        public static int Debris => Resolved(ref _debris);
 
         /// <summary>Mask matching everything a player attack may damage.</summary>
         public static int PlayerAttackMask => 1 << BossHurtbox;
@@ -131,6 +150,8 @@ namespace AdaptiveBossArena.Core.Constants
             _bossHurtbox = Lookup(LayerNames.BossHurtbox);
             _arena = Lookup(LayerNames.Arena);
             _projectile = Lookup(LayerNames.Projectile);
+            _ragdoll = Lookup(LayerNames.Ragdoll);
+            _debris = Lookup(LayerNames.Debris);
         }
 
         /// <summary>Resolves one layer, warning loudly when the project has not been configured.</summary>

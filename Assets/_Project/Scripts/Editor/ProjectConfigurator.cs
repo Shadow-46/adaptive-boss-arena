@@ -217,6 +217,23 @@ namespace AdaptiveBossArena.Editor
             AllowCollision(Layers.Player, Layers.Arena);
             AllowCollision(Layers.Boss, Layers.Arena);
             Physics.IgnoreLayerCollision(Layers.Player, Layers.Boss, true);
+
+            // Corpses and broken stone are scenery that obeys physics. Deny-by-default for the same
+            // reason as the hit volumes: a body or a chip of column that could touch a fighter or a
+            // hurtbox would start deciding the fight.
+            foreach (int loose in new[] { Layers.Ragdoll, Layers.Debris })
+            {
+                for (int other = 0; other < TotalLayerCount; other++)
+                {
+                    Physics.IgnoreLayerCollision(loose, other, true);
+                }
+
+                AllowCollision(loose, 0);
+                AllowCollision(loose, Layers.Arena);
+            }
+
+            AllowCollision(Layers.Debris, Layers.Debris);
+            AllowCollision(Layers.Debris, Layers.Ragdoll);
         }
 
         /// <summary>Re-enables collision between a specific pair of layers.</summary>
