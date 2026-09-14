@@ -178,6 +178,84 @@ namespace AdaptiveBossArena.Editor
         }
 
         /// <summary>
+        /// Loads or creates a lit material from a colour map, a normal map and a URP mask map.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The mask is packed the way URP Lit reads it - metallic in red, occlusion in green, smoothness
+        /// in alpha - so one texture fills both the metallic and the occlusion slot. Shipping the
+        /// published ARM map as-is would have put roughness where occlusion is read and made every stone
+        /// look lit from inside.
+        /// </para>
+        /// <para>
+        /// Tiling lives on the mesh UVs, not here, so one material serves a column and a wall of any size.
+        /// Refreshed on every run rather than only when missing, because unlike the flat surfaces these
+        /// carry no hand-tuned values, and a texture regenerated underneath would otherwise be orphaned.
+        /// </para>
+        /// </remarks>
+        /// <param name="materialName">File name, without extension.</param>
+        /// <param name="textureSet">Folder and file prefix of the set, e.g. <c>stone_tiles_02</c>.</param>
+        /// <param name="tint">Multiplied into the colour map, to pull a set toward the arena's palette.</param>
+        /// <returns>The material, or null when the textures or the lit shader are missing.</returns>
+        public static Material GetOrCreateTexturedLit(string materialName, string textureSet, Color tint)
+        {
+            string folder = "Assets/_Project/Art/ThirdParty/PolyHaven/" + textureSet + "/" + textureSet;
+            var albedo = AssetDatabase.LoadAssetAtPath<Texture2D>(folder + "_diff_1k.jpg");
+            var normal = AssetDatabase.LoadAssetAtPath<Texture2D>(folder + "_nor_gl_1k.jpg");
+            var mask = AssetDatabase.LoadAssetAtPath<Texture2D>(folder + "_mask_1k.png");
+            Shader shader = ResolveLitShader();
+
+            if (albedo == null || shader == null)
+            {
+                Debug.LogWarning("[Adaptive Boss Arena] Texture set " + textureSet + " is missing; a flat surface stands in.");
+                return GetOrCreateSurface(materialName, tint, 0f, 0.2f);
+            }
+
+            string path = $"{EditorMenus.GeneratedMaterialFolder}/{materialName}.mat";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            bool created = material == null;
+
+            if (created)
+            {
+                material = new Material(shader) { name = materialName };
+            }
+
+            material.shader = shader;
+            material.SetTexture("_BaseMap", albedo);
+            material.SetColor("_BaseColor", tint);
+
+            if (normal != null)
+            {
+                material.SetTexture("_BumpMap", normal);
+                material.SetFloat("_BumpScale", 1f);
+                material.EnableKeyword("_NORMALMAP");
+            }
+
+            if (mask != null)
+            {
+                material.SetTexture("_MetallicGlossMap", mask);
+                material.SetTexture("_OcclusionMap", mask);
+                material.SetFloat("_Metallic", 1f);
+                material.SetFloat("_Smoothness", 1f);
+                material.SetFloat("_OcclusionStrength", 1f);
+                material.EnableKeyword("_METALLICSPECGLOSSMAP");
+                material.EnableKeyword("_OCCLUSIONMAP");
+            }
+
+            if (created)
+            {
+                AssetAuthoring.EnsureFolderExists(EditorMenus.GeneratedMaterialFolder);
+                AssetDatabase.CreateAsset(material, path);
+            }
+            else
+            {
+                EditorUtility.SetDirty(material);
+            }
+
+            return material;
+        }
+
+        /// <summary>
         /// Loads or creates the shared transparent material used for attack overlays.
         /// </summary>
         /// <remarks>

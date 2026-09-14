@@ -37,9 +37,6 @@ namespace AdaptiveBossArena.Editor
         private static readonly Color FloorColor = new Color(0.26f, 0.26f, 0.30f);
         private static readonly Color WallColor = new Color(0.17f, 0.17f, 0.20f);
 
-        /// <summary>Weathered stone for the pillars and rubble.</summary>
-        private static readonly Color StoneColor = new Color(0.32f, 0.30f, 0.33f);
-
         /// <summary>A bruised, overcast sky for the arena to sit under.</summary>
         private static readonly Color SkyTint = new Color(0.47f, 0.31f, 0.36f);
 
@@ -47,35 +44,6 @@ namespace AdaptiveBossArena.Editor
 
         /// <summary>Kept low, so the sky frames the fight rather than competing with it.</summary>
         private const float SkyExposure = 0.55f;
-
-        /// <summary>
-        /// Brazier fire, above one so it blooms.
-        /// </summary>
-        /// <remarks>
-        /// The post-processing bloom threshold is 0.9, so anything brighter than that glows without
-        /// further work. This is the cheapest light source in the scene.
-        /// </remarks>
-        private static readonly Color EmberGlow = new Color(2.4f, 1.1f, 0.35f);
-
-        private static readonly Color BrazierLightColor = new Color(1f, 0.62f, 0.3f);
-
-        private const float BrazierIntensity = 2.6f;
-        private const float BrazierRange = 11f;
-
-        /// <summary>How far outside the wall ring the pillars stand.</summary>
-        private const float PillarRingOffset = 1.9f;
-
-        private const int RubbleCount = 22;
-
-        /// <summary>
-        /// Seed for the dressing layout.
-        /// </summary>
-        /// <remarks>
-        /// Fixed so the arena is identical in every regeneration and every build. Scattering with
-        /// <c>UnityEngine.Random</c> would make the scene differ between two runs of the generator
-        /// and produce a meaningless diff each time — the same reason the fight itself never uses it.
-        /// </remarks>
-        private const uint DressingSeed = 20260812u;
 
         /// <summary>Creates the arena scene, replacing any previously generated one.</summary>
         [MenuItem(EditorMenus.Setup + "3. Build Arena Scene", priority = EditorMenus.SetupPriorityBuildScene)]
@@ -168,7 +136,7 @@ namespace AdaptiveBossArena.Editor
 
             ReplaceFloorCollider(floor, config);
             BuildWalls(config, arenaRoot.transform);
-            BuildDressing(config, arenaRoot.transform);
+            Environment.CathedralBuilder.Build(config, arenaRoot.transform);
             BuildEnvironment(config, arenaRoot.transform);
         }
 
@@ -270,134 +238,6 @@ namespace AdaptiveBossArena.Editor
             probe.shadowDistance = 0f;
         }
 
-        /// <summary>
-        /// Adds pillars, braziers and rubble around the fighting floor.
-        /// </summary>
-        /// <remarks>
-        /// <para>
-        /// The arena was a grey disc inside a ring of grey boxes, which gave the eye nothing to
-        /// measure movement against. Standing geometry around the edge does that for free, and the
-        /// braziers give the single directional light some company — their emissive bowls sit above
-        /// the bloom threshold, so they glow without any extra work.
-        /// </para>
-        /// <para>
-        /// Everything is placed from a seeded source, so the layout is identical on every
-        /// regeneration and in every build. That is the same reason the fight itself uses a seeded
-        /// provider, and the reason <c>UnityEngine.Random</c> is not used anywhere in this project.
-        /// </para>
-        /// <para>
-        /// Purely decorative: it is all outside the wall ring or flat against the floor, and none of
-        /// it carries a collider, so it can never block a dash or catch an attack.
-        /// </para>
-        /// </remarks>
-        private static void BuildDressing(ArenaConfig config, Transform parent)
-        {
-            var dressingRoot = new GameObject("Dressing");
-            dressingRoot.transform.SetParent(parent);
-
-            var random = new XorShiftRandomProvider(DressingSeed);
-
-            Material stone = MaterialLibrary.GetOrCreateSurface(
-                "ArenaStone", StoneColor, metallic: 0f, smoothness: 0.12f);
-
-            Material ember = MaterialLibrary.GetOrCreateSurface(
-                "ArenaEmber", Color.black, metallic: 0f, smoothness: 0.5f, emission: EmberGlow);
-
-            int pillars = Mathf.Max(4, config.WallSegments / 4);
-
-            for (int i = 0; i < pillars; i++)
-            {
-                float angle = i * (360f / pillars) * Mathf.Deg2Rad;
-                float radius = config.Radius + PillarRingOffset;
-                var footprint = new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius);
-
-                float height = config.WallHeight * random.NextFloat(2.1f, 2.7f);
-
-                GameObject pillar = AddDecoration(
-                    dressingRoot.transform, $"Pillar_{i:D2}", PrimitiveType.Cube, stone,
-                    footprint + new Vector3(0f, height * 0.5f, 0f),
-                    new Vector3(1.1f, height, 1.1f));
-
-                pillar.transform.rotation = Quaternion.Euler(0f, -i * (360f / pillars), 0f);
-
-                // A bowl of fire at head height on alternate pillars. Alternating rather than every
-                // one keeps the ring from reading as a regular pattern.
-                if (i % 2 != 0)
-                {
-                    continue;
-                }
-
-                AddDecoration(
-                    dressingRoot.transform, $"Brazier_{i:D2}", PrimitiveType.Sphere, ember,
-                    footprint + new Vector3(0f, height * 0.82f, 0f),
-                    Vector3.one * 0.66f);
-
-                var light = new GameObject($"BrazierLight_{i:D2}");
-                light.transform.SetParent(dressingRoot.transform);
-                light.transform.position = footprint + new Vector3(0f, height * 0.82f, 0f);
-
-                Light brazier = light.AddComponent<Light>();
-                brazier.type = LightType.Point;
-                brazier.color = BrazierLightColor;
-                brazier.intensity = BrazierIntensity;
-                brazier.range = BrazierRange;
-
-                // No shadows: eight shadow-casting point lights would cost far more than they add
-                // against untextured geometry.
-                brazier.shadows = LightShadows.None;
-            }
-
-            for (int i = 0; i < RubbleCount; i++)
-            {
-                float angle = random.NextFloat(0f, Mathf.PI * 2f);
-                float radius = config.Radius + random.NextFloat(1.6f, 5.5f);
-                float size = random.NextFloat(0.35f, 1.15f);
-
-                GameObject rubble = AddDecoration(
-                    dressingRoot.transform, $"Rubble_{i:D2}", PrimitiveType.Cube, stone,
-                    new Vector3(
-                        Mathf.Cos(angle) * radius,
-                        size * random.NextFloat(0.1f, 0.35f),
-                        Mathf.Sin(angle) * radius),
-                    Vector3.one * size);
-
-                rubble.transform.rotation = Quaternion.Euler(
-                    random.NextFloat(-20f, 20f),
-                    random.NextFloat(0f, 360f),
-                    random.NextFloat(-20f, 20f));
-            }
-        }
-
-        /// <summary>Creates one decorative object, stripped of its collider.</summary>
-        /// <remarks>
-        /// The collider always goes. Dressing that could be collided with would change the fight,
-        /// and a scaled primitive's collider is the exact trap the floor already had to work around.
-        /// </remarks>
-        private static GameObject AddDecoration(
-            Transform parent,
-            string name,
-            PrimitiveType primitive,
-            Material material,
-            Vector3 position,
-            Vector3 scale)
-        {
-            GameObject decoration = GameObject.CreatePrimitive(primitive);
-            decoration.name = name;
-            decoration.layer = Layers.Arena;
-            decoration.transform.SetParent(parent);
-            decoration.transform.position = position;
-            decoration.transform.localScale = scale;
-
-            Object.DestroyImmediate(decoration.GetComponent<Collider>());
-
-            if (material != null)
-            {
-                decoration.GetComponent<MeshRenderer>().sharedMaterial = material;
-            }
-
-            return decoration;
-        }
-
         private static void BuildWalls(ArenaConfig config, Transform parent)
         {
             var wallRoot = new GameObject("Walls");
@@ -447,7 +287,8 @@ namespace AdaptiveBossArena.Editor
             light.intensity = 1.15f;
             light.shadows = LightShadows.Soft;
 
-            lightObject.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
+            // Down through the cathedral's open crossing, along the same line its light shafts are drawn.
+            lightObject.transform.rotation = Environment.CathedralBuilder.SunRotation;
 
             BuildReflectionProbe(config);
 
@@ -461,6 +302,15 @@ namespace AdaptiveBossArena.Editor
             RenderSettings.ambientSkyColor = new Color(0.22f, 0.24f, 0.30f);
             RenderSettings.ambientEquatorColor = new Color(0.14f, 0.14f, 0.17f);
             RenderSettings.ambientGroundColor = new Color(0.06f, 0.06f, 0.08f);
+
+            // Set in the scene, not only at runtime: URP strips the fog shader variants from a build
+            // whose scenes never use fog, and the haze would then silently not exist in the player.
+            RenderSettings.fog = true;
+            RenderSettings.fogMode = FogMode.Linear;
+            RenderSettings.fogStartDistance = ArenaAtmosphere.FogStart;
+            RenderSettings.fogEndDistance = ArenaAtmosphere.FogEnd;
+            RenderSettings.fogColor = HazeColor.Derive(
+                RenderSettings.ambientEquatorColor, light.color, light.intensity);
 
             return light;
         }
