@@ -22,5 +22,15 @@ shipped in this public repository and its public demo.
 - Licence: CC0 1.0 Universal (public domain dedication) - see `License.txt` beside the files
 - Used for: the sword combo, block, dash, knockback and get-up clips
 
+## Poly Haven - Stone Tiles 02, Castle Brick 07, Medieval Blocks 02
+
+- Files: `Assets/_Project/Art/ThirdParty/PolyHaven/<asset>/`
+- Source: https://polyhaven.com/a/stone_tiles_02, https://polyhaven.com/a/castle_brick_07,
+  https://polyhaven.com/a/medieval_blocks_02 (1K JPG maps from dl.polyhaven.org)
+- Authors: Charlotte Baglioni (Stone Tiles 02); Rob Tuytel (Castle Brick 07, Medieval Blocks 02)
+- Licence: CC0 1.0 Universal (public domain dedication) - see `License.txt` beside the files
+- Changed: each set's `_arm` map is repacked as `_mask` (metallic, occlusion, smoothness) for URP Lit
+- Used for: the cathedral floor, walls and columns
+
 CC0 requires no attribution. It is given anyway, because the work is excellent and credit costs
 nothing.

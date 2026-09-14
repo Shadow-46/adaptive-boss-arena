@@ -1,0 +1,7 @@
+Source: https://polyhaven.com/a/medieval_blocks_02
+Files: https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/medieval_blocks_02/
+Licence: CC0 1.0 Universal (public domain dedication)
+https://creativecommons.org/publicdomain/zero/1.0/
+
+The _mask map is derived from the published _arm map (AO, roughness, metal):
+R = metallic, G = ambient occlusion, A = smoothness (1 - roughness), the packing URP Lit reads.
