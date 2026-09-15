@@ -21,6 +21,11 @@ namespace AdaptiveBossArena.Combat.Feel
     /// <para>
     /// Driven by unscaled time so the flash still plays during the hit-stop it accompanies.
     /// </para>
+    /// <para>
+    /// A multiply toward blood red, not a blend toward white. A textured body's base colour is already
+    /// white, so blending to white changed nothing on the skin and turned only the flat-coloured parts - the
+    /// shield, the blade - into pale cards. Multiplying darkens every part alike.
+    /// </para>
     /// </remarks>
     [DisallowMultipleComponent]
     public sealed class HitFlash : MonoBehaviour
@@ -29,8 +34,8 @@ namespace AdaptiveBossArena.Combat.Feel
         private static readonly int FallbackColorId = Shader.PropertyToID("_Color");
 
         [SerializeField]
-        [Tooltip("Colour blended in at peak flash.")]
-        private Color _flashColor = Color.white;
+        [Tooltip("Colour every part is multiplied by at peak flash.")]
+        private Color _flashTint = new Color(1f, 0.4f, 0.34f);
 
         [SerializeField]
         [Range(0.02f, 0.4f)]
@@ -49,7 +54,19 @@ namespace AdaptiveBossArena.Combat.Feel
 
         private void Awake()
         {
-            _renderers = GetComponentsInChildren<Renderer>();
+            // Bodies and arms only: a trail or a particle system tinted through the same property would lose its
+            // own colour and fade.
+            var bodies = new System.Collections.Generic.List<Renderer>();
+
+            foreach (Renderer candidate in GetComponentsInChildren<Renderer>())
+            {
+                if (candidate is MeshRenderer || candidate is SkinnedMeshRenderer)
+                {
+                    bodies.Add(candidate);
+                }
+            }
+
+            _renderers = bodies.ToArray();
             _propertyBlock = new MaterialPropertyBlock();
             _baseColors = new Color[_renderers.Length];
 
@@ -113,7 +130,8 @@ namespace AdaptiveBossArena.Combat.Feel
 
                 target.GetPropertyBlock(_propertyBlock);
 
-                Color tinted = Color.Lerp(_baseColors[i], _flashColor, strength);
+                Color tinted = _baseColors[i] * Color.Lerp(Color.white, _flashTint, strength);
+                tinted.a = _baseColors[i].a;
                 _propertyBlock.SetColor(BaseColorId, tinted);
                 _propertyBlock.SetColor(FallbackColorId, tinted);
 

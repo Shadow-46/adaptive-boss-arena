@@ -196,7 +196,7 @@ namespace AdaptiveBossArena.Editor
             }
 
             Material core = MaterialLibrary.GetOrCreateSurface(
-                "BruteCore", Color.black, metallic: 0f, smoothness: 0.6f, emission: CoreGlow);
+                "BruteEmberCore", Color.black, metallic: 0f, smoothness: 0.6f, emission: CoreGlow);
 
             var sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             sphere.name = "Core";
@@ -206,8 +206,10 @@ namespace AdaptiveBossArena.Editor
             // Local scale is divided out of the chest's world scale, so the core keeps its size however
             // the rig is scaled.
             float parentScale = Mathf.Max(0.0001f, chest.lossyScale.x);
-            sphere.transform.localScale = Vector3.one * (size / parentScale);
-            sphere.transform.position = chest.position + chest.root.forward * (size * 0.9f);
+            // Set into the chest, not stuck on it: a whole glowing ball on the textured hide read as a flat
+            // disc glued to the model. Sunk in, only a smouldering patch shows through.
+            sphere.transform.localScale = Vector3.one * (size * CoreScale / parentScale);
+            sphere.transform.position = chest.position + chest.root.forward * (size * CoreDepth);
             sphere.GetComponent<MeshRenderer>().sharedMaterial = core;
         }
 
@@ -235,8 +237,17 @@ namespace AdaptiveBossArena.Editor
         /// <summary>Old bone, for horns.</summary>
         private static readonly Color BoneColor = new Color(0.86f, 0.83f, 0.76f);
 
-        /// <summary>The brute's core, hot enough to bloom and to explain the aura around it.</summary>
-        private static readonly Color CoreGlow = new Color(2.3f, 0.55f, 0.30f);
+        /// <summary>
+        /// The brute's core: a deep ember red, just past one so it smoulders under bloom.
+        /// </summary>
+        /// <remarks>It was far brighter, and bloom washed it out to a flat peach disc.</remarks>
+        private static readonly Color CoreGlow = new Color(1.25f, 0.16f, 0.04f);
+
+        /// <summary>The core's diameter against the size asked for.</summary>
+        private const float CoreScale = 0.7f;
+
+        /// <summary>How far in front of the chest bone the core's centre sits, against the size asked for.</summary>
+        private const float CoreDepth = 0.55f;
 
         /// <summary>
         /// Builds an armoured, upright figure for the player.
@@ -322,7 +333,7 @@ namespace AdaptiveBossArena.Editor
                 "BruteBone", BoneColor, metallic: 0f, smoothness: 0.25f);
 
             Material core = MaterialLibrary.GetOrCreateSurface(
-                "BruteCore", Color.black, metallic: 0f, smoothness: 0.6f, emission: CoreGlow);
+                "BruteEmberCore", Color.black, metallic: 0f, smoothness: 0.6f, emission: CoreGlow);
 
             float shoulder = radius * 0.82f;
 

@@ -164,8 +164,10 @@ namespace AdaptiveBossArena.Editor
 
                 // The knight fights sword and shield: the clips raise the left forearm to guard, and without a
                 // shield on it the guard is an empty fist.
+                // Weathered painted wood, not metal: with any metallic response its flat back mirrored the bright
+                // reflection probe and showed as a pale card whenever the knight turned away.
                 Art.ArmsBuilder.MountShield(rig, MaterialLibrary.GetOrCreateSurface(
-                    "KnightShield", new Color(0.24f, 0.08f, 0.07f), metallic: 0.35f, smoothness: 0.4f));
+                    "KnightShieldWood", new Color(0.2f, 0.07f, 0.06f), metallic: 0f, smoothness: 0.12f));
             }
             else
             {
