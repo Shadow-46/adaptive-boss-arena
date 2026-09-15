@@ -34,7 +34,7 @@ namespace AdaptiveBossArena.Editor
         private static readonly Color BackgroundColor = new Color(0.012f, 0.01f, 0.01f);
         private static readonly Color TitleColor = new Color(0.84f, 0.77f, 0.66f);
         private static readonly Color SubtitleColor = new Color(0.6f, 0.54f, 0.47f);
-        private static readonly Color EmberColor = new Color(0.55f, 0.13f, 0.05f);
+        private static readonly Color EmberColor = new Color(0.36f, 0.08f, 0.035f);
 
         /// <summary>Creates the title scene, replacing any previously generated one.</summary>
         [MenuItem(EditorMenus.Setup + "Build Title Scene", priority = EditorMenus.SetupPriorityBuildScene + 1)]
