@@ -55,6 +55,20 @@ namespace AdaptiveBossArena.Game
         /// </summary>
         private const float WallImpactTrauma = 0.32f;
 
+        /// <summary>
+        /// World speed for the beat after a guard breaks.
+        /// </summary>
+        /// <remarks>
+        /// The biggest moment in an exchange landed at full speed, over as soon as it began. A third of a
+        /// second at a third of the speed lets the stagger be seen, and is well inside the opening it grants.
+        /// </remarks>
+        private const float PoiseBreakSlowMotionScale = 0.35f;
+
+        private const float PoiseBreakSlowMotionSeconds = 0.35f;
+
+        /// <summary>Shake and camera punch on a broken guard: heavier than any single blow.</summary>
+        private const float PoiseBreakTrauma = 0.38f;
+
         [SerializeField]
         [Tooltip("Raised on a perfect dodge.")]
         private VoidEventChannel _perfectDodgeChannel;
@@ -78,6 +92,7 @@ namespace AdaptiveBossArena.Game
         private ImpactBurstPool _bursts;
         private ICombatEventBus _events;
         private IScreenShake _shake;
+        private ITimeService _time;
         private WeaponTrail _playerTrail;
         private WeaponTrail _bossTrail;
         private Transform _bossTransform;
@@ -91,6 +106,7 @@ namespace AdaptiveBossArena.Game
         private void Start()
         {
             ServiceRegistry.Current.TryGet(out _shake);
+            ServiceRegistry.Current.TryGet(out _time);
 
             if (ServiceRegistry.Current.TryGet(out _events))
             {
@@ -201,6 +217,9 @@ namespace AdaptiveBossArena.Game
 
                 case CombatEventKind.PoiseBroken:
                     Burst(combatEvent.Position, Vector3.up, ImpactFlavour.PostureBreak);
+                    _time?.RequestSlowMotion(PoiseBreakSlowMotionScale, PoiseBreakSlowMotionSeconds);
+                    _shake?.AddTrauma(PoiseBreakTrauma);
+                    _shake?.Punch(PoiseBreakTrauma);
                     break;
 
                 case CombatEventKind.Riposte:
