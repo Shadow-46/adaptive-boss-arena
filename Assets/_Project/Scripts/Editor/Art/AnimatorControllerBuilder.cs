@@ -1,6 +1,7 @@
 using System.Collections.Generic;
-using AdaptiveBossArena.Combat.Feel;
+using System.IO;
 using System.Linq;
+using AdaptiveBossArena.Combat.Feel;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
@@ -29,47 +30,34 @@ namespace AdaptiveBossArena.Editor.Art
         /// <summary>Folder the generated controller lives in.</summary>
         public const string ControllerFolder = EditorMenus.GeneratedAssetFolder + "/Animation";
 
-        /// <summary>Where the generated controller is written.</summary>
-        public const string ControllerPath = ControllerFolder + "/CharacterController.controller";
+        /// <summary>Whether a table's model is in the project.</summary>
+        /// <param name="table">The fighter's table.</param>
+        /// <returns>True when its model can be loaded.</returns>
+        public static bool IsAvailable(CharacterClipTable table) => LoadRigModel(table) != null;
 
-        private const string Library1 =
-            "Assets/_Project/Art/ThirdParty/Quaternius/UniversalAnimationLibrary/UAL1_Standard.fbx";
+        /// <summary>Loads the model a fighter is built from.</summary>
+        /// <param name="table">The fighter's table.</param>
+        /// <returns>The imported model, or null when its art is absent.</returns>
+        public static GameObject LoadRigModel(CharacterClipTable table) =>
+            AssetDatabase.LoadAssetAtPath<GameObject>(table.RigModel);
 
-        private const string Library2 =
-            "Assets/_Project/Art/ThirdParty/Quaternius/UniversalAnimationLibrary2/UAL2_Standard.fbx";
-
-        /// <summary>State name to the clip it plays.</summary>
-        public static readonly IReadOnlyDictionary<string, string> AttackStates = new Dictionary<string, string>
+        /// <summary>Rebuilds one fighter's controller from its table.</summary>
+        /// <param name="table">The fighter's table.</param>
+        /// <returns>The controller, or null when the table's clips are not in the project.</returns>
+        public static AnimatorController Build(CharacterClipTable table)
         {
-            { "Light1", "Sword_Regular_A" },
-            { "Light2", "Sword_Regular_B" },
-            { "Light3", "Sword_Regular_C" },
-            { "Heavy", "Sword_Attack" },
-            { "Special", "Sword_Regular_Combo" },
-            { "Overhead", "OverhandThrow" },
-            { "Hook", "Melee_Hook" },
-            { "Dash", "Sword_Dash_RM" }
-        };
-
-        /// <summary>Loads the model the rigged characters are built from.</summary>
-        /// <returns>The imported mannequin model, or null when the art is absent.</returns>
-        public static GameObject LoadRigModel() => AssetDatabase.LoadAssetAtPath<GameObject>(Library1);
-
-        /// <summary>Rebuilds the controller from the imported clips.</summary>
-        /// <returns>The controller, or null when the clips are not in the project.</returns>
-        public static AnimatorController Build()
-        {
-            Dictionary<string, AnimationClip> clips = LoadClips();
+            Dictionary<string, AnimationClip> clips = LoadClips(table.ClipSources);
 
             if (clips.Count == 0)
             {
-                Debug.LogWarning("[Adaptive Boss Arena] No character animation clips found; the generated bodies stay.");
+                Debug.LogWarning("[Adaptive Boss Arena] No clips found for " + table.Name + "; the generated bodies stay.");
                 return null;
             }
 
             AssetAuthoring.EnsureFolderExists(ControllerFolder);
 
-            AnimatorController controller = LoadEmptiedOrCreate();
+            string path = ControllerFolder + "/" + table.Name + ".controller";
+            AnimatorController controller = LoadEmptiedOrCreate(path);
             controller.AddParameter(CharacterAnimatorParameters.Speed, AnimatorControllerParameterType.Float);
             controller.AddParameter(CharacterAnimatorParameters.AttackTime, AnimatorControllerParameterType.Float);
             controller.AddParameter(CharacterAnimatorParameters.ReactionTime, AnimatorControllerParameterType.Float);
@@ -77,28 +65,24 @@ namespace AdaptiveBossArena.Editor.Art
             AnimatorStateMachine machine = controller.layers[0].stateMachine;
 
             AnimatorState locomotion = machine.AddState(CharacterAnimatorParameters.LocomotionState);
-            locomotion.motion = BuildLocomotion(controller, clips);
+            locomotion.motion = BuildLocomotion(controller, clips, table.Locomotion);
             machine.defaultState = locomotion;
 
-            AddClipState(machine, CharacterAnimatorParameters.RollState, clips, "Roll");
-            AddClipState(machine, CharacterAnimatorParameters.GuardState, clips, "Sword_Block");
-            AddClipState(machine, CharacterAnimatorParameters.StaggerState, clips, "Idle_Shield_Break");
-            AddClipState(machine, CharacterAnimatorParameters.DeathState, clips, "Death01");
-            AddClipState(machine, CharacterAnimatorParameters.AirborneState, clips, "Hit_Knockback");
-
-            AnimatorState floored = AddClipState(machine, CharacterAnimatorParameters.KnockedDownState, clips, "LayToIdle");
-
-            if (floored != null)
+            foreach (KeyValuePair<string, string> entry in table.States)
             {
-                floored.timeParameterActive = true;
-                floored.timeParameter = CharacterAnimatorParameters.ReactionTime;
-            }
+                AnimatorState state = AddClipState(machine, entry.Key, clips, entry.Value);
 
-            foreach (KeyValuePair<string, string> attack in AttackStates)
-            {
-                AnimatorState state = AddClipState(machine, attack.Key, clips, attack.Value);
+                if (state == null)
+                {
+                    continue;
+                }
 
-                if (state != null)
+                if (entry.Key == CharacterAnimatorParameters.KnockedDownState)
+                {
+                    state.timeParameterActive = true;
+                    state.timeParameter = CharacterAnimatorParameters.ReactionTime;
+                }
+                else if (CharacterClipTable.AttackStateNames.Contains(entry.Key))
                 {
                     state.timeParameterActive = true;
                     state.timeParameter = CharacterAnimatorParameters.AttackTime;
@@ -120,13 +104,13 @@ namespace AdaptiveBossArena.Editor.Art
         /// failure that once left the boss unable to attack. Its contents are structure and are rebuilt
         /// in full each run; only its identity is kept.
         /// </remarks>
-        private static AnimatorController LoadEmptiedOrCreate()
+        private static AnimatorController LoadEmptiedOrCreate(string path)
         {
-            var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(ControllerPath);
+            var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(path);
 
             if (controller == null)
             {
-                return AnimatorController.CreateAnimatorControllerAtPath(ControllerPath);
+                return AnimatorController.CreateAnimatorControllerAtPath(path);
             }
 
             controller.parameters = new AnimatorControllerParameter[0];
@@ -138,7 +122,7 @@ namespace AdaptiveBossArena.Editor.Art
                 machine.RemoveState(child.state);
             }
 
-            foreach (Object subAsset in AssetDatabase.LoadAllAssetsAtPath(ControllerPath))
+            foreach (Object subAsset in AssetDatabase.LoadAllAssetsAtPath(path))
             {
                 if (subAsset is BlendTree)
                 {
@@ -149,15 +133,31 @@ namespace AdaptiveBossArena.Editor.Art
             return controller;
         }
 
-        private static Dictionary<string, AnimationClip> LoadClips() =>
-            AssetDatabase.LoadAllAssetsAtPath(Library1)
-                .Concat(AssetDatabase.LoadAllAssetsAtPath(Library2))
-                .OfType<AnimationClip>()
-                .Where(clip => !clip.name.StartsWith("__preview__"))
-                .GroupBy(clip => clip.name)
-                .ToDictionary(group => group.Key, group => group.First());
+        /// <summary>Every clip in the sources, by name; where two share a name, the earlier source wins.</summary>
+        private static Dictionary<string, AnimationClip> LoadClips(IEnumerable<string> sources)
+        {
+            var clips = new Dictionary<string, AnimationClip>();
 
-        private static Motion BuildLocomotion(AnimatorController controller, Dictionary<string, AnimationClip> clips)
+            foreach (string source in sources)
+            {
+                IEnumerable<string> files = AssetDatabase.IsValidFolder(source)
+                    ? Directory.GetFiles(source, "*.fbx", SearchOption.AllDirectories).Select(f => f.Replace(Path.DirectorySeparatorChar, '/'))
+                    : new[] { source };
+
+                foreach (AnimationClip clip in files.SelectMany(AssetDatabase.LoadAllAssetsAtPath).OfType<AnimationClip>())
+                {
+                    if (!clip.name.StartsWith("__preview__") && !clips.ContainsKey(clip.name))
+                    {
+                        clips.Add(clip.name, clip);
+                    }
+                }
+            }
+
+            return clips;
+        }
+
+        private static Motion BuildLocomotion(
+            AnimatorController controller, Dictionary<string, AnimationClip> clips, (float Speed, string Clip)[] steps)
         {
             var tree = new BlendTree
             {
@@ -169,10 +169,10 @@ namespace AdaptiveBossArena.Editor.Art
 
             AssetDatabase.AddObjectToAsset(tree, controller);
 
-            AddChild(tree, clips, "Sword_Idle", 0f);
-            AddChild(tree, clips, "Walk_Loop", 0.3f);
-            AddChild(tree, clips, "Jog_Fwd_Loop", 0.7f);
-            AddChild(tree, clips, "Sprint_Loop", 1f);
+            foreach ((float speed, string clip) in steps)
+            {
+                AddChild(tree, clips, clip, speed);
+            }
 
             return tree;
         }

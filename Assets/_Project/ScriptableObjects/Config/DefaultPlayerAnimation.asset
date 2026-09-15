@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: AdaptiveBossArena.Combat::AdaptiveBossArena.Combat.Feel.CharacterAnimationConfig
   _id: animation.player
   _designerNotes: 
-  _rigPrefab: {fileID: 919132149155446097, guid: a4c63cae17b98ff4c8a2f360ca01d042, type: 3}
-  _animatorController: {fileID: 9100000, guid: b36c0ea1aac0a4a459b9e964766444e5, type: 2}
+  _rigPrefab: {fileID: 919132149155446097, guid: 657f5b928004b5844b2348ef13168c92, type: 3}
+  _animatorController: {fileID: 9100000, guid: edc05d41a2be7ba4ca3627b9589c9f88, type: 2}
   _rigScale: 1
   _attackClips:
   - _attack: {fileID: 11400000, guid: b612f7e88df49f04e9a415fa54141bd4, type: 2}

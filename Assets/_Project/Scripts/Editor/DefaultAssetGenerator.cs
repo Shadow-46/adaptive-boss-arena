@@ -231,13 +231,14 @@ namespace AdaptiveBossArena.Editor
         /// <remarks>
         /// Chosen so the attack reads from the body, which is how its telegraph now works for everything
         /// except the slams and waves: a wide sweep swings wide, the jab is a short hook, the charge is a
-        /// driving lunge, and the ground-strikers all bring the weapon down overhead.
+        /// driving lunge, the slam brings the weapon down, and the two shockwaves are a gathering cast that
+        /// releases outward, so the ground warning and the body tell the same story.
         /// </remarks>
         private static readonly (string Attack, string State)[] BossClipBindings =
         {
             ("BossSweep", "Light2"), ("BossSlam", "Overhead"), ("BossCharge", "Dash"),
-            ("BossShockwave", "Overhead"), ("BossJab", "Hook"), ("BossPerilousOverhead", "Heavy"),
-            ("BossPhaseShockwave", "Overhead")
+            ("BossShockwave", "Cast"), ("BossJab", "Hook"), ("BossPerilousOverhead", "Heavy"),
+            ("BossPhaseShockwave", "Cast")
         };
 
         /// <summary>
@@ -250,22 +251,27 @@ namespace AdaptiveBossArena.Editor
         /// </remarks>
         private static void AssignRigs()
         {
-            GameObject rig = Art.AnimatorControllerBuilder.LoadRigModel();
-            UnityEditor.Animations.AnimatorController controller = rig != null ? Art.AnimatorControllerBuilder.Build() : null;
+            // The licensed Mixamo knight and brute when this checkout has them; otherwise the CC0 mannequin for
+            // both, which a clone of the public repository always has. The brute's fallback scale makes one
+            // skeleton read as a head-and-a-half taller body.
+            bool licensed = Art.LicensedArtPostprocessor.Available;
 
-            // The mannequin stands about as tall as the knight. The brute is a head and a half taller and
-            // correspondingly broader, which is what makes one skeleton read as two very different bodies.
-            AssignRig("DefaultPlayerAnimation", rig, controller, 1f, PlayerClipBindings);
-            AssignRig("DefaultBossAnimation", rig, controller, 1.55f, BossClipBindings);
+            Art.CharacterClipTable knight = licensed ? Art.CharacterClipTable.Knight : Art.CharacterClipTable.Fallback("KnightController", 1f);
+            Art.CharacterClipTable brute = licensed ? Art.CharacterClipTable.Brute : Art.CharacterClipTable.Fallback("BruteController", 1.55f);
+
+            AssignRig("DefaultPlayerAnimation", knight, PlayerClipBindings);
+            AssignRig("DefaultBossAnimation", brute, BossClipBindings);
         }
 
         private static void AssignRig(
             string configName,
-            GameObject rig,
-            RuntimeAnimatorController controller,
-            float scale,
+            Art.CharacterClipTable table,
             (string Attack, string State)[] bindings)
         {
+            GameObject rig = Art.AnimatorControllerBuilder.LoadRigModel(table);
+            RuntimeAnimatorController controller = rig != null ? Art.AnimatorControllerBuilder.Build(table) : null;
+            float scale = table.RigScale;
+
             var config = AssetDatabase.LoadAssetAtPath<CharacterAnimationConfig>($"{ConfigFolder}/{configName}.asset");
 
             if (config == null)
