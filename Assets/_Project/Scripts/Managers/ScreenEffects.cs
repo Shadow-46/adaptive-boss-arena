@@ -36,7 +36,7 @@ namespace AdaptiveBossArena.Game
         private const float LowHealthSaturationDrop = 45f;
         private const float LowHealthEaseHalfLife = 0.35f;
 
-        private const float DamagePulseVignette = 0.22f;
+        private const float DamagePulseVignette = 0.14f;
         private const float DeflectChromaticAdd = 0.55f;
         private const float DeflectBloomAdd = 0.7f;
         private const float PulseDecayPerSecond = 3.5f;

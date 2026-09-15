@@ -630,6 +630,9 @@ namespace AdaptiveBossArena.Editor.Environment
             var renderer = dustObject.GetComponent<ParticleSystemRenderer>();
             renderer.sharedMaterial = GetOrCreateAdditive("DustMote", DotTexture(), Color.white);
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+
+            // A mote drifting past the lens would otherwise fill a tenth of the screen as a bloomed white blob.
+            renderer.maxParticleSize = 0.006f;
         }
 
         private static GameObject Block(
