@@ -80,10 +80,14 @@ namespace AdaptiveBossArena.Editor
             rect.anchoredPosition = anchoredPosition;
             rect.sizeDelta = new Vector2(320f, 56f);
 
-            buttonObject.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.16f);
+            // Dark iron with a thin bone edge, warming when hovered. A translucent white slab read as a
+            // placeholder, on every screen that has buttons.
+            buttonObject.GetComponent<Image>().color = Color.white;
+            buttonObject.AddComponent<Outline>().effectColor = new Color(0.62f, 0.52f, 0.4f, 0.55f);
 
             Text text = CreateText(buttonObject.transform, "Label", label, 26, TextAnchor.MiddleCenter);
             text.rectTransform.sizeDelta = new Vector2(320f, 56f);
+            text.color = new Color(0.86f, 0.8f, 0.7f);
 
             // AddPersistentListener, not AddListener. This runs at edit time while the scene is being
             // baked to disk, and a plain AddListener registers a runtime-only callback that is never
@@ -91,6 +95,16 @@ namespace AdaptiveBossArena.Editor
             // nothing, however correct the wiring looked in code. Persistent listeners are the ones
             // stored in the scene, exactly as if the method had been dragged into the inspector.
             var button = buttonObject.GetComponent<Button>();
+            button.colors = new ColorBlock
+            {
+                normalColor = new Color(0.07f, 0.05f, 0.05f, 0.82f),
+                highlightedColor = new Color(0.32f, 0.1f, 0.06f, 0.9f),
+                pressedColor = new Color(0.5f, 0.14f, 0.07f, 1f),
+                selectedColor = new Color(0.24f, 0.08f, 0.05f, 0.9f),
+                disabledColor = new Color(0.05f, 0.05f, 0.05f, 0.5f),
+                colorMultiplier = 1f,
+                fadeDuration = 0.12f
+            };
             UnityEventTools.AddPersistentListener(button.onClick, onClick);
 
             return button;

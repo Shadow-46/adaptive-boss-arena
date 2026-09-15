@@ -65,6 +65,50 @@ namespace AdaptiveBossArena.Editor
             return LoadSprite(path);
         }
 
+        /// <summary>A soft white glow fading from the centre to nothing at the edges, tinted by the image using it.</summary>
+        /// <returns>The sprite asset.</returns>
+        public static Sprite RadialGlow()
+        {
+            const int Size = 256;
+            string path = Folder + "/RadialGlow.asset";
+
+            Sprite existing = LoadSprite(path);
+
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            var texture = new Texture2D(Size, Size, TextureFormat.RGBA32, false)
+            {
+                name = "RadialGlowTexture",
+                wrapMode = TextureWrapMode.Clamp,
+                filterMode = FilterMode.Bilinear
+            };
+
+            for (int y = 0; y < Size; y++)
+            {
+                for (int x = 0; x < Size; x++)
+                {
+                    float dx = (x + 0.5f) / Size * 2f - 1f, dy = (y + 0.5f) / Size * 2f - 1f;
+                    float falloff = Mathf.Clamp01(1f - Mathf.Sqrt(dx * dx + dy * dy));
+                    texture.SetPixel(x, y, new Color(1f, 1f, 1f, falloff * falloff * falloff));
+                }
+            }
+
+            texture.Apply();
+
+            var sprite = Sprite.Create(texture, new Rect(0, 0, Size, Size), new Vector2(0.5f, 0.5f), 100f);
+            sprite.name = "RadialGlow";
+
+            AssetAuthoring.EnsureFolderExists(Folder);
+            AssetDatabase.CreateAsset(texture, path);
+            AssetDatabase.AddObjectToAsset(sprite, texture);
+            AssetDatabase.SaveAssets();
+
+            return LoadSprite(path);
+        }
+
         private static Sprite LoadSprite(string path)
         {
             foreach (Object asset in AssetDatabase.LoadAllAssetsAtPath(path))

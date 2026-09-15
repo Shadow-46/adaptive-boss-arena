@@ -31,9 +31,10 @@ namespace AdaptiveBossArena.Editor
         private const int ReferenceWidth = 1920;
         private const int ReferenceHeight = 1080;
 
-        private static readonly Color BackgroundColor = new Color(0.04f, 0.04f, 0.06f);
-        private static readonly Color TitleColor = new Color(0.9f, 0.35f, 0.35f);
-        private static readonly Color SubtitleColor = new Color(0.75f, 0.78f, 0.85f);
+        private static readonly Color BackgroundColor = new Color(0.012f, 0.01f, 0.01f);
+        private static readonly Color TitleColor = new Color(0.84f, 0.77f, 0.66f);
+        private static readonly Color SubtitleColor = new Color(0.6f, 0.54f, 0.47f);
+        private static readonly Color EmberColor = new Color(0.55f, 0.13f, 0.05f);
 
         /// <summary>Creates the title scene, replacing any previously generated one.</summary>
         [MenuItem(EditorMenus.Setup + "Build Title Scene", priority = EditorMenus.SetupPriorityBuildScene + 1)]
@@ -91,15 +92,38 @@ namespace AdaptiveBossArena.Editor
             GameObject canvasObject = CreateCanvas();
             Transform root = canvasObject.transform;
 
-            Text title = UiBuilder.CreateText(root, "Title", "ADAPTIVE BOSS ARENA", 84, TextAnchor.MiddleCenter);
+            // A dying ember glow behind the lettering instead of a flat dark fill: the title is the first
+            // thing anyone sees, and red capitals on black read as a placeholder.
+            var glow = new GameObject("EmberGlow", typeof(RectTransform), typeof(Image));
+            glow.transform.SetParent(root, false);
+            var glowRect = glow.GetComponent<RectTransform>();
+            glowRect.anchorMin = Vector2.zero;
+            glowRect.anchorMax = Vector2.one;
+            glowRect.offsetMin = new Vector2(-200f, -300f);
+            glowRect.offsetMax = new Vector2(200f, 100f);
+            var glowImage = glow.GetComponent<Image>();
+            glowImage.sprite = UiSprites.RadialGlow();
+            glowImage.color = EmberColor;
+            glowImage.raycastTarget = false;
+
+            Text title = UiBuilder.CreateText(root, "Title", "A D A P T I V E   B O S S   A R E N A", 72, TextAnchor.MiddleCenter);
             title.rectTransform.anchoredPosition = new Vector2(0f, 220f);
+            title.rectTransform.sizeDelta = new Vector2(1800f, 100f);
             title.color = TitleColor;
-            title.fontStyle = FontStyle.Bold;
+            title.gameObject.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.9f);
+
+            var rule = new GameObject("TitleRule", typeof(RectTransform), typeof(Image));
+            rule.transform.SetParent(root, false);
+            var ruleRect = rule.GetComponent<RectTransform>();
+            ruleRect.anchoredPosition = new Vector2(0f, 168f);
+            ruleRect.sizeDelta = new Vector2(760f, 2f);
+            rule.GetComponent<Image>().color = new Color(0.5f, 0.12f, 0.06f, 0.9f);
 
             Text subtitle = UiBuilder.CreateText(
                 root, "Subtitle", "It learns what you repeat.", 30, TextAnchor.MiddleCenter);
-            subtitle.rectTransform.anchoredPosition = new Vector2(0f, 140f);
+            subtitle.rectTransform.anchoredPosition = new Vector2(0f, 130f);
             subtitle.color = SubtitleColor;
+            subtitle.fontStyle = FontStyle.Italic;
 
             // The component must exist before the buttons are wired, because the persistent listeners
             // baked into them serialise a reference to it.
@@ -131,8 +155,8 @@ namespace AdaptiveBossArena.Editor
         private const float ModifierColumnX = -640f;
         private const float ModifierToggleOffset = 232f;
         private const float ModifierRowSpacing = 52f;
-        private static readonly Color ModifierAccent = new Color(0.55f, 0.9f, 0.6f);
-        private static readonly Color ModifierHeaderColor = new Color(0.8f, 0.82f, 0.88f);
+        private static readonly Color ModifierAccent = new Color(0.72f, 0.2f, 0.08f);
+        private static readonly Color ModifierHeaderColor = new Color(0.78f, 0.7f, 0.6f);
 
         /// <summary>
         /// Builds the challenge-modifier column: a labelled toggle per rule, saved as it is changed.
