@@ -43,7 +43,11 @@ namespace AdaptiveBossArena.Editor
         private static readonly Color SkyGroundColor = new Color(0.05f, 0.04f, 0.06f);
 
         /// <summary>Kept low, so the sky frames the fight rather than competing with it.</summary>
-        private const float SkyExposure = 0.55f;
+        /// <remarks>
+        /// Lower than it was once post-processing actually rendered: the grade's exposure lift turned the sky
+        /// through every window into a pale glare.
+        /// </remarks>
+        private const float SkyExposure = 0.2f;
 
         /// <summary>Creates the arena scene, replacing any previously generated one.</summary>
         [MenuItem(EditorMenus.Setup + "3. Build Arena Scene", priority = EditorMenus.SetupPriorityBuildScene)]

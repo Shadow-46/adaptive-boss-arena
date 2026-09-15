@@ -76,24 +76,25 @@ namespace AdaptiveBossArena.Editor
             string materialName, Color skyTint, Color groundColor, float exposure)
         {
             string path = $"{EditorMenus.GeneratedMaterialFolder}/{materialName}.mat";
-            var existing = AssetDatabase.LoadAssetAtPath<Material>(path);
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            bool created = material == null;
 
-            if (existing != null)
+            if (created)
             {
-                return existing;
+                Shader shader = Shader.Find("Skybox/Procedural");
+
+                if (shader == null)
+                {
+                    Debug.LogWarning(
+                        "[Adaptive Boss Arena] The procedural sky shader could not be resolved, so the " +
+                        "camera will keep clearing to a flat colour.");
+                    return null;
+                }
+
+                material = new Material(shader) { name = materialName };
             }
 
-            Shader shader = Shader.Find("Skybox/Procedural");
-
-            if (shader == null)
-            {
-                Debug.LogWarning(
-                    "[Adaptive Boss Arena] The procedural sky shader could not be resolved, so the " +
-                    "camera will keep clearing to a flat colour.");
-                return null;
-            }
-
-            var material = new Material(shader) { name = materialName };
+            // Written on every run, so a change to the sky reaches an existing asset.
             material.SetColor("_SkyTint", skyTint);
             material.SetColor("_GroundColor", groundColor);
             material.SetFloat("_Exposure", exposure);
@@ -102,8 +103,21 @@ namespace AdaptiveBossArena.Editor
             // feel oppressed by.
             material.SetFloat("_AtmosphereThickness", 1.7f);
 
-            AssetAuthoring.EnsureFolderExists(EditorMenus.GeneratedMaterialFolder);
-            AssetDatabase.CreateAsset(material, path);
+            // No sun disc: the sun is behind cloud, and a hot disc showing through a window bloomed to white.
+            material.SetFloat("_SunDisk", 0f);
+            material.DisableKeyword("_SUNDISK_SIMPLE");
+            material.DisableKeyword("_SUNDISK_HIGH_QUALITY");
+            material.EnableKeyword("_SUNDISK_NONE");
+
+            if (created)
+            {
+                AssetAuthoring.EnsureFolderExists(EditorMenus.GeneratedMaterialFolder);
+                AssetDatabase.CreateAsset(material, path);
+            }
+            else
+            {
+                EditorUtility.SetDirty(material);
+            }
 
             return material;
         }
