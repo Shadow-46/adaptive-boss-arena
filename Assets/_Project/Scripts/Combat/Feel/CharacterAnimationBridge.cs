@@ -120,7 +120,7 @@ namespace AdaptiveBossArena.Combat.Feel
 
         private AttackClipTimeWarp WarpFor(AttackDefinition attack)
         {
-            float contact = _config != null ? _config.ClipContactFraction : 0.45f;
+            float contact = _config != null ? _config.ContactFractionFor(attack) : ClipContact.DefaultContact;
 
             // Normalised clip space: a clip of length one, so no clip lengths need storing anywhere.
             return new AttackClipTimeWarp(

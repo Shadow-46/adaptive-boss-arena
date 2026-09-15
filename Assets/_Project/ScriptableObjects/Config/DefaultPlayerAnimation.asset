@@ -20,24 +20,34 @@ MonoBehaviour:
   _attackClips:
   - _attack: {fileID: 11400000, guid: b612f7e88df49f04e9a415fa54141bd4, type: 2}
     _state: Light1
+    _contactFraction: 0.40425533
   - _attack: {fileID: 11400000, guid: 1400dc5f7369ad747a87d9cb94217ca0, type: 2}
     _state: Light2
+    _contactFraction: 0.5319149
   - _attack: {fileID: 11400000, guid: 1631fc85fd19d7c498de86b0b9a6c158, type: 2}
     _state: Light3
+    _contactFraction: 0.42553192
   - _attack: {fileID: 11400000, guid: 0c22a197c1fffde48aa418bd7ca172b7, type: 2}
     _state: Light1
+    _contactFraction: 0.40425533
   - _attack: {fileID: 11400000, guid: 1192b8c9e0f85e24c9c375597c20e802, type: 2}
     _state: Light3
+    _contactFraction: 0.42553192
   - _attack: {fileID: 11400000, guid: 161e8470f16946b4da1bc4c746fed900, type: 2}
     _state: Light1
+    _contactFraction: 0.40425533
   - _attack: {fileID: 11400000, guid: e8e5a4f68150aae47a3974085ac02aaa, type: 2}
     _state: Light2
+    _contactFraction: 0.5319149
   - _attack: {fileID: 11400000, guid: 562917821e9f09d42940508e26aee691, type: 2}
     _state: Light3
+    _contactFraction: 0.42553192
   - _attack: {fileID: 11400000, guid: 6c11f08fdcd1c514098c673ced9d65bf, type: 2}
     _state: Light1
+    _contactFraction: 0.40425533
   - _attack: {fileID: 11400000, guid: 817e8f6a6ab3fd247b3803288036af66, type: 2}
     _state: Dash
+    _contactFraction: 0.44680852
   _clipContactFraction: 0.45
   _idleBobAmplitude: 0.04
   _idleBobFrequency: 1.4

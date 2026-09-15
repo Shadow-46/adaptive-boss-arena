@@ -20,18 +20,25 @@ MonoBehaviour:
   _attackClips:
   - _attack: {fileID: 11400000, guid: c36e1a4c0c2652e44a0844711735c22a, type: 2}
     _state: Light2
+    _contactFraction: 0.19148937
   - _attack: {fileID: 11400000, guid: 9a2b3bde94dd7424783e41b43ef210e0, type: 2}
     _state: Overhead
+    _contactFraction: 0.4893617
   - _attack: {fileID: 11400000, guid: 5c47ed3ac6dcb0648801a9e6e503bc50, type: 2}
     _state: Dash
+    _contactFraction: 0.70212764
   - _attack: {fileID: 11400000, guid: a85d1e6c062cdc148afac1575b1b5abb, type: 2}
     _state: Cast
+    _contactFraction: 0.25531915
   - _attack: {fileID: 11400000, guid: 126f8a091d25e214590b283ab2bcce93, type: 2}
     _state: Hook
+    _contactFraction: 0.42553192
   - _attack: {fileID: 11400000, guid: 1b8a10dd73636cc43b5fa064f62ca83f, type: 2}
     _state: Heavy
+    _contactFraction: 0.44680852
   - _attack: {fileID: 11400000, guid: d2dc5bf9fb135f244ab52724961d8436, type: 2}
     _state: Cast
+    _contactFraction: 0.25531915
   _clipContactFraction: 0.45
   _idleBobAmplitude: 0.04
   _idleBobFrequency: 1

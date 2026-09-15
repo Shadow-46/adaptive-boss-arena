@@ -293,6 +293,8 @@ namespace AdaptiveBossArena.Editor
                 entry.FindPropertyRelative("_attack").objectReferenceValue =
                     AssetDatabase.LoadAssetAtPath<AttackDefinition>($"{AttackFolder}/{bindings[i].Attack}.asset");
                 entry.FindPropertyRelative("_state").stringValue = bindings[i].State;
+                entry.FindPropertyRelative("_contactFraction").floatValue =
+                    Art.ClipContactMeasure.ContactFor(table, bindings[i].State);
             }
 
             serialized.ApplyModifiedPropertiesWithoutUndo();

@@ -204,6 +204,26 @@ namespace AdaptiveBossArena.Combat.Feel
         /// <summary>Where in each attack clip, as a fraction of its length, the blade lands.</summary>
         public float ClipContactFraction => _clipContactFraction;
 
+        /// <summary>When in its clip an attack's blow lands.</summary>
+        /// <remarks>
+        /// Measured per clip by the generator, because the clips differ too much for one number: a one-second
+        /// cut and a two-second leap do not strike at the same fraction of their length.
+        /// </remarks>
+        /// <param name="attack">The attack in progress.</param>
+        /// <returns>The contact fraction, falling back to the config's default where none was measured.</returns>
+        public float ContactFractionFor(AttackDefinition attack)
+        {
+            foreach (AttackClipBinding binding in _attackClips)
+            {
+                if (binding.Attack == attack && binding.ContactFraction > 0f)
+                {
+                    return binding.ContactFraction;
+                }
+            }
+
+            return _clipContactFraction;
+        }
+
         /// <summary>The attack state an attack plays.</summary>
         /// <param name="attack">The attack in progress.</param>
         /// <returns>The state name, falling back by damage type when the attack has no binding.</returns>
@@ -328,10 +348,18 @@ namespace AdaptiveBossArena.Combat.Feel
         [Tooltip("The Animator state it plays.")]
         private string _state;
 
+        [SerializeField]
+        [Range(0f, 1f)]
+        [Tooltip("Fraction of the clip at which the blow lands, measured from the weapon hand. Zero uses the config's default.")]
+        private float _contactFraction;
+
         /// <summary>The attack.</summary>
         public AttackDefinition Attack => _attack;
 
         /// <summary>The Animator state it plays.</summary>
         public string State => _state;
+
+        /// <summary>Fraction of the clip at which the blow lands, or zero when unmeasured.</summary>
+        public float ContactFraction => _contactFraction;
     }
 }
