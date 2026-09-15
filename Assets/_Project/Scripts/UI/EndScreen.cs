@@ -54,8 +54,10 @@ namespace AdaptiveBossArena.UI
         [Tooltip("Fade-in duration.")]
         private float _fadeSeconds = 0.6f;
 
-        private static readonly Color VictoryColor = new Color(0.6f, 0.9f, 1f);
-        private static readonly Color DefeatColor = new Color(1f, 0.45f, 0.45f);
+        // Tarnished gold for a victory and old blood for a defeat, spaced like an inscription. Pale blue and
+        // pink capitals read as an arcade's game-over card.
+        private static readonly Color VictoryColor = new Color(0.84f, 0.72f, 0.46f);
+        private static readonly Color DefeatColor = new Color(0.66f, 0.09f, 0.06f);
 
         private bool _isRunning;
         private float _elapsed;
@@ -114,7 +116,7 @@ namespace AdaptiveBossArena.UI
 
             if (_headline != null)
             {
-                _headline.text = won ? "THE BOSS FALLS" : "YOU FALL";
+                _headline.text = won ? "T H E   B R U T E   F A L L S" : "Y O U   F A L L";
                 _headline.color = won ? VictoryColor : DefeatColor;
             }
 

@@ -75,7 +75,7 @@ namespace AdaptiveBossArena.Editor
 
         /// <summary>Thickness of a gauge's iron rim, in reference pixels.</summary>
         private const float FrameThickness = 2f;
-        private static readonly Color PanelColor = new Color(0f, 0f, 0f, 0.72f);
+        private static readonly Color PanelColor = new Color(0.012f, 0.006f, 0.006f, 0.86f);
 
         /// <summary>Builds the whole interface and returns the objects the director needs.</summary>
         /// <param name="actionsAsset">Input actions asset, for the pause control.</param>
@@ -327,20 +327,23 @@ namespace AdaptiveBossArena.Editor
 
             // Tall enough to contain 72pt glyphs. The default 80 was shorter than the line itself, so
             // it only rendered at all because overflow is permitted.
-            headline.rectTransform.sizeDelta = new Vector2(1000f, 100f);
+            headline.rectTransform.sizeDelta = new Vector2(1600f, 100f);
+            headline.gameObject.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.9f);
 
             // Sized for the longest summary the end screen can produce — seven lines on a run that
             // sets a personal best — so it cannot spill into the dossier below it.
             Text summary = CreateText(panel.transform, "Summary", string.Empty, 28, TextAnchor.UpperCenter);
             summary.rectTransform.anchoredPosition = new Vector2(0f, SummaryCentreY);
             summary.rectTransform.sizeDelta = new Vector2(900f, 230f);
+            summary.color = new Color(0.84f, 0.79f, 0.7f);
 
             // The dossier: the boss's read on the player. Left-aligned and roomy because it is a list
             // of sentences, and it is the payoff of the whole "it studied you" mechanic.
             Text dossier = CreateText(panel.transform, "Dossier", string.Empty, 24, TextAnchor.UpperLeft);
             dossier.rectTransform.anchoredPosition = new Vector2(0f, DossierCentreY);
             dossier.rectTransform.sizeDelta = new Vector2(760f, 300f);
-            dossier.color = new Color(0.82f, 0.86f, 0.94f);
+            dossier.color = LetteringColor;
+            dossier.fontStyle = FontStyle.Italic;
 
             var screen = root.gameObject.AddComponent<EndScreen>();
             CreateButton(
