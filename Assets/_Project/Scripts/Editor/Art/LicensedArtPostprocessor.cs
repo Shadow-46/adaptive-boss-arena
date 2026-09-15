@@ -47,7 +47,7 @@ namespace AdaptiveBossArena.Editor.Art
 
         /// <summary>Bumped whenever the import rules change, so files already imported pick them up.</summary>
         /// <returns>The version of these import rules.</returns>
-        public override uint GetVersion() => 1;
+        public override uint GetVersion() => 2;
 
         /// <summary>The character whose skeleton an animation file drives.</summary>
         /// <param name="animationPath">The animation file's asset path.</param>
@@ -103,6 +103,23 @@ namespace AdaptiveBossArena.Editor.Art
             // Null on the first import of a fresh checkout; OnPostprocessAllAssets imports this file again
             // once the character exists.
             importer.sourceAvatar = AssetDatabase.LoadAssetAtPath<Avatar>(CharacterFor(assetPath));
+        }
+
+        private void OnPreprocessTexture()
+        {
+            if (!assetPath.StartsWith(MixamoFolder))
+            {
+                return;
+            }
+
+            var importer = (TextureImporter)assetImporter;
+            importer.maxTextureSize = 2048;
+
+            // A normal map imported as colour lights the armour as if every dent faced the wrong way.
+            if (assetPath.Contains("_normal"))
+            {
+                importer.textureType = TextureImporterType.NormalMap;
+            }
         }
 
         private void OnPreprocessAnimation()

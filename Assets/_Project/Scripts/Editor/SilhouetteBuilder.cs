@@ -159,14 +159,21 @@ namespace AdaptiveBossArena.Editor
             rig.localRotation = Quaternion.Euler(0f, snapped, 0f) * rig.localRotation;
         }
 
-        /// <summary>The material a rigged knight's body is drawn with: the same steel as the generated one.</summary>
+        /// <summary>The material a rigged knight's body is drawn with.</summary>
+        /// <remarks>
+        /// The licensed Paladin's own textured plate when present; otherwise the flat steel the CC0 mannequin
+        /// has always worn, which has no textures of its own to show.
+        /// </remarks>
         /// <returns>The knight's armour material.</returns>
         public static Material KnightRigMaterial() =>
+            Art.LicensedArtMaterials.Knight() ??
             MaterialLibrary.GetOrCreateSurface("KnightArmour", ArmourColor, metallic: 0.85f, smoothness: 0.45f);
 
-        /// <summary>The material a rigged brute's body is drawn with: the same hide as the generated one.</summary>
+        /// <summary>The material a rigged brute's body is drawn with.</summary>
+        /// <remarks>The licensed Warrok's own textured hide when present; otherwise the mannequin's flat hide.</remarks>
         /// <returns>The brute's hide material.</returns>
         public static Material BruteRigMaterial() =>
+            Art.LicensedArtMaterials.Brute() ??
             MaterialLibrary.GetOrCreateSurface("BruteHide", HideColor, metallic: 0.05f, smoothness: 0.18f);
 
         /// <summary>
