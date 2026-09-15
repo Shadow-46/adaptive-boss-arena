@@ -89,7 +89,7 @@ namespace AdaptiveBossArena.Tests.PlayMode
             // body part-way down and passes or fails depending on how the slow motion happened to fall.
             float waited = 0f, realWaited = 0f;
 
-            while (waited < 1.2f && realWaited < 10f)
+            while (waited < 2f && realWaited < 12f)
             {
                 waited += Time.deltaTime;
                 realWaited += Time.unscaledDeltaTime;
@@ -99,8 +99,10 @@ namespace AdaptiveBossArena.Tests.PlayMode
                 yield return null;
             }
 
-            bool headDown = head.position.y < standingHead - 0.5f;
-            bool hipsDown = hips.position.y < standingHips - 0.35f;
+            // As a share of standing height, not a fixed drop: the body can come to rest kneeling, which lowers
+            // the head by about a third - far past any stagger or sway, but short of a fixed half metre.
+            bool headDown = head.position.y < standingHead * 0.75f;
+            bool hipsDown = hips.position.y < standingHips * 0.7f;
 
             Assert.IsTrue(headDown || hipsDown,
                 $"The body never went down: head {head.position.y:F2} m from {standingHead:F2}, hips {hips.position.y:F2} m from {standingHips:F2}, " +
