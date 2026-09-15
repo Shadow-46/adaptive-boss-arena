@@ -1,3 +1,4 @@
+using AdaptiveBossArena.Core.Services;
 using UnityEngine;
 
 namespace AdaptiveBossArena.Combat.Feel
@@ -32,6 +33,8 @@ namespace AdaptiveBossArena.Combat.Feel
         /// <summary>Fallback for the rare case the render pipeline's particle shader is unavailable.</summary>
         private const string FallbackShaderName = "Sprites/Default";
 
+        private const uint ScatterSeed = 0x51A7u;
+
         [SerializeField]
         [Range(4, 32)]
         [Tooltip("How many impacts may be visible at once. Beyond this the oldest is recycled.")]
@@ -50,7 +53,8 @@ namespace AdaptiveBossArena.Combat.Feel
         /// fallback, and it says so when used.
         /// </remarks>
         /// <param name="material">The spark material, normally the generated asset.</param>
-        public void Construct(Material material)
+        /// <param name="matterMaterial">The alpha-blended material blood and dust are drawn with.</param>
+        public void Construct(Material material, Material matterMaterial = null)
         {
             if (material == null)
             {
@@ -63,13 +67,17 @@ namespace AdaptiveBossArena.Combat.Feel
 
             _bursts = new ImpactBurst[_capacity];
 
+            // Its own seeded generator: scatter is cosmetic, so it must not draw from the one the boss's
+            // decisions are pinned to, and the global generator is off limits.
+            var random = new XorShiftRandomProvider(ScatterSeed);
+
             for (int i = 0; i < _capacity; i++)
             {
                 var burstObject = new GameObject($"ImpactBurst_{i}");
                 burstObject.transform.SetParent(transform, worldPositionStays: false);
 
                 _bursts[i] = burstObject.AddComponent<ImpactBurst>();
-                _bursts[i].Construct(material);
+                _bursts[i].Construct(material, matterMaterial, random);
             }
         }
 

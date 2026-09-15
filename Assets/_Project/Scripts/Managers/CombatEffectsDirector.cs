@@ -71,6 +71,10 @@ namespace AdaptiveBossArena.Game
         [Tooltip("Material impact sparks are drawn with. Assigned by the scene generator, so its shader ships.")]
         private Material _impactMaterial;
 
+        [SerializeField]
+        [Tooltip("Alpha-blended material blood and dust are drawn with. Assigned by the scene generator.")]
+        private Material _matterMaterial;
+
         private ImpactBurstPool _bursts;
         private ICombatEventBus _events;
         private IScreenShake _shake;
@@ -81,7 +85,7 @@ namespace AdaptiveBossArena.Game
         private void Awake()
         {
             _bursts = gameObject.AddComponent<ImpactBurstPool>();
-            _bursts.Construct(_impactMaterial);
+            _bursts.Construct(_impactMaterial, _matterMaterial);
         }
 
         private void Start()
@@ -144,7 +148,7 @@ namespace AdaptiveBossArena.Game
         {
             if (_bossTransform != null)
             {
-                _bursts.Play(_bossTransform.position + Vector3.up * 0.25f, Vector3.up, ImpactFlavour.Block);
+                _bursts.Play(_bossTransform.position + Vector3.up * 0.25f, Vector3.up, ImpactFlavour.Stone);
             }
 
             _shake?.AddTrauma(OverbalanceTrauma);
@@ -191,7 +195,7 @@ namespace AdaptiveBossArena.Game
 
                 case CombatEventKind.WallImpact:
                     // Sparks thrown back off the wall, toward the fight, where the body met the stone.
-                    Burst(combatEvent.Position, -combatEvent.Direction, ImpactFlavour.Heavy);
+                    Burst(combatEvent.Position, -combatEvent.Direction, ImpactFlavour.Stone);
                     _shake?.AddTrauma(WallImpactTrauma);
                     break;
 
@@ -302,15 +306,20 @@ namespace AdaptiveBossArena.Game
             VoidEventChannel perfectDodge,
             IntEventChannel bossPhase,
             VoidEventChannel overbalance,
-            Material impactMaterial)
+            Material impactMaterial,
+            Material matterMaterial = null)
         {
             _perfectDodgeChannel = perfectDodge;
             _bossPhaseChannel = bossPhase;
             _overbalanceChannel = overbalance;
             _impactMaterial = impactMaterial;
+            _matterMaterial = matterMaterial;
         }
 
         /// <summary>The material impact sparks are drawn with.</summary>
         public Material ImpactMaterial => _impactMaterial;
+
+        /// <summary>The material blood and dust are drawn with.</summary>
+        public Material MatterMaterial => _matterMaterial;
     }
 }

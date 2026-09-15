@@ -237,6 +237,8 @@ namespace AdaptiveBossArena.Tests.PlayMode
             Assert.IsNotNull(hazards.DiscMaterial, "Hazard discs have no material asset assigned.");
 
             Assert.IsTrue(effects.ImpactMaterial.shader.isSupported, "The spark shader is not supported.");
+            Assert.IsNotNull(effects.MatterMaterial, "Blood and dust have no material asset assigned.");
+            Assert.IsTrue(effects.MatterMaterial.shader.isSupported, "The blood and dust shader is not supported.");
             Assert.IsTrue(hazards.DiscMaterial.shader.isSupported, "The hazard shader is not supported.");
 
             yield return null;

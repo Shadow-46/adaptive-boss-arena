@@ -270,16 +270,9 @@ namespace AdaptiveBossArena.Editor
             const string materialName = "AttackOverlay";
             string path = $"{EditorMenus.GeneratedMaterialFolder}/{materialName}.mat";
 
-            var existing = AssetDatabase.LoadAssetAtPath<Material>(path);
+            Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
 
-            if (existing != null)
-            {
-                return existing;
-            }
-
-            Material material = CreateTransparentUnlit(materialName);
-
-            if (material == null)
+            if (shader == null)
             {
                 Debug.LogWarning(
                     "[Adaptive Boss Arena] Could not resolve a transparent shader; attack overlays " +
@@ -287,8 +280,22 @@ namespace AdaptiveBossArena.Editor
                 return null;
             }
 
-            AssetAuthoring.EnsureFolderExists(EditorMenus.GeneratedMaterialFolder);
-            AssetDatabase.CreateAsset(material, path);
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+
+            if (material == null)
+            {
+                material = new Material(shader) { name = materialName };
+                AssetAuthoring.EnsureFolderExists(EditorMenus.GeneratedMaterialFolder);
+                AssetDatabase.CreateAsset(material, path);
+            }
+
+            // The particle shader, not the plain unlit one, because it multiplies in vertex colour: the overlay
+            // mesh carries its rim-bright, faint-inside falloff that way. Reapplied to an existing asset.
+            material.shader = shader;
+            ConfigureParticleBlend(material, additive: false);
+            material.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off);
+            material.SetFloat("_ColorMode", 0f);
+            EditorUtility.SetDirty(material);
 
             return material;
         }
@@ -358,7 +365,7 @@ namespace AdaptiveBossArena.Editor
 
             if (existing != null)
             {
-                return existing;
+                return DressSparks(existing);
             }
 
             Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
@@ -371,20 +378,110 @@ namespace AdaptiveBossArena.Editor
 
             var material = new Material(shader) { name = materialName };
 
-            material.SetFloat("_Surface", 1f);
-            material.SetFloat("_Blend", 1f);
-            material.SetFloat("_ZWrite", 0f);
-            material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
-            material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
-            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-            material.EnableKeyword("_EMISSION");
-            material.SetOverrideTag("RenderType", "Transparent");
-            material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            ConfigureParticleBlend(material, additive: true);
+            DressSparks(material);
 
             AssetAuthoring.EnsureFolderExists(EditorMenus.GeneratedMaterialFolder);
             AssetDatabase.CreateAsset(material, path);
 
             return material;
+        }
+
+        /// <summary>Loads or creates the material blood and dust are drawn with.</summary>
+        /// <remarks>
+        /// Alpha-blended, unlike the sparks: blood and dust are matter that covers what is behind it. Drawn
+        /// additively they glowed, which made a blow landing on a body look like a firework.
+        /// </remarks>
+        /// <returns>The matter material, or null when the particle shader is missing.</returns>
+        public static Material GetOrCreateImpactMatter()
+        {
+            const string materialName = "ImpactMatter";
+            string path = EditorMenus.GeneratedMaterialFolder + "/" + materialName + ".mat";
+
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+
+            if (material == null)
+            {
+                Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+
+                if (shader == null)
+                {
+                    return null;
+                }
+
+                material = new Material(shader) { name = materialName };
+                ConfigureParticleBlend(material, additive: false);
+                AssetAuthoring.EnsureFolderExists(EditorMenus.GeneratedMaterialFolder);
+                AssetDatabase.CreateAsset(material, path);
+            }
+
+            material.SetTexture("_BaseMap", SoftParticle());
+            material.SetColor("_BaseColor", Color.white);
+            EditorUtility.SetDirty(material);
+
+            return material;
+        }
+
+        /// <summary>Gives the spark material its round falloff and a tint hot enough to bloom.</summary>
+        /// <remarks>
+        /// Untextured, a spark was a stretched square; tinted at one it never reached the bloom threshold and
+        /// read as orange paint. Refreshed on every run so existing assets pick the change up.
+        /// </remarks>
+        private static Material DressSparks(Material material)
+        {
+            material.SetTexture("_BaseMap", SoftParticle());
+            material.SetColor("_BaseColor", new Color(2.4f, 1.5f, 0.7f, 1f));
+            EditorUtility.SetDirty(material);
+
+            return material;
+        }
+
+        /// <summary>Sets a particle material transparent, either adding light or covering what is behind.</summary>
+        private static void ConfigureParticleBlend(Material material, bool additive)
+        {
+            material.SetFloat("_Surface", 1f);
+            material.SetFloat("_Blend", additive ? 1f : 0f);
+            material.SetFloat("_ZWrite", 0f);
+            material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            material.SetFloat("_DstBlend", (float)(additive
+                ? UnityEngine.Rendering.BlendMode.One
+                : UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha));
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            material.SetOverrideTag("RenderType", "Transparent");
+            material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+        }
+
+        /// <summary>A white disc with a soft falloff, shared by every particle material.</summary>
+        private static Texture2D SoftParticle()
+        {
+            const int Size = 64;
+            const string Name = "SoftParticle";
+            string path = EditorMenus.GeneratedMaterialFolder + "/" + Name + ".asset";
+
+            var existing = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            var texture = new Texture2D(Size, Size, TextureFormat.RGBA32, true) { name = Name, wrapMode = TextureWrapMode.Clamp };
+
+            for (int y = 0; y < Size; y++)
+            {
+                for (int x = 0; x < Size; x++)
+                {
+                    float r = new Vector2((x + 0.5f) / Size * 2f - 1f, (y + 0.5f) / Size * 2f - 1f).magnitude;
+                    float alpha = 1f - Environment.CathedralBuilder.Edge(0.25f, 1f, r);
+                    texture.SetPixel(x, y, new Color(1f, 1f, 1f, alpha * alpha));
+                }
+            }
+
+            texture.Apply(true);
+            AssetAuthoring.EnsureFolderExists(EditorMenus.GeneratedMaterialFolder);
+            AssetDatabase.CreateAsset(texture, path);
+
+            return texture;
         }
 
         /// <summary>
