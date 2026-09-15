@@ -93,6 +93,12 @@ namespace AdaptiveBossArena.Game
         [Tooltip("Carries the boss phase index that drives the mood.")]
         private IntEventChannel _phaseChannel;
 
+        /// <summary>The light probes as baked, under the opening ambience. Null when the scene has none.</summary>
+        private UnityEngine.Rendering.SphericalHarmonicsL2[] _bakedProbes;
+
+        private UnityEngine.Rendering.SphericalHarmonicsL2[] _tintedProbes;
+        private Color _probeGain = Color.white;
+
         private int _targetPhase;
         private Color _lightColor;
         private float _lightIntensity;
@@ -125,6 +131,15 @@ namespace AdaptiveBossArena.Game
             RenderSettings.fogStartDistance = FogStart;
             RenderSettings.fogEndDistance = FogEnd;
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
+
+            // Captured before anything is tinted: every later tint is measured from the bake, never compounded.
+            LightProbes probes = LightmapSettings.lightProbes;
+
+            if (probes != null && probes.count > 0)
+            {
+                _bakedProbes = probes.bakedProbes;
+                _tintedProbes = new UnityEngine.Rendering.SphericalHarmonicsL2[_bakedProbes.Length];
+            }
 
             // Snap to the opening mood so the fight does not fade in from whatever the editor left set.
             _targetPhase = 0;
@@ -178,6 +193,32 @@ namespace AdaptiveBossArena.Game
             RenderSettings.ambientEquatorColor = _equator;
             RenderSettings.ambientGroundColor = _ground;
             RenderSettings.fogColor = HazeColor.Derive(_equator, _lightColor, _lightIntensity);
+
+            TintBakedLight();
+        }
+
+        /// <summary>Carries the current ambience into the probes baked under the opening one.</summary>
+        /// <remarks>
+        /// Skipped while the gain has not moved, so the probes are only rewritten during a phase transition
+        /// rather than every frame of a fight.
+        /// </remarks>
+        private void TintBakedLight()
+        {
+            if (_bakedProbes == null || LightmapSettings.lightProbes == null)
+            {
+                return;
+            }
+
+            Color gain = ProbeTint.Gain(_equator, Profiles[0].Equator);
+
+            if (Mathf.Abs(gain.r - _probeGain.r) + Mathf.Abs(gain.g - _probeGain.g) + Mathf.Abs(gain.b - _probeGain.b) < 0.002f)
+            {
+                return;
+            }
+
+            _probeGain = gain;
+            ProbeTint.Apply(_bakedProbes, _tintedProbes, gain);
+            LightmapSettings.lightProbes.bakedProbes = _tintedProbes;
         }
     }
 }
