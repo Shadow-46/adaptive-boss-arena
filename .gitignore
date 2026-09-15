@@ -75,3 +75,9 @@ desktop.ini
 # play-mode run and does not always clean it up again.
 /Assets/InitTestScene*.unity
 /Assets/InitTestScene*.unity.meta
+
+# Mixamo art: free to use in the game and its builds, but not to redistribute as raw files, so it never
+# enters this public repository. See Docs/ART_INTEGRATION.md for how to fetch it; without it the generators
+# fall back to the CC0 Quaternius characters.
+Assets/_Project/Art/Licensed/
+Assets/_Project/Art/Licensed.meta
