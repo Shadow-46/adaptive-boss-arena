@@ -164,8 +164,10 @@ namespace AdaptiveBossArena.Editor
                 // shield on it the guard is an empty fist.
                 // Weathered painted wood, not metal: with any metallic response its flat back mirrored the bright
                 // reflection probe and showed as a pale card whenever the knight turned away.
-                Art.ArmsBuilder.MountShield(rig, MaterialLibrary.GetOrCreateSurface(
-                    "KnightShieldWood", new Color(0.2f, 0.07f, 0.06f), metallic: 0f, smoothness: 0.12f));
+                Art.ArmsBuilder.MountShield(rig, MaterialLibrary.GetOrCreateTexturedSurface(
+                    "KnightShieldPainted",
+                    Art.ArmsBuilder.ShieldFace(Art.ArmsBuilder.ShieldWidth, Art.ArmsBuilder.ShieldHeight),
+                    smoothness: 0.18f));
             }
             else
             {

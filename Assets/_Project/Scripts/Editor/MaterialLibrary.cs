@@ -122,6 +122,41 @@ namespace AdaptiveBossArena.Editor
             return material;
         }
 
+        /// <summary>Loads or creates a non-metallic lit material showing a generated texture.</summary>
+        /// <param name="materialName">File name, without extension.</param>
+        /// <param name="albedo">The surface's colour texture.</param>
+        /// <param name="smoothness">How glossy the surface is.</param>
+        /// <returns>The material, or null when no lit shader or texture is available.</returns>
+        public static Material GetOrCreateTexturedSurface(string materialName, Texture2D albedo, float smoothness)
+        {
+            Shader shader = ResolveLitShader();
+
+            if (shader == null || albedo == null)
+            {
+                return null;
+            }
+
+            string path = $"{EditorMenus.GeneratedMaterialFolder}/{materialName}.mat";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+
+            if (material == null)
+            {
+                material = new Material(shader) { name = materialName };
+                AssetAuthoring.EnsureFolderExists(EditorMenus.GeneratedMaterialFolder);
+                AssetDatabase.CreateAsset(material, path);
+            }
+
+            // Rewritten every run, so a regenerated texture or retuned finish reaches the existing asset.
+            material.shader = shader;
+            material.SetTexture("_BaseMap", albedo);
+            material.SetColor("_BaseColor", Color.white);
+            material.SetFloat("_Metallic", 0f);
+            material.SetFloat("_Smoothness", smoothness);
+            EditorUtility.SetDirty(material);
+
+            return material;
+        }
+
         /// <summary>
         /// Loads or creates a surface material with metal, roughness and optional glow.
         /// </summary>

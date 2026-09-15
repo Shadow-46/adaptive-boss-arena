@@ -76,7 +76,8 @@ namespace AdaptiveBossArena.Editor.Art
         /// <returns>The mesh asset.</returns>
         public static Mesh HeaterShield(float width, float height, float thickness, float bulge)
         {
-            string name = Invariant($"HeaterShield_{width:0.##}x{height:0.##}x{thickness:0.###}_{bulge:0.###}");
+            // "uv": the shield carries planar texture coordinates for its painted face; earlier meshes had none.
+            string name = Invariant($"HeaterShield_{width:0.##}x{height:0.##}x{thickness:0.###}_{bulge:0.###}_uv");
 
             return LoadOrSave(name, () =>
             {
@@ -101,8 +102,112 @@ namespace AdaptiveBossArena.Editor.Art
                     builder.Quad(frontP, backP, backQ, frontQ);
                 }
 
-                return builder.Build();
+                return builder.Build(planarUv: true);
             });
+        }
+
+        /// <summary>Width of the knight's shield in metres.</summary>
+        public const float ShieldWidth = 0.52f;
+
+        /// <summary>Height of the knight's shield in metres.</summary>
+        public const float ShieldHeight = 0.72f;
+
+        /// <summary>
+        /// The face of a heater shield: painted planks worn to the wood, an iron rim, a boss and rivets.
+        /// </summary>
+        /// <remarks>
+        /// Untextured, the shield was one flat plane of colour, and under the boss's glow it read as a coloured
+        /// card strapped to the knight's arm. Generated to the same outline as the mesh, so the rim follows its
+        /// edge; mapped across the shield's width and height by the planar coordinates <see cref="HeaterShield"/>
+        /// gives it.
+        /// </remarks>
+        /// <param name="width">Shield width in metres, as given to <see cref="HeaterShield"/>.</param>
+        /// <param name="height">Shield height in metres, as given to <see cref="HeaterShield"/>.</param>
+        /// <returns>The texture asset.</returns>
+        public static Texture2D ShieldFace(float width, float height)
+        {
+            const int Width = 256, Height = 352;
+            const int Planks = 5;
+            string path = $"{MeshFolder}/ShieldFace.asset";
+
+            var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            bool created = texture == null;
+
+            if (created)
+            {
+                texture = new Texture2D(Width, Height, TextureFormat.RGBA32, true) { name = "ShieldFace" };
+            }
+
+            List<Vector2> outline = HeaterOutline(width, height, 24);
+            var paint = new Color(0.34f, 0.07f, 0.05f);
+            var wood = new Color(0.24f, 0.16f, 0.1f);
+            var iron = new Color(0.17f, 0.16f, 0.16f);
+
+            for (int y = 0; y < Height; y++)
+            {
+                for (int x = 0; x < Width; x++)
+                {
+                    float u = (x + 0.5f) / Width, v = (y + 0.5f) / Height;
+                    var point = new Vector2((u - 0.5f) * width, (v - 0.5f) * height);
+                    float edge = DistanceToOutline(point, outline);
+
+                    // Grain runs down the planks; wear shows the wood through the paint in noisy patches.
+                    int plank = Mathf.Min(Planks - 1, (int)(u * Planks));
+                    float grain = Mathf.PerlinNoise(u * 40f + plank * 7.3f, v * 3f);
+                    float wear = Mathf.PerlinNoise(u * 6f + 3.1f, v * 6f + 9.7f);
+                    Color colour = Color.Lerp(paint, wood, Mathf.Clamp01((wear - 0.52f) * 5f));
+                    colour *= 0.8f + grain * 0.35f + (plank % 2) * 0.05f;
+
+                    float seam = Mathf.Abs(u * Planks - Mathf.Round(u * Planks));
+                    colour *= seam < 0.03f ? 0.35f : 1f;
+
+                    float boss = Vector2.Distance(point, new Vector2(0f, height * 0.08f));
+                    bool onRim = edge < 0.03f;
+                    bool onBoss = boss < 0.065f;
+                    bool rivet = edge > 0.03f && edge < 0.05f && Mathf.Repeat((point.x + point.y) * 30f, 1f) < 0.12f;
+
+                    if (onRim || onBoss || rivet)
+                    {
+                        float pitting = Mathf.PerlinNoise(u * 60f, v * 60f);
+                        colour = iron * (0.75f + pitting * 0.5f) * (onBoss ? 1f + (0.065f - boss) * 6f : 1f);
+                    }
+
+                    // Grime darkening toward the edge, where hands and blows have worn it.
+                    colour *= Mathf.Lerp(0.7f, 1f, Mathf.Clamp01(edge / 0.12f));
+                    colour.a = 1f;
+                    texture.SetPixel(x, y, colour);
+                }
+            }
+
+            texture.Apply(true);
+
+            if (created)
+            {
+                AssetAuthoring.EnsureFolderExists(MeshFolder);
+                AssetDatabase.CreateAsset(texture, path);
+            }
+            else
+            {
+                EditorUtility.SetDirty(texture);
+            }
+
+            return texture;
+        }
+
+        /// <summary>Distance from a point to the nearest edge of a closed outline.</summary>
+        private static float DistanceToOutline(Vector2 point, List<Vector2> outline)
+        {
+            float nearest = float.MaxValue;
+
+            for (int i = 0; i < outline.Count; i++)
+            {
+                Vector2 a = outline[i], b = outline[(i + 1) % outline.Count];
+                Vector2 ab = b - a;
+                float t = Mathf.Clamp01(Vector2.Dot(point - a, ab) / Mathf.Max(1e-8f, ab.sqrMagnitude));
+                nearest = Mathf.Min(nearest, Vector2.Distance(point, a + ab * t));
+            }
+
+            return nearest;
         }
 
         /// <summary>
@@ -165,7 +270,7 @@ namespace AdaptiveBossArena.Editor.Art
             shield.transform.position = forearm.position + along * (armLength * 0.55f) + outward * 0.07f;
             shield.transform.rotation = Quaternion.LookRotation(outward, -along);
 
-            shield.AddComponent<MeshFilter>().sharedMesh = HeaterShield(0.52f, 0.72f, 0.035f, 0.05f);
+            shield.AddComponent<MeshFilter>().sharedMesh = HeaterShield(ShieldWidth, ShieldHeight, 0.035f, 0.05f);
             shield.AddComponent<MeshRenderer>().sharedMaterial = material;
         }
 
@@ -301,11 +406,37 @@ namespace AdaptiveBossArena.Editor.Art
                 _triangles.Add(start + 2);
             }
 
-            public Mesh Build()
+            /// <param name="planarUv">
+            /// Whether to give the mesh texture coordinates spread across its width and height, for a face seen
+            /// straight on, like a shield's.
+            /// </param>
+            public Mesh Build(bool planarUv = false)
             {
                 var mesh = new Mesh { vertices = _vertices.ToArray(), triangles = _triangles.ToArray() };
-                mesh.RecalculateNormals();
                 mesh.RecalculateBounds();
+
+                if (planarUv)
+                {
+                    Bounds bounds = mesh.bounds;
+                    var uvs = new Vector2[_vertices.Count];
+
+                    for (int i = 0; i < uvs.Length; i++)
+                    {
+                        uvs[i] = new Vector2(
+                            Mathf.InverseLerp(bounds.min.x, bounds.max.x, _vertices[i].x),
+                            Mathf.InverseLerp(bounds.min.y, bounds.max.y, _vertices[i].y));
+                    }
+
+                    mesh.uv = uvs;
+                }
+
+                mesh.RecalculateNormals();
+
+                if (planarUv)
+                {
+                    mesh.RecalculateTangents();
+                }
+
                 return mesh;
             }
         }
