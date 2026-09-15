@@ -73,6 +73,9 @@ namespace AdaptiveBossArena.Editor
             BuildArenaGeometry(config);
             Light directionalLight = BuildLighting(config);
             Environment.CathedralBuilder.BindSun(directionalLight);
+
+            // After every light and every stone exists: the probe grid, the Mixed lights and any earlier bake.
+            Environment.LightingBaker.PrepareScene(config);
             BuildSpawnMarkers(config);
             BuildManagers();
 

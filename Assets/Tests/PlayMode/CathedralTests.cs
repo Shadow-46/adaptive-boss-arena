@@ -94,6 +94,23 @@ namespace AdaptiveBossArena.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator TheBakedLightingSurvivesTheSceneBeingRebuilt()
+        {
+            // The scene is regenerated from code on every setup, headless and without a GPU to bake with. The
+            // bake is only worth anything if each rebuild picks it back up.
+            yield return null;
+
+            ReflectionProbe probe = Object.FindAnyObjectByType<ReflectionProbe>();
+
+            Assert.IsNotNull(probe, "The arena has no reflection probe.");
+            Assert.AreEqual(UnityEngine.Rendering.ReflectionProbeMode.Custom, probe.mode, "The reflection probe lost its bake.");
+            Assert.IsNotNull(probe.customBakedTexture, "The reflection probe has no baked cubemap.");
+
+            Assert.IsNotNull(LightmapSettings.lightProbes, "The arena lost its baked light probes.");
+            Assert.Greater(LightmapSettings.lightProbes.count, 0, "The arena lost its baked light probes.");
+        }
+
+        [UnityTest]
         public IEnumerator TheHazeIsOnAndNeverBlack()
         {
             yield return null;
