@@ -117,6 +117,21 @@ namespace AdaptiveBossArena.Game
         private ITimeService _time;
         private Vector3 _anchor;
         private Vector3 _smoothedLookahead;
+
+        /// <summary>How much of the boom the arena wall took away this frame, in metres.</summary>
+        private float _boomLoss;
+
+        /// <summary>
+        /// Distance kept between the camera and the wall ring. Enough that the near clip plane never
+        /// touches the parapet, so the view is never half stone.
+        /// </summary>
+        private const float WallClearance = 0.6f;
+
+        /// <summary>Metres the camera rises for each metre of boom the wall takes away, to look down over the player.</summary>
+        private const float RisePerLostMetre = 0.45f;
+
+        /// <summary>Extra degrees of pitch at a fully collapsed boom, so a raised camera still frames the player.</summary>
+        private const float PitchAtCollapsedBoom = 32f;
         private bool _isLockedOn;
 
         /// <summary>The vantage point currently in use.</summary>
@@ -279,8 +294,16 @@ namespace AdaptiveBossArena.Game
                            + new Vector3(0f, _config.CameraHeight, -_config.CameraDistance);
 
                 default:
-                    Vector3 back = -OrbitForward() * _distance;
-                    return FocusPoint() + back + Vector3.up * _height;
+                    Vector3 focus = FocusPoint();
+                    Vector3 desired = focus - OrbitForward() * _distance + Vector3.up * _height;
+
+                    // Knockback and wall shoves pin the player against the ring all the time now, and the
+                    // boom then put the camera outside it, looking at the back of the wall. Kept inside,
+                    // it rises for what it lost and looks over the player instead.
+                    Vector3 confined = ConfineToArena(desired, focus, _config.Radius - WallClearance, out _boomLoss);
+                    confined.y += _boomLoss * RisePerLostMetre;
+
+                    return confined;
             }
         }
 
@@ -296,8 +319,58 @@ namespace AdaptiveBossArena.Game
                     return Quaternion.Euler(_config.CameraPitchDegrees, 0f, 0f);
 
                 default:
-                    return OrbitRotation(OrbitForward(), _pitchDegrees);
+                    float collapsed = _distance > 0f ? Mathf.Clamp01(_boomLoss / _distance) : 0f;
+                    return OrbitRotation(OrbitForward(), _pitchDegrees + PitchAtCollapsedBoom * collapsed);
             }
+        }
+
+        /// <summary>
+        /// Pulls a camera position that has left the arena back inside, along the line from what it frames.
+        /// </summary>
+        /// <remarks>
+        /// Along the boom rather than straight toward the centre, so the camera keeps looking the way it was
+        /// and only comes closer. Height is left alone: how much to rise for the lost distance is framing, and
+        /// belongs to the caller. Horizontal only, because the wall is a vertical ring.
+        /// </remarks>
+        /// <param name="desired">Where the camera wants to be.</param>
+        /// <param name="focus">The point it frames, assumed inside the ring.</param>
+        /// <param name="radius">Horizontal radius the camera must stay within.</param>
+        /// <param name="lost">How much of the horizontal boom was taken away, in metres.</param>
+        /// <returns>The confined position.</returns>
+        public static Vector3 ConfineToArena(Vector3 desired, Vector3 focus, float radius, out float lost)
+        {
+            lost = 0f;
+
+            var point = new Vector2(desired.x, desired.z);
+
+            if (point.sqrMagnitude <= radius * radius)
+            {
+                return desired;
+            }
+
+            var from = new Vector2(focus.x, focus.z);
+            Vector2 boom = point - from;
+
+            // Where the boom leaves the circle: |from + t * boom| = radius, taking the exit root.
+            float a = Vector2.Dot(boom, boom);
+            float b = 2f * Vector2.Dot(from, boom);
+            float c = Vector2.Dot(from, from) - radius * radius;
+            float discriminant = b * b - 4f * a * c;
+
+            if (a <= Mathf.Epsilon || discriminant < 0f || c > 0f)
+            {
+                // The framed point is itself outside the ring; the best available is the nearest point on it.
+                Vector2 onRing = point.normalized * radius;
+                lost = Vector2.Distance(point, onRing);
+                return new Vector3(onRing.x, desired.y, onRing.y);
+            }
+
+            float t = Mathf.Clamp01((-b + Mathf.Sqrt(discriminant)) / (2f * a));
+            Vector2 kept = from + boom * t;
+
+            lost = boom.magnitude * (1f - t);
+
+            return new Vector3(kept.x, desired.y, kept.y);
         }
 
         /// <summary>The third-person orientation: looking along a heading, tipped down by a pitch.</summary>
