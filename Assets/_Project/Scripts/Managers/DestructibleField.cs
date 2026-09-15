@@ -110,7 +110,7 @@ namespace AdaptiveBossArena.Game
             foreach (Destructible destructible in _destructibles)
             {
                 if (destructible != null &&
-                    DestructionRules.Reaches(impact, reach, destructible.Centre) &&
+                    DestructionRules.Reaches(impact, reach + destructible.ReachBonus, destructible.Centre) &&
                     destructible.Break(impact, _pool, _random, _pieceSpeed))
                 {
                     broken++;

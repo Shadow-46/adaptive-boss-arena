@@ -51,6 +51,14 @@ namespace AdaptiveBossArena.Editor.Environment
         private const int ShaftCount = 5;
         private const float ParapetCrownHeight = 0.9f;
         private const int ParapetCrownPieces = 5;
+        private const int ColumnPieces = 10;
+
+        /// <summary>
+        /// How much further a column can be broken from than the impact's own reach: the three and a half
+        /// metres it stands behind the wall ring, less a margin so only a blow landing squarely in front of
+        /// it counts.
+        /// </summary>
+        private const float ColumnReachBonus = 3.2f;
 
         /// <summary>Live debris ceilings: the plan's physics budget of 40 bodies on WebGL, a generous 150 on desktop.</summary>
         private const int WebDebrisCapacity = 40;
@@ -184,7 +192,7 @@ namespace AdaptiveBossArena.Editor.Environment
             GameObject crown = Block(parent, wall.name + "_Crown", crownSize, 2f, _brick,
                 wall.position + Vector3.up * (baseHeight * 0.5f), wall.rotation);
 
-            crown.AddComponent<Destructible>().Bind(crown.GetComponent<MeshRenderer>(), crownSize, ParapetCrownPieces);
+            crown.AddComponent<Destructible>().Bind(new Renderer[] { crown.GetComponent<MeshRenderer>() }, crownSize, ParapetCrownPieces);
         }
 
         private static void BuildColumns(Transform root, float radius)
@@ -210,10 +218,16 @@ namespace AdaptiveBossArena.Editor.Environment
                     continue;
                 }
 
-                Block(columns, $"Shaft_{i}", new Vector3(ColumnWidth, ColumnHeight, ColumnWidth), 1.5f, _block,
+                var shaftSize = new Vector3(ColumnWidth, ColumnHeight, ColumnWidth);
+                GameObject shaft = Block(columns, $"Shaft_{i}", shaftSize, 1.5f, _block,
                     foot + Vector3.up * (1f + ColumnHeight * 0.5f), facing);
-                Block(columns, $"Capital_{i}", new Vector3(2.4f, 0.8f, 2.4f), 1.5f, _block,
+                GameObject capital = Block(columns, $"Capital_{i}", new Vector3(2.4f, 0.8f, 2.4f), 1.5f, _block,
                     foot + Vector3.up * (1.4f + ColumnHeight), facing);
+
+                // The plinth stays: a column that comes down leaves its footing, like the two already fallen.
+                shaft.AddComponent<Destructible>().Bind(
+                    new Renderer[] { shaft.GetComponent<MeshRenderer>(), capital.GetComponent<MeshRenderer>() },
+                    shaftSize, ColumnPieces, ColumnReachBonus);
 
                 if (i % 2 == 0)
                 {
@@ -232,6 +246,47 @@ namespace AdaptiveBossArena.Editor.Environment
                     Block(columns, $"Lintel_{i}", new Vector3(1.4f, 1.6f, chord), 1.5f, _block,
                         middle + Vector3.up * (2.6f + ColumnHeight), Quaternion.Euler(0f, -midAngle, 0f));
                 }
+            }
+
+            GiveColumnsTheirLintels(columns);
+        }
+
+        /// <summary>
+        /// Adds the lintels either side of each standing column to what disappears when it breaks.
+        /// </summary>
+        /// <remarks>
+        /// A lintel is carried by two columns, and one left spanning to a column that has come down would hang
+        /// in the air. Done after every column and lintel exists, because a column's left-hand lintel is built
+        /// in the previous turn of the loop and its right-hand one after it.
+        /// </remarks>
+        private static void GiveColumnsTheirLintels(Transform columns)
+        {
+            for (int i = 0; i < ColumnCount; i++)
+            {
+                Transform shaft = columns.Find($"Shaft_{i}");
+
+                if (shaft == null || !shaft.TryGetComponent(out Destructible destructible))
+                {
+                    continue;
+                }
+
+                var parts = new System.Collections.Generic.List<Renderer>
+                {
+                    shaft.GetComponent<MeshRenderer>(),
+                    columns.Find($"Capital_{i}").GetComponent<MeshRenderer>()
+                };
+
+                foreach (string lintel in new[] { $"Lintel_{i}", $"Lintel_{(i + ColumnCount - 1) % ColumnCount}" })
+                {
+                    Transform found = columns.Find(lintel);
+
+                    if (found != null)
+                    {
+                        parts.Add(found.GetComponent<MeshRenderer>());
+                    }
+                }
+
+                destructible.Bind(parts.ToArray(), new Vector3(ColumnWidth, ColumnHeight, ColumnWidth), ColumnPieces, ColumnReachBonus);
             }
         }
 

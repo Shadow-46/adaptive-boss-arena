@@ -21,15 +21,20 @@ namespace AdaptiveBossArena.Combat
     public sealed class Destructible : MonoBehaviour
     {
         [SerializeField]
-        [Tooltip("The intact stone, hidden when this breaks.")]
-        private Renderer _intact;
+        [Tooltip("Every visible part of the intact stone, hidden when this breaks.")]
+        private Renderer[] _intact = new Renderer[0];
+
+        [SerializeField]
+        [Min(0f)]
+        [Tooltip("Extra reach for stone that stands back from where blows land, such as a column behind the wall.")]
+        private float _reachBonus;
 
         [SerializeField]
         [Tooltip("Dimensions of the intact stone, in metres, which the pieces are cut from.")]
         private Vector3 _size = Vector3.one;
 
         [SerializeField]
-        [Range(1, 12)]
+        [Range(1, 16)]
         [Tooltip("How many pieces it breaks into.")]
         private int _pieceCount = 5;
 
@@ -39,15 +44,25 @@ namespace AdaptiveBossArena.Combat
         /// <summary>Centre of the intact stone.</summary>
         public Vector3 Centre => transform.position;
 
+        /// <summary>How much further than an impact's own reach this stone can be broken from.</summary>
+        /// <remarks>
+        /// The columns stand three metres behind the wall ring, where no blow ever lands. Without this they
+        /// could only break from impacts the fight cannot produce; with it, a charge into the wall right in
+        /// front of one brings it down.
+        /// </remarks>
+        public float ReachBonus => _reachBonus;
+
         /// <summary>Assigns the stone and its size. Used by the scene generator.</summary>
-        /// <param name="intact">The intact stone's renderer.</param>
-        /// <param name="size">Its dimensions, in metres.</param>
+        /// <param name="intact">Every visible part of the intact stone.</param>
+        /// <param name="size">Its dimensions, in metres, which the pieces are cut from.</param>
         /// <param name="pieceCount">How many pieces it breaks into.</param>
-        public void Bind(Renderer intact, Vector3 size, int pieceCount)
+        /// <param name="reachBonus">Extra reach, for stone standing back from where blows land.</param>
+        public void Bind(Renderer[] intact, Vector3 size, int pieceCount, float reachBonus = 0f)
         {
-            _intact = intact;
+            _intact = intact ?? new Renderer[0];
             _size = size;
             _pieceCount = pieceCount;
+            _reachBonus = reachBonus;
         }
 
         /// <summary>Breaks the stone, throwing its pieces away from the impact.</summary>
@@ -64,11 +79,7 @@ namespace AdaptiveBossArena.Combat
             }
 
             IsBroken = true;
-
-            if (_intact != null)
-            {
-                _intact.enabled = false;
-            }
+            SetVisible(false);
 
             if (pool == null || random == null)
             {
@@ -102,10 +113,17 @@ namespace AdaptiveBossArena.Combat
         public void Restore()
         {
             IsBroken = false;
+            SetVisible(true);
+        }
 
-            if (_intact != null)
+        private void SetVisible(bool visible)
+        {
+            foreach (Renderer part in _intact)
             {
-                _intact.enabled = true;
+                if (part != null)
+                {
+                    part.enabled = visible;
+                }
             }
         }
     }

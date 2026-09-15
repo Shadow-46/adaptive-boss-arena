@@ -53,6 +53,25 @@ namespace AdaptiveBossArena.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator ASlamAtTheWallInFrontOfAColumnBringsTheColumnDown()
+        {
+            // The columns stand behind the wall ring, where no blow lands. A heavy one at the wall squarely
+            // in front of a column must still reach it, or the tallest stone in the room could never fall.
+            Destructible column = _field.Destructibles.First(d => d.name == "Shaft_0");
+            Destructible opposite = _field.Destructibles.First(d => d.name == "Shaft_4");
+
+            Vector3 toColumn = column.Centre;
+            toColumn.y = 0f;
+
+            Object.FindAnyObjectByType<HazardField>().Spawn(toColumn.normalized * 15.5f, 3f, 0f, 0.5f);
+
+            yield return null;
+
+            Assert.IsTrue(column.IsBroken, "A slam at the wall in front of the column left it standing.");
+            Assert.IsFalse(opposite.IsBroken, "A slam on one side brought down the column opposite.");
+        }
+
+        [UnityTest]
         public IEnumerator BreakingEverythingStaysInsideTheDebrisBudget()
         {
             _field.BreakWithin(Vector3.zero, 100f);
