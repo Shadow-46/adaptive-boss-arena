@@ -78,11 +78,14 @@ namespace AdaptiveBossArena.Tests.PlayMode
 
             Assert.IsTrue(_ragdoll.IsActive, "The killing blow did not wake the ragdoll.");
 
-            float waited = 0f;
+            // Game time, not real time: a death plays in slow motion, so a fixed real-time window catches the
+            // body part-way down and passes or fails depending on how the slow motion happened to fall.
+            float waited = 0f, realWaited = 0f;
 
-            while (waited < 2f)
+            while (waited < 1.2f && realWaited < 10f)
             {
-                waited += Time.unscaledDeltaTime;
+                waited += Time.deltaTime;
+                realWaited += Time.unscaledDeltaTime;
 
                 Assert.IsFalse(float.IsNaN(hips.position.y), "The ragdoll produced a NaN position.");
 
