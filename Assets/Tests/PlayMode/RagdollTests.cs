@@ -72,7 +72,12 @@ namespace AdaptiveBossArena.Tests.PlayMode
         public IEnumerator DeathDropsTheBodyAndARetryStandsItBackUp()
         {
             Rigidbody hips = _ragdoll.Bodies[0];
-            float standing = hips.position.y;
+            Rigidbody head = _ragdoll.Bodies[2];
+
+            // Measured by the head, not the hips. How high the hips rest depends on how the body lands - one run
+            // left the corpse face-down and kneeling, head on the floor and hips still 0.58 m up - while a head
+            // that has dropped most of a metre means the body is down whichever way it fell.
+            float standingHead = head.position.y;
 
             _player.TakeDamage(KillingBlow);
 
@@ -92,7 +97,10 @@ namespace AdaptiveBossArena.Tests.PlayMode
                 yield return null;
             }
 
-            Assert.Less(hips.position.y, standing - 0.25f, "The hips never fell.");
+            Assert.Less(head.position.y, standingHead - 0.6f,
+                $"The body never went down: head {head.position.y:F2} m from {standingHead:F2}, hips {hips.position.y:F2} m, " +
+                $"after {waited:F2} s game time / {realWaited:F2} s real, time scale {Time.timeScale:F2}, " +
+                $"player at {_player.transform.position}.");
 
             _player.ResetForNewAttempt(new Vector3(0f, 0f, -6f));
 
