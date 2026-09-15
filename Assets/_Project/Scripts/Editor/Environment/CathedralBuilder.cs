@@ -46,7 +46,11 @@ namespace AdaptiveBossArena.Editor.Environment
         private const float OuterWallHeight = 18f;
         private const float OuterWallThickness = 1.5f;
         private const float WindowSill = 5f;
-        private const float WindowHead = 13f;
+        /// <summary>Where the window's pointed arch springs from its straight sides.</summary>
+        private const float WindowSpring = 9.5f;
+
+        /// <summary>The arch's point above its springing, against the window's width: a steep lancet.</summary>
+        private const float WindowArchRise = 0.75f;
         private const int DebrisCount = 34;
         private const int ShaftCount = 5;
         private const float ParapetCrownHeight = 0.9f;
@@ -399,10 +403,14 @@ namespace AdaptiveBossArena.Editor.Environment
                     continue;
                 }
 
-                float headHeight = OuterWallHeight - WindowHead;
+                float headHeight = OuterWallHeight - WindowSpring;
 
-                Block(walls, $"Head_{face}", new Vector3(OuterWallThickness, headHeight, window), 2f, _brick,
-                    centre + Vector3.up * (WindowHead + headHeight * 0.5f), facing);
+                // A pointed arch over the window rather than a flat lintel: the rectangular openings read as a
+                // warehouse, and the lancet is most of what says cathedral from the fighting floor.
+                GameObject head = Block(walls, $"Head_{face}", Vector3.one, 2f, _brick,
+                    centre + Vector3.up * (WindowSpring + headHeight * 0.5f), facing);
+                head.GetComponent<MeshFilter>().sharedMesh = TiledMeshes.PointedArchHead(
+                    OuterWallThickness, headHeight, window, window * WindowArchRise, 2f);
 
                 float bayDepth = apothem - (radius + ColumnRingOffset) + 1f;
                 Vector3 bayCentre = OnRing(angle, apothem - bayDepth * 0.5f);

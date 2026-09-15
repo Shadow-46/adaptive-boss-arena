@@ -51,6 +51,148 @@ namespace AdaptiveBossArena.Editor.Environment
             return mesh;
         }
 
+        /// <summary>
+        /// Loads or creates the wall above a pointed window: a slab whose underside is a Gothic arch.
+        /// </summary>
+        /// <remarks>
+        /// Laid out like <see cref="Box"/> with size (thickness, height, span), centred, so it drops into the
+        /// place of the flat-bottomed block it replaces. Rectangular window heads read as a warehouse; the
+        /// pointed arch is most of what says cathedral from the fighting floor.
+        /// </remarks>
+        /// <param name="thickness">Wall thickness in metres, along x.</param>
+        /// <param name="height">Slab height from the arch's springing to its top, along y.</param>
+        /// <param name="span">Window width in metres, along z.</param>
+        /// <param name="rise">Height of the arch's point above its springing; at least half the span.</param>
+        /// <param name="metresPerTile">How many metres one repeat of the texture covers.</param>
+        /// <returns>The mesh asset.</returns>
+        public static Mesh PointedArchHead(float thickness, float height, float span, float rise, float metresPerTile)
+        {
+            string name = string.Format(
+                System.Globalization.CultureInfo.InvariantCulture,
+                "ArchHead_{0:0.##}x{1:0.##}x{2:0.##}_r{3:0.##}_{4:0.##}", thickness, height, span, rise, metresPerTile);
+            string path = MeshFolder + "/" + name + ".asset";
+
+            var existing = AssetDatabase.LoadAssetAtPath<Mesh>(path);
+
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            Mesh mesh = BuildArchHead(thickness, height, span, Mathf.Clamp(rise, span * 0.5f, height * 0.95f), Mathf.Max(0.01f, metresPerTile));
+            mesh.name = name;
+
+            AssetAuthoring.EnsureFolderExists(MeshFolder);
+            AssetDatabase.CreateAsset(mesh, path);
+
+            return mesh;
+        }
+
+        /// <summary>Height of a pointed arch's underside above its springing, at a point across its span.</summary>
+        /// <remarks>
+        /// Two circular arcs of equal radius, each centred on the far side of the middle, meeting in a point.
+        /// The radius is the one that brings the point to the requested rise.
+        /// </remarks>
+        /// <param name="z">Position across the span, from minus half the span to plus half.</param>
+        /// <param name="span">Window width.</param>
+        /// <param name="rise">Height of the point.</param>
+        /// <returns>The underside's height.</returns>
+        public static float PointedArchHeight(float z, float span, float rise)
+        {
+            float half = span * 0.5f;
+            float radius = (rise * rise + half * half) / span;
+            float centre = radius - half;
+            float fromCentre = Mathf.Abs(z) + centre;
+
+            return Mathf.Sqrt(Mathf.Max(0f, radius * radius - fromCentre * fromCentre));
+        }
+
+        private static Mesh BuildArchHead(float thickness, float height, float span, float rise, float tile)
+        {
+            const int Slices = 24;
+
+            var vertices = new System.Collections.Generic.List<Vector3>();
+            var uvs = new System.Collections.Generic.List<Vector2>();
+            var triangles = new System.Collections.Generic.List<int>();
+
+            float bottom = -height * 0.5f, top = height * 0.5f, halfT = thickness * 0.5f;
+
+            Vector3 Underside(int i, float x)
+            {
+                float z = -span * 0.5f + span * i / Slices;
+                return new Vector3(x, bottom + PointedArchHeight(z, span, rise), z);
+            }
+
+            // The two faces of the wall: each slice is a quad from the arch up to the top.
+            foreach (float x in new[] { halfT, -halfT })
+            {
+                var outward = new Vector3(Mathf.Sign(x), 0f, 0f);
+
+                for (int i = 0; i < Slices; i++)
+                {
+                    Vector3 a = Underside(i, x), b = Underside(i + 1, x);
+                    AddQuad(a, b, new Vector3(x, top, b.z), new Vector3(x, top, a.z), outward,
+                        p => new Vector2(p.z / tile, p.y / tile), vertices, uvs, triangles);
+                }
+            }
+
+            // The arch's underside, facing down into the opening and in toward its middle.
+            float along = 0f;
+
+            for (int i = 0; i < Slices; i++)
+            {
+                Vector3 a = Underside(i, halfT), b = Underside(i + 1, halfT);
+                float length = Vector3.Distance(a, b);
+                Vector3 midpoint = (a + b) * 0.5f;
+                Vector3 away = new Vector3(0f, bottom - 1f, 0f) - new Vector3(0f, midpoint.y, midpoint.z * 0.5f);
+                float start = along;
+
+                AddQuad(a, b, Underside(i + 1, -halfT), Underside(i, -halfT), away,
+                    p => new Vector2(Mathf.Approximately(p.z, a.z) ? start / tile : (start + length) / tile, (p.x + halfT) / tile),
+                    vertices, uvs, triangles);
+
+                along += length;
+            }
+
+            // The top, in case a high camera ever looks down on it.
+            AddQuad(new Vector3(halfT, top, -span * 0.5f), new Vector3(halfT, top, span * 0.5f),
+                new Vector3(-halfT, top, span * 0.5f), new Vector3(-halfT, top, -span * 0.5f), Vector3.up,
+                p => new Vector2(p.z / tile, p.x / tile), vertices, uvs, triangles);
+
+            var mesh = new Mesh();
+            mesh.SetVertices(vertices);
+            mesh.SetUVs(0, uvs);
+            mesh.SetTriangles(triangles, 0);
+            mesh.RecalculateNormals();
+            mesh.RecalculateTangents();
+            mesh.RecalculateBounds();
+
+            return mesh;
+        }
+
+        /// <summary>Adds a quad with its own vertices, wound so its front faces the given direction.</summary>
+        private static void AddQuad(
+            Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 facing, System.Func<Vector3, Vector2> uv,
+            System.Collections.Generic.List<Vector3> vertices, System.Collections.Generic.List<Vector2> uvs,
+            System.Collections.Generic.List<int> triangles)
+        {
+            int start = vertices.Count;
+            vertices.Add(a); vertices.Add(b); vertices.Add(c); vertices.Add(d);
+            uvs.Add(uv(a)); uvs.Add(uv(b)); uvs.Add(uv(c)); uvs.Add(uv(d));
+
+            // Unity's front face is clockwise seen from outside, where Cross(b - a, c - a) points outward.
+            bool outward = Vector3.Dot(Vector3.Cross(b - a, c - a), facing) > 0f;
+
+            if (outward)
+            {
+                triangles.AddRange(new[] { start, start + 1, start + 2, start, start + 2, start + 3 });
+            }
+            else
+            {
+                triangles.AddRange(new[] { start, start + 2, start + 1, start, start + 3, start + 2 });
+            }
+        }
+
         private static Mesh BuildBox(Vector3 size, float tile)
         {
             Vector3 half = size * 0.5f;
