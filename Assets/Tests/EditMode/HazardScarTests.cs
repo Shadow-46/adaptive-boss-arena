@@ -40,9 +40,9 @@ namespace AdaptiveBossArena.Tests.EditMode
         {
             float brightest = 0f, darkestOpaque = 1f;
 
-            for (int y = 0; y < _scar.height; y += 4)
+            for (int y = 0; y < _scar.height; y += 1)
             {
-                for (int x = 0; x < _scar.width; x += 4)
+                for (int x = 0; x < _scar.width; x += 1)
                 {
                     Color c = _scar.GetPixel(x, y);
 

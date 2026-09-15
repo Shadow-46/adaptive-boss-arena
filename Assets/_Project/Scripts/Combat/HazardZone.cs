@@ -47,7 +47,7 @@ namespace AdaptiveBossArena.Combat
         private const float MaxAlpha = 0.95f;
 
         /// <summary>Above one, so the embers in the scar's cracks bloom; the texture carries the colours.</summary>
-        private static readonly Color HazardColor = new Color(1.6f, 1.25f, 1.1f);
+        private static readonly Color HazardColor = new Color(1.25f, 1.1f, 1.05f);
 
         /// <summary>The scar's width against the damaging diameter.</summary>
         private const float ScarReach = 2.3f;

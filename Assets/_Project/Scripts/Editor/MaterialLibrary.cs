@@ -607,7 +607,7 @@ namespace AdaptiveBossArena.Editor
             {
                 float angle = crack * (Mathf.PI * 2f / 9f) + random.NextFloat(-0.25f, 0.25f);
                 Vector2 point = Vector2.zero;
-                float width = random.NextFloat(0.012f, 0.02f);
+                float width = random.NextFloat(0.007f, 0.012f);
 
                 for (int step = 0; step < 11; step++)
                 {
@@ -634,7 +634,7 @@ namespace AdaptiveBossArena.Editor
             }
 
             var scorch = new Color(0.05f, 0.03f, 0.02f);
-            var ember = new Color(1f, 0.42f, 0.1f);
+            var ember = new Color(0.95f, 0.28f, 0.05f);
 
             for (int y = 0; y < Size; y++)
             {
@@ -655,11 +655,11 @@ namespace AdaptiveBossArena.Editor
 
                     float body = 1f - Environment.CathedralBuilder.Edge(0.3f, 1f, r);
                     float cracks = crackStrength * (1f - Environment.CathedralBuilder.Edge(0.7f, 1f, r));
-                    float heart = Mathf.Exp(-(r * r) / 0.02f);
+                    float heart = Mathf.Exp(-(r * r) / 0.008f);
                     float glow = Mathf.Max(cracks, heart * 0.8f);
 
                     Color colour = Color.Lerp(scorch, ember, glow);
-                    colour.a = Mathf.Clamp01(Mathf.Max(body * 0.7f, glow));
+                    colour.a = Mathf.Clamp01(Mathf.Max(body * 0.85f, glow));
                     texture.SetPixel(x, y, colour);
                 }
             }
