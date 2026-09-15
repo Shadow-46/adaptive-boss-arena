@@ -401,24 +401,130 @@ namespace AdaptiveBossArena.Editor
             const string materialName = "HazardDisc";
             string path = EditorMenus.GeneratedMaterialFolder + "/" + materialName + ".mat";
 
-            var existing = AssetDatabase.LoadAssetAtPath<Material>(path);
-
-            if (existing != null)
-            {
-                return existing;
-            }
-
-            Material material = CreateTransparentUnlit(materialName);
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
 
             if (material == null)
             {
-                return null;
+                material = CreateTransparentUnlit(materialName);
+
+                if (material == null)
+                {
+                    return null;
+                }
+
+                AssetAuthoring.EnsureFolderExists(EditorMenus.GeneratedMaterialFolder);
+                AssetDatabase.CreateAsset(material, path);
             }
 
-            AssetAuthoring.EnsureFolderExists(EditorMenus.GeneratedMaterialFolder);
-            AssetDatabase.CreateAsset(material, path);
+            // A scorched crater with ember cracks rather than a flat red disc: the disc read as a UI marker lying
+            // on the floor, not as ground a slam had broken. Refreshed on every run so a change reaches the asset.
+            material.SetTexture("_BaseMap", ScorchCracks());
+            EditorUtility.SetDirty(material);
 
             return material;
+        }
+
+        /// <summary>
+        /// A ground scar: a scorched centre fading to its rim, split by glowing cracks radiating from the impact.
+        /// </summary>
+        /// <remarks>
+        /// Colour carries the embers and alpha the extent, so the hazard's tint and fade still come from the
+        /// zone's per-instance colour. Cracks are grown from a fixed seed, so every regeneration draws the same scar.
+        /// </remarks>
+        private static Texture2D ScorchCracks()
+        {
+            const int Size = 384;
+            const string Name = "HazardScorchCracks";
+            string path = EditorMenus.GeneratedMaterialFolder + "/" + Name + ".asset";
+
+            var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            bool created = texture == null;
+
+            if (created)
+            {
+                texture = new Texture2D(Size, Size, TextureFormat.RGBA32, true) { name = Name };
+            }
+
+            texture.wrapMode = TextureWrapMode.Clamp;
+
+            var segments = new System.Collections.Generic.List<(Vector2 A, Vector2 B, float Width)>();
+            var random = new Core.Services.XorShiftRandomProvider(9173u);
+
+            // Main cracks run outward from the impact, wandering as they go; some fork once.
+            for (int crack = 0; crack < 9; crack++)
+            {
+                float angle = crack * (Mathf.PI * 2f / 9f) + random.NextFloat(-0.25f, 0.25f);
+                Vector2 point = Vector2.zero;
+                float width = random.NextFloat(0.012f, 0.02f);
+
+                for (int step = 0; step < 11; step++)
+                {
+                    angle += random.NextFloat(-0.35f, 0.35f);
+                    Vector2 next = point + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * random.NextFloat(0.06f, 0.1f);
+                    segments.Add((point, next, width * (1f - step / 12f)));
+
+                    if (step == 4 && random.NextBool(0.6f))
+                    {
+                        float forkAngle = angle + random.NextFloat(0.5f, 0.9f) * (random.NextBool() ? 1f : -1f);
+                        Vector2 fork = next;
+
+                        for (int f = 0; f < 5; f++)
+                        {
+                            forkAngle += random.NextFloat(-0.3f, 0.3f);
+                            Vector2 forkNext = fork + new Vector2(Mathf.Cos(forkAngle), Mathf.Sin(forkAngle)) * 0.06f;
+                            segments.Add((fork, forkNext, width * 0.6f * (1f - f / 6f)));
+                            fork = forkNext;
+                        }
+                    }
+
+                    point = next;
+                }
+            }
+
+            var scorch = new Color(0.05f, 0.03f, 0.02f);
+            var ember = new Color(1f, 0.42f, 0.1f);
+
+            for (int y = 0; y < Size; y++)
+            {
+                for (int x = 0; x < Size; x++)
+                {
+                    var p = new Vector2((x + 0.5f) / Size * 2f - 1f, (y + 0.5f) / Size * 2f - 1f);
+                    float r = p.magnitude;
+
+                    float crackStrength = 0f;
+
+                    foreach ((Vector2 a, Vector2 b, float width) in segments)
+                    {
+                        Vector2 ab = b - a;
+                        float t = Mathf.Clamp01(Vector2.Dot(p - a, ab) / Mathf.Max(1e-6f, ab.sqrMagnitude));
+                        float distance = Vector2.Distance(p, a + ab * t);
+                        crackStrength = Mathf.Max(crackStrength, Mathf.Exp(-(distance * distance) / (width * width)));
+                    }
+
+                    float body = 1f - Environment.CathedralBuilder.Edge(0.3f, 1f, r);
+                    float cracks = crackStrength * (1f - Environment.CathedralBuilder.Edge(0.7f, 1f, r));
+                    float heart = Mathf.Exp(-(r * r) / 0.02f);
+                    float glow = Mathf.Max(cracks, heart * 0.8f);
+
+                    Color colour = Color.Lerp(scorch, ember, glow);
+                    colour.a = Mathf.Clamp01(Mathf.Max(body * 0.7f, glow));
+                    texture.SetPixel(x, y, colour);
+                }
+            }
+
+            texture.Apply(true);
+
+            if (created)
+            {
+                AssetAuthoring.EnsureFolderExists(EditorMenus.GeneratedMaterialFolder);
+                AssetDatabase.CreateAsset(texture, path);
+            }
+            else
+            {
+                EditorUtility.SetDirty(texture);
+            }
+
+            return texture;
         }
 
         /// <summary>

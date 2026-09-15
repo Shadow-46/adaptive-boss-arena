@@ -42,13 +42,15 @@ namespace AdaptiveBossArena.Combat
         /// <summary>Height the disc floats above the floor, to avoid z-fighting with it.</summary>
         private const float DiscLift = 0.02f;
 
-        /// <summary>Thinness of the disc primitive.</summary>
-        private const float DiscThickness = 0.02f;
 
         /// <summary>Peak opacity of the disc while active.</summary>
-        private const float MaxAlpha = 0.5f;
+        private const float MaxAlpha = 0.95f;
 
-        private static readonly Color HazardColor = new Color(1f, 0.35f, 0.18f);
+        /// <summary>Above one, so the embers in the scar's cracks bloom; the texture carries the colours.</summary>
+        private static readonly Color HazardColor = new Color(1.6f, 1.25f, 1.1f);
+
+        /// <summary>The scar's width against the damaging diameter.</summary>
+        private const float ScarReach = 2.3f;
 
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
 
@@ -72,7 +74,10 @@ namespace AdaptiveBossArena.Combat
         /// <param name="material">The transparent material every zone tints and reuses.</param>
         public void Construct(Material material)
         {
-            GameObject disc = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            // A flat quad carrying the scorch texture, lying on the floor. It was a thin cylinder in a flat colour,
+            // which read as a marker placed on the ground rather than ground a slam had broken.
+            GameObject disc = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            disc.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
             disc.name = "Disc";
 
             // The primitive's capsule collider would intercept attacks and movement; a hazard is a
@@ -113,7 +118,8 @@ namespace AdaptiveBossArena.Combat
             // full diameter and the vertical scale is half the thickness.
             if (_disc != null)
             {
-                _disc.localScale = new Vector3(_radius * 2f, DiscThickness * 0.5f, _radius * 2f);
+                // The scar reaches a little past the damaging radius, so its cracks and faded rim sit outside the danger.
+                _disc.localScale = new Vector3(_radius * ScarReach, _radius * ScarReach, 1f);
             }
 
             gameObject.SetActive(true);
