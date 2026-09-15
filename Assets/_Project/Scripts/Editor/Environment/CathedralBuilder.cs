@@ -52,6 +52,10 @@ namespace AdaptiveBossArena.Editor.Environment
         /// <summary>The arch's point above its springing, against the window's width: a steep lancet.</summary>
         private const float WindowArchRise = 0.75f;
         private const int DebrisCount = 34;
+        private const int StainCount = 16;
+
+        /// <summary>Height of floor stains above the stone: clear of it, and below the scars at 0.02.</summary>
+        private const float StainLift = 0.006f;
         private const int ShaftCount = 5;
         private const float ParapetCrownHeight = 0.9f;
         private const int ParapetCrownPieces = 5;
@@ -108,6 +112,7 @@ namespace AdaptiveBossArena.Editor.Environment
             float radius = config.Radius;
 
             BuildFloor(root.transform, arenaRoot, radius);
+            BuildFloorStains(root.transform, radius);
             ReskinWallRing(root.transform, arenaRoot);
             BuildColumns(root.transform, radius);
             BuildOuterWalls(root.transform, radius);
@@ -142,6 +147,93 @@ namespace AdaptiveBossArena.Editor.Environment
             float span = (radius + OuterWallApothemOffset + OuterWallThickness) * 2f + 4f;
             Block(root, "NaveFloor", new Vector3(span, 0.3f, span), 2.5f, _floor,
                 new Vector3(0f, -0.15f, 0f), Quaternion.identity);
+        }
+
+        /// <summary>
+        /// Old stains across the nave, and grime gathered where the floor meets the wall ring.
+        /// </summary>
+        /// <remarks>
+        /// The floor was one clean tiled plane under an even light: the largest thing on screen, and the most
+        /// obviously generated. Seeded, so every rebuild lays the same stains; flat, collider-free quads just
+        /// above the stone, beneath the scars and warnings drawn over them.
+        /// </remarks>
+        private static void BuildFloorStains(Transform root, float radius)
+        {
+            var stains = new GameObject("FloorStains").transform;
+            stains.SetParent(root, false);
+
+            Material stain = GetOrCreateStain("FloorStain", StainTexture(), new Color(0.05f, 0.035f, 0.03f, 0.6f));
+            Material grime = GetOrCreateStain("FloorGrime", GrimeRingTexture(), new Color(0.02f, 0.02f, 0.025f, 0.75f));
+            var random = new XorShiftRandomProvider(LayoutSeed + 2u);
+            Mesh quad = Resources.GetBuiltinResource<Mesh>("Quad.fbx");
+
+            for (int i = 0; i < StainCount; i++)
+            {
+                float distance = Mathf.Sqrt(random.NextFloat(0f, 1f)) * (radius - 1f);
+                float size = random.NextFloat(1.4f, 4.2f);
+
+                GameObject patch = Place(stains, $"Stain_{i:D2}", quad, stain,
+                    OnRing(random.NextFloat(0f, 360f), distance) + Vector3.up * (StainLift + i * 0.0005f),
+                    Quaternion.Euler(90f, random.NextFloat(0f, 360f), 0f));
+                patch.transform.localScale = new Vector3(size, size * random.NextFloat(0.6f, 1f), 1f);
+                patch.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            }
+
+            // One quad spanning the whole floor, its texture clear in the middle and darkening toward the ring.
+            GameObject ring = Place(stains, "WallGrime", quad, grime, Vector3.up * (StainLift * 0.5f), Quaternion.Euler(90f, 0f, 0f));
+            ring.transform.localScale = new Vector3((radius + 1f) * 2f, (radius + 1f) * 2f, 1f);
+            ring.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        }
+
+        /// <summary>An irregular blotch: layered noise cut by a soft radial falloff, darker at its heart.</summary>
+        private static Texture2D StainTexture() => GetOrCreateTexture("FloorStainBlotch", 256, 256, (u, v) =>
+        {
+            float x = u * 2f - 1f, y = v * 2f - 1f;
+            float r = Mathf.Sqrt(x * x + y * y);
+            float noise = Mathf.PerlinNoise(u * 5.3f + 11.7f, v * 5.3f + 3.1f) * 0.65f + Mathf.PerlinNoise(u * 17f + 2.3f, v * 17f + 8.9f) * 0.35f;
+            float shape = 1f - Edge(0.35f, 0.95f, r + (noise - 0.5f) * 0.7f);
+            return Mathf.Clamp01(shape * (0.55f + noise * 0.6f));
+        });
+
+        /// <summary>Clear across the fighting floor, gathering into a dark band at the wall ring.</summary>
+        private static Texture2D GrimeRingTexture() => GetOrCreateTexture("FloorGrimeRing", 512, 512, (u, v) =>
+        {
+            float x = u * 2f - 1f, y = v * 2f - 1f;
+            float r = Mathf.Sqrt(x * x + y * y);
+            float noise = Mathf.PerlinNoise(u * 9f + 4.4f, v * 9f + 1.3f);
+            return Mathf.Clamp01(Edge(0.62f, 0.97f, r + (noise - 0.5f) * 0.12f) * (0.7f + noise * 0.3f));
+        });
+
+        private static Material GetOrCreateStain(string materialName, Texture2D texture, Color colour)
+        {
+            string path = EditorMenus.GeneratedMaterialFolder + "/" + materialName + ".mat";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+
+            if (material == null)
+            {
+                material = new Material(shader) { name = materialName };
+                AssetAuthoring.EnsureFolderExists(EditorMenus.GeneratedMaterialFolder);
+                AssetDatabase.CreateAsset(material, path);
+            }
+
+            // Alpha-blended matter, not light: a stain darkens whatever the light has done to the stone.
+            material.shader = shader;
+            material.SetFloat("_Surface", 1f);
+            material.SetFloat("_Blend", 0f);
+            material.SetFloat("_ZWrite", 0f);
+            material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            material.SetOverrideTag("RenderType", "Transparent");
+
+            // Before every other transparent thing, so scars and warnings always draw over the stains.
+            material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent - 50;
+            material.SetTexture("_BaseMap", texture);
+            material.SetColor("_BaseColor", colour);
+            EditorUtility.SetDirty(material);
+
+            return material;
         }
 
         /// <summary>
@@ -407,10 +499,9 @@ namespace AdaptiveBossArena.Editor.Environment
 
                 // A pointed arch over the window rather than a flat lintel: the rectangular openings read as a
                 // warehouse, and the lancet is most of what says cathedral from the fighting floor.
-                GameObject head = Block(walls, $"Head_{face}", Vector3.one, 2f, _brick,
-                    centre + Vector3.up * (WindowSpring + headHeight * 0.5f), facing);
-                head.GetComponent<MeshFilter>().sharedMesh = TiledMeshes.PointedArchHead(
-                    OuterWallThickness, headHeight, window, window * WindowArchRise, 2f);
+                Place(walls, $"Head_{face}",
+                    TiledMeshes.PointedArchHead(OuterWallThickness, headHeight, window, window * WindowArchRise, 2f),
+                    _brick, centre + Vector3.up * (WindowSpring + headHeight * 0.5f), facing);
 
                 float bayDepth = apothem - (radius + ColumnRingOffset) + 1f;
                 Vector3 bayCentre = OnRing(angle, apothem - bayDepth * 0.5f);
@@ -645,13 +736,17 @@ namespace AdaptiveBossArena.Editor.Environment
 
         private static GameObject Block(
             Transform parent, string name, Vector3 size, float metresPerTile, Material material,
-            Vector3 position, Quaternion rotation)
+            Vector3 position, Quaternion rotation) =>
+            Place(parent, name, TiledMeshes.Box(size, metresPerTile), material, position, rotation);
+
+        private static GameObject Place(
+            Transform parent, string name, Mesh mesh, Material material, Vector3 position, Quaternion rotation)
         {
             var block = new GameObject(name);
             block.transform.SetParent(parent, false);
             block.transform.SetPositionAndRotation(position, rotation);
 
-            block.AddComponent<MeshFilter>().sharedMesh = TiledMeshes.Box(size, metresPerTile);
+            block.AddComponent<MeshFilter>().sharedMesh = mesh;
             block.AddComponent<MeshRenderer>().sharedMaterial = material;
 
             return block;
