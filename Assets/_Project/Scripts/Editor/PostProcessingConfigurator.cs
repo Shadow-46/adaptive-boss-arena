@@ -86,19 +86,24 @@ namespace AdaptiveBossArena.Editor
         {
             Vignette vignette = GetOrAdd<Vignette>(profile);
 
-            vignette.intensity.Override(0.32f);
-            vignette.smoothness.Override(0.5f);
+            vignette.intensity.Override(0.4f);
+            vignette.smoothness.Override(0.45f);
             vignette.color.Override(new Color(0.02f, 0.01f, 0.04f));
         }
 
-        /// <summary>Lifts contrast and cools the palette so untextured surfaces read as deliberate.</summary>
+        /// <summary>Drains colour and deepens contrast toward a grim, overcast palette.</summary>
+        /// <remarks>
+        /// With textured characters and stone the image no longer needs lifting; it needs weight. At nearly
+        /// full saturation the green hide, bright bars and orange light read as a cartoon. Exposure comes down
+        /// only a little, because a darker grade than this lost the fighters against the floor.
+        /// </remarks>
         private static void ConfigureColorAdjustments(VolumeProfile profile)
         {
             ColorAdjustments color = GetOrAdd<ColorAdjustments>(profile);
 
-            color.postExposure.Override(0.15f);
-            color.contrast.Override(18f);
-            color.saturation.Override(-6f);
+            color.postExposure.Override(-0.05f);
+            color.contrast.Override(26f);
+            color.saturation.Override(-30f);
             color.colorFilter.Override(new Color(0.94f, 0.96f, 1f));
         }
 
@@ -136,7 +141,7 @@ namespace AdaptiveBossArena.Editor
             FilmGrain grain = GetOrAdd<FilmGrain>(profile);
 
             grain.type.Override(FilmGrainLookup.Medium1);
-            grain.intensity.Override(0.22f);
+            grain.intensity.Override(0.28f);
 
             // Lets the grain fade out of bright areas, which is how it behaves on real stock.
             grain.response.Override(0.8f);
@@ -155,9 +160,9 @@ namespace AdaptiveBossArena.Editor
             ShadowsMidtonesHighlights grading = GetOrAdd<ShadowsMidtonesHighlights>(profile);
 
             // The fourth channel of each is the overall weight of that band, not alpha.
-            grading.shadows.Override(new Vector4(0.86f, 0.93f, 1.12f, 0f));
-            grading.midtones.Override(new Vector4(1f, 0.99f, 0.97f, 0f));
-            grading.highlights.Override(new Vector4(1.1f, 1.02f, 0.88f, 0f));
+            grading.shadows.Override(new Vector4(0.84f, 0.92f, 1.08f, -0.12f));
+            grading.midtones.Override(new Vector4(1f, 0.98f, 0.95f, 0f));
+            grading.highlights.Override(new Vector4(1.08f, 1f, 0.86f, -0.08f));
         }
 
         /// <summary>
