@@ -367,7 +367,13 @@ namespace AdaptiveBossArena.Combat
                         break;
 
                     case AttackPhase.Active:
-                        _visualizer.ShowStrike(attack);
+                        // The same rule as the wind-up. A bright shape flashed under every ordinary swing,
+                        // the player's included, read as a board game piece and hid the blow the body made.
+                        if (attack != null && attack.ShowTelegraph)
+                        {
+                            _visualizer.ShowStrike(attack);
+                        }
+
                         break;
 
                     default:

@@ -43,12 +43,12 @@ namespace AdaptiveBossArena.Combat.Feel
         [SerializeField]
         [Range(0f, 1f)]
         [Tooltip("Opacity of the wind-up telegraph. Low enough not to dominate, high enough to read.")]
-        private float _telegraphAlpha = 0.16f;
+        private float _telegraphAlpha = 0.45f;
 
         [SerializeField]
         [Range(0f, 1f)]
         [Tooltip("Opacity at the moment the blow lands.")]
-        private float _strikeAlpha = 0.75f;
+        private float _strikeAlpha = 0.9f;
 
         [SerializeField]
         [Range(0.05f, 0.6f)]
@@ -96,7 +96,7 @@ namespace AdaptiveBossArena.Combat.Feel
             if (_isTelegraphing && _perilous && _strikeFadeRemaining <= 0f)
             {
                 float pulse = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * PerilousPulseHz * Mathf.PI * 2f);
-                _alpha = Mathf.Lerp(_telegraphAlpha, _telegraphAlpha * 2.2f, pulse);
+                _alpha = Mathf.Lerp(_telegraphAlpha, Mathf.Min(1f, _telegraphAlpha * 2.2f), pulse);
                 ApplyColor();
             }
 
