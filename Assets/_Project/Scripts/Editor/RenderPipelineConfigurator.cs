@@ -150,6 +150,8 @@ namespace AdaptiveBossArena.Editor
             TunePipeline(desktop, DesktopTier);
             EnsureAmbientOcclusion(RendererAssetPath, EnableAmbientOcclusion);
             EnsureAmbientOcclusion(DesktopRendererAssetPath, true);
+            EnsurePostProcessData(RendererAssetPath);
+            EnsurePostProcessData(DesktopRendererAssetPath);
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
@@ -422,6 +424,36 @@ namespace AdaptiveBossArena.Editor
                 case float number:
                     property.floatValue = number;
                     break;
+            }
+        }
+
+        /// <summary>The post-processing shaders and textures the pipeline package ships with.</summary>
+        public const string DefaultPostProcessDataPath =
+            "Packages/com.unity.render-pipelines.universal/Runtime/Data/PostProcessData.asset";
+
+        /// <summary>
+        /// Gives a renderer the resources post-processing needs.
+        /// </summary>
+        /// <remarks>
+        /// A renderer created from script has none, and URP silently skips every post-processing effect for a
+        /// renderer without them - whatever the camera and volume say. That is how the game shipped without
+        /// bloom, tonemapping, vignette or grade while every piece of the setup looked correct.
+        /// </remarks>
+        private static void EnsurePostProcessData(string rendererAssetPath)
+        {
+            var rendererData = AssetDatabase.LoadAssetAtPath<UniversalRendererData>(rendererAssetPath);
+            var data = AssetDatabase.LoadAssetAtPath<PostProcessData>(DefaultPostProcessDataPath);
+
+            if (rendererData == null || data == null)
+            {
+                Debug.LogWarning("[Adaptive Boss Arena] Could not give a renderer its post-processing data; effects will not render.");
+                return;
+            }
+
+            if (rendererData.postProcessData != data)
+            {
+                rendererData.postProcessData = data;
+                EditorUtility.SetDirty(rendererData);
             }
         }
 

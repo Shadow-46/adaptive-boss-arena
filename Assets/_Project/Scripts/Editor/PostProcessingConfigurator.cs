@@ -41,6 +41,9 @@ namespace AdaptiveBossArena.Editor
                 created = true;
             }
 
+            // Entries left null by earlier runs, which added effects without saving them; see GetOrAdd.
+            profile.components.RemoveAll(component => component == null);
+
             ConfigureBloom(profile);
             ConfigureVignette(profile);
             ConfigureColorAdjustments(profile);
@@ -86,7 +89,7 @@ namespace AdaptiveBossArena.Editor
         {
             Vignette vignette = GetOrAdd<Vignette>(profile);
 
-            vignette.intensity.Override(0.4f);
+            vignette.intensity.Override(0.36f);
             vignette.smoothness.Override(0.45f);
             vignette.color.Override(new Color(0.02f, 0.01f, 0.04f));
         }
@@ -101,9 +104,9 @@ namespace AdaptiveBossArena.Editor
         {
             ColorAdjustments color = GetOrAdd<ColorAdjustments>(profile);
 
-            color.postExposure.Override(-0.05f);
-            color.contrast.Override(26f);
-            color.saturation.Override(-30f);
+            color.postExposure.Override(1.3f);
+            color.contrast.Override(20f);
+            color.saturation.Override(-22f);
             color.colorFilter.Override(new Color(0.94f, 0.96f, 1f));
         }
 
@@ -160,9 +163,9 @@ namespace AdaptiveBossArena.Editor
             ShadowsMidtonesHighlights grading = GetOrAdd<ShadowsMidtonesHighlights>(profile);
 
             // The fourth channel of each is the overall weight of that band, not alpha.
-            grading.shadows.Override(new Vector4(0.84f, 0.92f, 1.08f, -0.12f));
+            grading.shadows.Override(new Vector4(0.9f, 0.95f, 1.05f, 0f));
             grading.midtones.Override(new Vector4(1f, 0.98f, 0.95f, 0f));
-            grading.highlights.Override(new Vector4(1.08f, 1f, 0.86f, -0.08f));
+            grading.highlights.Override(new Vector4(1.06f, 1f, 0.9f, 0f));
         }
 
         /// <summary>
@@ -177,21 +180,35 @@ namespace AdaptiveBossArena.Editor
         {
             WhiteBalance balance = GetOrAdd<WhiteBalance>(profile);
 
-            balance.temperature.Override(-14f);
-            balance.tint.Override(4f);
+            balance.temperature.Override(-5f);
+            balance.tint.Override(2f);
         }
 
         /// <summary>Returns an override from the profile, adding it when absent.</summary>
+        /// <remarks>
+        /// <see cref="VolumeProfile.Add{T}"/> only creates the effect in memory. Unless it is also saved into
+        /// the profile's asset, the profile reloads with a null in its place - which is how every build shipped
+        /// with no bloom, tonemapping, vignette or grade at all, while the editor session that ran setup
+        /// looked right.
+        /// </remarks>
         private static TComponent GetOrAdd<TComponent>(VolumeProfile profile)
             where TComponent : VolumeComponent
         {
-            if (profile.TryGet(out TComponent existing))
+            if (!profile.TryGet(out TComponent component))
             {
-                existing.active = true;
-                return existing;
+                component = profile.Add<TComponent>(overrides: true);
             }
 
-            return profile.Add<TComponent>(overrides: true);
+            component.active = true;
+
+            if (!AssetDatabase.Contains(component))
+            {
+                component.name = typeof(TComponent).Name;
+                component.hideFlags = HideFlags.HideInInspector | HideFlags.HideInHierarchy;
+                AssetDatabase.AddObjectToAsset(component, profile);
+            }
+
+            return component;
         }
     }
 }
