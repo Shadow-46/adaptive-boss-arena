@@ -53,6 +53,30 @@ namespace AdaptiveBossArena.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator TheRoofsShadowIsAnAccentNotACover()
+        {
+            // The first cookie blocked most of the sun and, measured in a running build, took the whole frame
+            // from 0.38 to 0.21 mean luminance - the arena read as dusk. The crossing is open to the sky.
+            _lighting.Apply(web: false);
+
+            yield return null;
+
+            var cookie = (Texture2D)_sun.cookie;
+            Color[] pixels = cookie.GetPixels();
+
+            float sum = 0f, darkest = 1f;
+
+            foreach (Color pixel in pixels)
+            {
+                sum += pixel.r;
+                darkest = Mathf.Min(darkest, pixel.r);
+            }
+
+            Assert.GreaterOrEqual(sum / pixels.Length, 0.85f, "The roof's shadow blocks too much of the sun overall.");
+            Assert.GreaterOrEqual(darkest, 0.5f - 0.01f, "The roof's shadow blacks the sun out somewhere.");
+        }
+
+        [UnityTest]
         public IEnumerator TheWebDrawsFainterShaftsAndNoCookie()
         {
             // Found under its own parent: the columns have a Shaft_0 of their own.

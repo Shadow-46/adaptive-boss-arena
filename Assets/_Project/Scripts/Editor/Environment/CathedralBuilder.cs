@@ -53,6 +53,9 @@ namespace AdaptiveBossArena.Editor.Environment
         private const int ParapetCrownPieces = 5;
         private const int ColumnPieces = 10;
 
+        /// <summary>The least sun the roof's shadow lets through anywhere, as a fraction.</summary>
+        public const float MinimumSun = 0.5f;
+
         /// <summary>
         /// How much further a column can be broken from than the impact's own reach: the three and a half
         /// metres it stands behind the wall ring, less a margin so only a blow landing squarely in front of
@@ -510,13 +513,6 @@ namespace AdaptiveBossArena.Editor.Environment
             const string Name = "RoofShadowCookie";
 
             string path = EditorMenus.GeneratedMaterialFolder + "/" + Name + ".asset";
-            var existing = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-
-            if (existing != null)
-            {
-                return existing;
-            }
-
             var random = new XorShiftRandomProvider(LayoutSeed + 3u);
             var lattice = new float[Cells, Cells];
 
@@ -528,11 +524,17 @@ namespace AdaptiveBossArena.Editor.Environment
                 }
             }
 
-            var texture = new Texture2D(Size, Size, TextureFormat.RGBA32, true)
+            // Rewritten in place on every run rather than only created once, so a change to the pattern reaches
+            // the scene without the asset having to be deleted, and every reference to it survives.
+            var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            bool created = texture == null;
+
+            if (created)
             {
-                name = Name,
-                wrapMode = TextureWrapMode.Repeat
-            };
+                texture = new Texture2D(Size, Size, TextureFormat.RGBA32, true) { name = Name };
+            }
+
+            texture.wrapMode = TextureWrapMode.Repeat;
 
             for (int py = 0; py < Size; py++)
             {
@@ -551,20 +553,31 @@ namespace AdaptiveBossArena.Editor.Environment
                         Mathf.Lerp(lattice[x0, y0], lattice[x1, y0], fx),
                         Mathf.Lerp(lattice[x0, y1], lattice[x1, y1], fx), fy);
 
-                    float roof = Mathf.SmoothStep(0.62f, 0.72f, noise);
+                    float roof = Edge(0.72f, 0.8f, noise);
 
                     // Four rafters, a whole number of them per tile so they meet across the seam.
                     float rafter = Mathf.Abs(Mathf.Sin(u * Mathf.PI * 4f));
-                    float beam = Mathf.SmoothStep(0.06f, 0.14f, rafter);
+                    float beam = Edge(0.04f, 0.1f, rafter);
 
-                    float light = Mathf.Lerp(1f, 0.28f, roof) * Mathf.Lerp(0.35f, 1f, beam);
+                    // Accents, not cover. The crossing is open to the sky, so the fighting floor is sunlit with
+                    // a few shadows across it. The first version cut the sun to about a fifth everywhere and took
+                    // the whole frame from 0.38 to 0.21 mean luminance; nothing here may fall below MinimumSun.
+                    float light = Mathf.Max(MinimumSun, Mathf.Lerp(1f, 0.6f, roof) * Mathf.Lerp(0.65f, 1f, beam));
                     texture.SetPixel(px, py, new Color(light, light, light, 1f));
                 }
             }
 
             texture.Apply(true);
-            AssetAuthoring.EnsureFolderExists(EditorMenus.GeneratedMaterialFolder);
-            AssetDatabase.CreateAsset(texture, path);
+
+            if (created)
+            {
+                AssetAuthoring.EnsureFolderExists(EditorMenus.GeneratedMaterialFolder);
+                AssetDatabase.CreateAsset(texture, path);
+            }
+            else
+            {
+                EditorUtility.SetDirty(texture);
+            }
 
             return texture;
         }
@@ -688,6 +701,20 @@ namespace AdaptiveBossArena.Editor.Environment
             float d = Vector2.Distance(new Vector2(u, v), new Vector2(0.5f, 0.5f)) * 2f;
             return Mathf.Clamp01(1f - d * d);
         });
+
+        /// <summary>A smooth 0-to-1 ramp as <paramref name="x"/> crosses from one edge to the other.</summary>
+        /// <remarks>
+        /// GLSL's <c>smoothstep(edge0, edge1, x)</c>. Not <see cref="Mathf.SmoothStep"/>, whose arguments look the
+        /// same and mean something else: it interpolates between its first two values, so passing it edges
+        /// returns a value between those edges and never a mask. That mistake made the first roof cookie cut
+        /// the sun to about a fifth over the whole arena.
+        /// </remarks>
+        /// <param name="edge0">Where the ramp starts.</param>
+        /// <param name="edge1">Where the ramp ends.</param>
+        /// <param name="x">The value to ramp.</param>
+        /// <returns>Zero below the first edge, one above the second, smooth between.</returns>
+        public static float Edge(float edge0, float edge1, float x) =>
+            Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(edge0, edge1, x));
 
         /// <summary>
         /// A white texture whose alpha comes from a function, saved as an asset.
