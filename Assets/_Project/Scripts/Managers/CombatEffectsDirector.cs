@@ -69,6 +69,15 @@ namespace AdaptiveBossArena.Game
         /// <summary>Shake and camera punch on a broken guard: heavier than any single blow.</summary>
         private const float PoiseBreakTrauma = 0.38f;
 
+        /// <summary>Rough size of the splatter a light blow leaves, in metres.</summary>
+        private const float LightBloodSize = 0.8f;
+
+        /// <summary>Rough size of the splatter a heavy blow leaves, in metres.</summary>
+        private const float HeavyBloodSize = 1.4f;
+
+        /// <summary>Seed for splatter turns and sizes: cosmetic, and kept off the gameplay generator.</summary>
+        private const uint BloodSeed = 0xB100Du;
+
         [SerializeField]
         [Tooltip("Raised on a perfect dodge.")]
         private VoidEventChannel _perfectDodgeChannel;
@@ -89,6 +98,12 @@ namespace AdaptiveBossArena.Game
         [Tooltip("Alpha-blended material blood and dust are drawn with. Assigned by the scene generator.")]
         private Material _matterMaterial;
 
+        [SerializeField]
+        [Tooltip("Splatter left on the floor under a landed blow. Assigned by the scene generator.")]
+        private Material _bloodMaterial;
+
+        private BloodDecalPool _blood;
+
         private ImpactBurstPool _bursts;
         private ICombatEventBus _events;
         private IScreenShake _shake;
@@ -101,6 +116,13 @@ namespace AdaptiveBossArena.Game
         {
             _bursts = gameObject.AddComponent<ImpactBurstPool>();
             _bursts.Construct(_impactMaterial, _matterMaterial);
+
+            if (_bloodMaterial != null)
+            {
+                _blood = new GameObject("BloodDecals").AddComponent<BloodDecalPool>();
+                _blood.transform.SetParent(transform, worldPositionStays: false);
+                _blood.Construct(_bloodMaterial, new XorShiftRandomProvider(BloodSeed));
+            }
         }
 
         private void Start()
@@ -181,6 +203,8 @@ namespace AdaptiveBossArena.Game
 
                 case CombatEventKind.AttackLanded:
                     Burst(combatEvent.Position, combatEvent.Direction, FlavourFor(combatEvent.DamageType));
+                    _blood?.Place(combatEvent.Position, combatEvent.Direction,
+                        FlavourFor(combatEvent.DamageType) == ImpactFlavour.Heavy ? HeavyBloodSize : LightBloodSize);
                     break;
 
                 case CombatEventKind.Deflected:
@@ -326,14 +350,19 @@ namespace AdaptiveBossArena.Game
             IntEventChannel bossPhase,
             VoidEventChannel overbalance,
             Material impactMaterial,
-            Material matterMaterial = null)
+            Material matterMaterial = null,
+            Material bloodMaterial = null)
         {
             _perfectDodgeChannel = perfectDodge;
             _bossPhaseChannel = bossPhase;
             _overbalanceChannel = overbalance;
             _impactMaterial = impactMaterial;
             _matterMaterial = matterMaterial;
+            _bloodMaterial = bloodMaterial;
         }
+
+        /// <summary>The material floor splatters are drawn with.</summary>
+        public Material BloodMaterial => _bloodMaterial;
 
         /// <summary>The material impact sparks are drawn with.</summary>
         public Material ImpactMaterial => _impactMaterial;

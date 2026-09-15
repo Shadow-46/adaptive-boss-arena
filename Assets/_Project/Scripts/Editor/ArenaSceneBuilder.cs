@@ -455,7 +455,8 @@ namespace AdaptiveBossArena.Editor
             var effectsDirector = Object.FindAnyObjectByType<CombatEffectsDirector>();
             effectsDirector?.Bind(
                 channels.PerfectDodge, channels.BossPhase, channels.Overbalance,
-                MaterialLibrary.GetOrCreateImpactSparks(), MaterialLibrary.GetOrCreateImpactMatter());
+                MaterialLibrary.GetOrCreateImpactSparks(), MaterialLibrary.GetOrCreateImpactMatter(),
+                MaterialLibrary.GetOrCreateBloodSplatter());
         }
 
         /// <summary>Places a generated combatant prefab at its spawn point.</summary>

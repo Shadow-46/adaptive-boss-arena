@@ -526,6 +526,121 @@ namespace AdaptiveBossArena.Editor
             return material;
         }
 
+        /// <summary>Loads or creates the material for blood left on the floor.</summary>
+        /// <remarks>
+        /// Alpha-blended dark blood, drawn after the floor's old stains and before the scars and warnings, so
+        /// fresh blood lies over old grime and under anything that still matters to the fight.
+        /// </remarks>
+        /// <returns>The splatter material, or null when the particle shader is missing.</returns>
+        public static Material GetOrCreateBloodSplatter()
+        {
+            const string materialName = "BloodSplatter";
+            string path = EditorMenus.GeneratedMaterialFolder + "/" + materialName + ".mat";
+
+            Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+
+            if (shader == null)
+            {
+                return null;
+            }
+
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+
+            if (material == null)
+            {
+                material = new Material(shader) { name = materialName };
+                AssetAuthoring.EnsureFolderExists(EditorMenus.GeneratedMaterialFolder);
+                AssetDatabase.CreateAsset(material, path);
+            }
+
+            material.shader = shader;
+            ConfigureParticleBlend(material, additive: false);
+            material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent - 40;
+            material.SetTexture("_BaseMap", BloodSplatterTexture());
+            material.SetColor("_BaseColor", Color.white);
+            EditorUtility.SetDirty(material);
+
+            return material;
+        }
+
+        /// <summary>
+        /// A splatter: a pooled mass near the bottom, streaks and droplets flung toward the top.
+        /// </summary>
+        /// <remarks>
+        /// Oriented so the texture's up is the direction of the blow; the pool lays it along the blow. Seeded, so
+        /// every regeneration draws the same splatter.
+        /// </remarks>
+        private static Texture2D BloodSplatterTexture()
+        {
+            const int Size = 256;
+            const string Name = "BloodSplatterTexture";
+            string path = EditorMenus.GeneratedMaterialFolder + "/" + Name + ".asset";
+
+            var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            bool created = texture == null;
+
+            if (created)
+            {
+                texture = new Texture2D(Size, Size, TextureFormat.RGBA32, true) { name = Name };
+            }
+
+            texture.wrapMode = TextureWrapMode.Clamp;
+
+            var random = new Core.Services.XorShiftRandomProvider(4410u);
+            var drops = new System.Collections.Generic.List<(Vector2 Centre, float Radius)>();
+
+            // Droplets thrown up the texture, smaller the further they flew.
+            for (int i = 0; i < 38; i++)
+            {
+                float along = random.NextFloat(0f, 1f);
+                float spread = random.NextFloat(-0.35f, 0.35f) * (0.4f + along);
+                drops.Add((new Vector2(0.5f + spread, 0.3f + along * 0.62f), Mathf.Lerp(0.045f, 0.008f, along) * random.NextFloat(0.6f, 1.3f)));
+            }
+
+            var dark = new Color(0.16f, 0.008f, 0.01f);
+            var fresh = new Color(0.34f, 0.02f, 0.02f);
+
+            for (int y = 0; y < Size; y++)
+            {
+                for (int x = 0; x < Size; x++)
+                {
+                    var p = new Vector2((x + 0.5f) / Size, (y + 0.5f) / Size);
+
+                    // The main pool: a noisy blob low in the texture.
+                    Vector2 fromPool = new Vector2((p.x - 0.5f) / 0.2f, (p.y - 0.3f) / 0.16f);
+                    float noise = Mathf.PerlinNoise(p.x * 14f + 3.7f, p.y * 14f + 8.2f);
+                    float pool = 1f - Environment.CathedralBuilder.Edge(0.7f, 1.05f, fromPool.magnitude + (noise - 0.5f) * 0.6f);
+
+                    float drop = 0f;
+
+                    foreach ((Vector2 centre, float radius) in drops)
+                    {
+                        float d = Vector2.Distance(p, centre) / radius;
+                        drop = Mathf.Max(drop, 1f - Environment.CathedralBuilder.Edge(0.75f, 1f, d));
+                    }
+
+                    float alpha = Mathf.Clamp01(Mathf.Max(pool, drop) * (0.8f + noise * 0.25f));
+                    Color colour = Color.Lerp(dark, fresh, noise);
+                    colour.a = alpha;
+                    texture.SetPixel(x, y, colour);
+                }
+            }
+
+            texture.Apply(true);
+
+            if (created)
+            {
+                AssetAuthoring.EnsureFolderExists(EditorMenus.GeneratedMaterialFolder);
+                AssetDatabase.CreateAsset(texture, path);
+            }
+            else
+            {
+                EditorUtility.SetDirty(texture);
+            }
+
+            return texture;
+        }
+
         /// <summary>Gives the spark material its round falloff and a tint hot enough to bloom.</summary>
         /// <remarks>
         /// Untextured, a spark was a stretched square; tinted at one it never reached the bloom threshold and
