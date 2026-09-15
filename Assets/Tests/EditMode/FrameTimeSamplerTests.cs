@@ -126,6 +126,28 @@ namespace AdaptiveBossArena.Tests.EditMode
 
             Assert.IsFalse(request.IsRequested);
             Assert.IsFalse(request.QuitWhenDone);
+            Assert.IsNull(request.ShotFolder);
+        }
+
+        [Test]
+        public void ACaptureCanRecordASequenceOfFrames()
+        {
+            // Motion is judged in motion: a single frame cannot show whether a swing has weight.
+            PerfCaptureRequest request = PerfCaptureRequest.Read(
+                new[] { "game.exe", "-perfCapture", "10", "-perfShots", @"C:\frames", "-perfShotEvery", "0.1" },
+                string.Empty);
+
+            Assert.AreEqual(@"C:\frames", request.ShotFolder);
+            Assert.AreEqual(0.1f, request.ShotEverySeconds, 0.0001f);
+        }
+
+        [Test]
+        public void AFrameSequenceDefaultsToTenFramesASecond()
+        {
+            PerfCaptureRequest request = PerfCaptureRequest.Read(
+                new[] { "game.exe", "-perfCapture", "10", "-perfShots", @"C:\frames" }, string.Empty);
+
+            Assert.AreEqual(0.1f, request.ShotEverySeconds, 0.0001f);
         }
 
         [Test]

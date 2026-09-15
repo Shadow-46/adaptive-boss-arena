@@ -24,6 +24,11 @@ namespace AdaptiveBossArena.Utilities.Statistics
         private const string LogFlag = "-perfLog";
         private const string QuitFlag = "-perfQuit";
         private const string ShotFlag = "-perfShot";
+        private const string ShotsFlag = "-perfShots";
+        private const string ShotEveryFlag = "-perfShotEvery";
+
+        /// <summary>Default spacing of a frame sequence: ten frames a second, enough to read a swing's arc.</summary>
+        public const float DefaultShotEverySeconds = 0.1f;
         private const string CaptureQueryKey = "perf";
 
         /// <summary>How long to sample, in seconds. Zero when no capture was requested.</summary>
@@ -38,6 +43,13 @@ namespace AdaptiveBossArena.Utilities.Statistics
         /// the wrong scale or holds its blade backwards, and only an image of the running build says so.
         /// </remarks>
         public string ShotPath { get; init; }
+
+        /// <summary>Folder a sequence of frames is written to during the capture, or null.</summary>
+        /// <remarks>A single frame cannot show whether a swing has weight or a fall reads as a fall; a sequence can.</remarks>
+        public string ShotFolder { get; init; }
+
+        /// <summary>Seconds between frames of the sequence.</summary>
+        public float ShotEverySeconds { get; init; }
 
         /// <summary>Whether the application should quit once the capture is written.</summary>
         public bool QuitWhenDone { get; init; }
@@ -54,6 +66,8 @@ namespace AdaptiveBossArena.Utilities.Statistics
             float seconds = 0f;
             string logPath = null;
             string shotPath = null;
+            string shotFolder = null;
+            float shotEvery = DefaultShotEverySeconds;
             bool quit = false;
 
             if (arguments != null)
@@ -79,6 +93,14 @@ namespace AdaptiveBossArena.Utilities.Statistics
                         case ShotFlag when !string.IsNullOrEmpty(next):
                             shotPath = next;
                             break;
+
+                        case ShotsFlag when !string.IsNullOrEmpty(next):
+                            shotFolder = next;
+                            break;
+
+                        case ShotEveryFlag when TryParseSeconds(next, out float every):
+                            shotEvery = every;
+                            break;
                     }
                 }
             }
@@ -88,7 +110,15 @@ namespace AdaptiveBossArena.Utilities.Statistics
                 seconds = querySeconds;
             }
 
-            return new PerfCaptureRequest { Seconds = seconds, LogPath = logPath, QuitWhenDone = quit, ShotPath = shotPath };
+            return new PerfCaptureRequest
+            {
+                Seconds = seconds,
+                LogPath = logPath,
+                QuitWhenDone = quit,
+                ShotPath = shotPath,
+                ShotFolder = shotFolder,
+                ShotEverySeconds = shotEvery
+            };
         }
 
         /// <summary>Reads the capture length from a page URL's query string.</summary>

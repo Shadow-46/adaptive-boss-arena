@@ -63,6 +63,10 @@ namespace AdaptiveBossArena.Game
         private bool _quitWhenDone;
         private string _shotPath;
         private bool _shotTaken;
+        private string _shotFolder;
+        private float _shotEvery;
+        private float _nextSequenceShot;
+        private int _sequenceIndex;
 
         /// <summary>Seconds into the sampled fight the screenshot is taken, once the fighters have closed.</summary>
         private const float ShotAfterSeconds = 4f;
@@ -126,6 +130,12 @@ namespace AdaptiveBossArena.Game
             {
                 _shotTaken = true;
                 StartCoroutine(SaveFrame(_shotPath));
+            }
+
+            if (!string.IsNullOrEmpty(_shotFolder) && _captured >= _nextSequenceShot)
+            {
+                _nextSequenceShot += _shotEvery;
+                StartCoroutine(SaveFrame(System.IO.Path.Combine(_shotFolder, $"frame_{_sequenceIndex++:D4}.raw")));
             }
 
             if (_captured >= _captureSeconds)
@@ -213,8 +223,21 @@ namespace AdaptiveBossArena.Game
 
             if (_quitWhenDone)
             {
-                Application.Quit();
+                StartCoroutine(QuitAfterFramesAreWritten());
             }
+        }
+
+        /// <summary>Quits once every frame capture already started has finished writing.</summary>
+        /// <remarks>
+        /// A frame capture waits for the end of the frame before reading the screen back. Quitting on the frame
+        /// that ends a sequence tore the player down with one still waiting, and it crashed on the way out.
+        /// </remarks>
+        private System.Collections.IEnumerator QuitAfterFramesAreWritten()
+        {
+            yield return new WaitForEndOfFrame();
+            yield return null;
+
+            Application.Quit();
         }
 
         /// <summary>Formats the current measurement as the single line budgets are checked against.</summary>
@@ -257,6 +280,13 @@ namespace AdaptiveBossArena.Game
             _logPath = request.LogPath;
             _quitWhenDone = request.QuitWhenDone;
             _shotPath = request.ShotPath;
+            _shotFolder = request.ShotFolder;
+            _shotEvery = Mathf.Max(0.02f, request.ShotEverySeconds);
+
+            if (!string.IsNullOrEmpty(_shotFolder))
+            {
+                Directory.CreateDirectory(_shotFolder);
+            }
         }
 
         private void OnGUI()
