@@ -13,6 +13,12 @@ namespace AdaptiveBossArena.Combat.Feel
         /// <summary>Planar speed from zero to one, driving the locomotion blend.</summary>
         public const string Speed = "Speed";
 
+        /// <summary>Movement across the facing, scaled by speed: right is positive. Drives strafes.</summary>
+        public const string MoveX = "MoveX";
+
+        /// <summary>Movement along the facing, scaled by speed: forward is positive. Drives walks, runs and back-steps.</summary>
+        public const string MoveZ = "MoveZ";
+
         /// <summary>Normalised clip time for the attack state playing, set from the attack's timeline.</summary>
         public const string AttackTime = "AttackTime";
 

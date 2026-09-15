@@ -30,6 +30,15 @@ namespace AdaptiveBossArena.Combat.Feel
         private const float ContactSpanFraction = 0.08f;
 
         private static readonly int SpeedParam = Animator.StringToHash(CharacterAnimatorParameters.Speed);
+        private static readonly int MoveXParam = Animator.StringToHash(CharacterAnimatorParameters.MoveX);
+        private static readonly int MoveZParam = Animator.StringToHash(CharacterAnimatorParameters.MoveZ);
+
+        /// <summary>How quickly the directional blend follows a change of direction, so a turn does not pop legs.</summary>
+        private const float DirectionDampSeconds = 0.12f;
+
+        private Vector3 _lastRootPosition;
+        private bool _hasRootPosition;
+        private Vector2 _blendPosition;
         private static readonly int AttackTimeParam = Animator.StringToHash(CharacterAnimatorParameters.AttackTime);
         private static readonly int ReactionTimeParam = Animator.StringToHash(CharacterAnimatorParameters.ReactionTime);
 
@@ -129,6 +138,7 @@ namespace AdaptiveBossArena.Combat.Feel
 
             _animator.SetFloat(SpeedParam, Mathf.Clamp01(planarSpeed01));
             _animator.SetFloat(ReactionTimeParam, Mathf.Clamp01(reactionProgress01));
+            DriveDirection(planarSpeed01);
 
             bool attacking = attack != null && attackPhase != AttackPhase.Inactive && IsAttackState(state);
             string target = attacking ? AttackStateFor(attack) : StateFor(state);
@@ -177,6 +187,27 @@ namespace AdaptiveBossArena.Combat.Feel
         /// <summary>The upper-body flinch's current weight, from zero at rest to one at full strength.</summary>
         public float HitWeight => _hitLayer >= 0 && _animator != null ? _animator.GetLayerWeight(_hitLayer) : 0f;
 
+        /// <summary>
+        /// Feeds the directional blend the fighter's movement relative to its facing.
+        /// </summary>
+        /// <remarks>
+        /// Read from the character root's own motion rather than handed in, so neither controller changes: the
+        /// root is what the motor moves, while this visual root also carries the procedural lean and recoil.
+        /// </remarks>
+        private void DriveDirection(float planarSpeed01)
+        {
+            Transform root = transform.parent != null ? transform.parent : transform;
+            Vector3 displacement = _hasRootPosition ? root.position - _lastRootPosition : Vector3.zero;
+            _lastRootPosition = root.position;
+            _hasRootPosition = true;
+
+            _blendPosition = LocomotionDirection.BlendPosition(displacement, transform.rotation, planarSpeed01, _blendPosition);
+
+            float delta = Time.deltaTime;
+            _animator.SetFloat(MoveXParam, _blendPosition.x, DirectionDampSeconds, delta);
+            _animator.SetFloat(MoveZParam, _blendPosition.y, DirectionDampSeconds, delta);
+        }
+
         /// <summary>Returns the rig to its idle state for a retry.</summary>
         public void ResetState()
         {
@@ -192,6 +223,10 @@ namespace AdaptiveBossArena.Combat.Feel
             if (HasSkeleton)
             {
                 _animator.SetFloat(SpeedParam, 0f);
+                _animator.SetFloat(MoveXParam, 0f);
+                _animator.SetFloat(MoveZParam, 0f);
+                _blendPosition = Vector2.zero;
+                _hasRootPosition = false;
                 _animator.Play(CharacterAnimatorParameters.LocomotionState, 0, 0f);
             }
         }

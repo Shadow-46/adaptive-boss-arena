@@ -59,13 +59,17 @@ namespace AdaptiveBossArena.Editor.Art
             string path = ControllerFolder + "/" + table.Name + ".controller";
             AnimatorController controller = LoadEmptiedOrCreate(path);
             controller.AddParameter(CharacterAnimatorParameters.Speed, AnimatorControllerParameterType.Float);
+            controller.AddParameter(CharacterAnimatorParameters.MoveX, AnimatorControllerParameterType.Float);
+            controller.AddParameter(CharacterAnimatorParameters.MoveZ, AnimatorControllerParameterType.Float);
             controller.AddParameter(CharacterAnimatorParameters.AttackTime, AnimatorControllerParameterType.Float);
             controller.AddParameter(CharacterAnimatorParameters.ReactionTime, AnimatorControllerParameterType.Float);
 
             AnimatorStateMachine machine = controller.layers[0].stateMachine;
 
             AnimatorState locomotion = machine.AddState(CharacterAnimatorParameters.LocomotionState);
-            locomotion.motion = BuildLocomotion(controller, clips, table.Locomotion);
+            locomotion.motion = table.Directional.Length > 0
+                ? BuildDirectionalLocomotion(controller, clips, table)
+                : BuildLocomotion(controller, clips, table.Locomotion);
             machine.defaultState = locomotion;
 
             foreach (KeyValuePair<string, string> entry in table.States)
@@ -253,6 +257,52 @@ namespace AdaptiveBossArena.Editor.Art
 
             return tree;
         }
+
+        /// <summary>
+        /// A two-dimensional blend of idle, walks, runs, back-steps and strafes, each placed where it travels.
+        /// </summary>
+        /// <remarks>
+        /// Each clip's position is its measured travel over the fastest clip's, so the run sits at one along the
+        /// facing, a walk about a third of the way, and a strafe out to its side at the speed it actually steps.
+        /// Driven by movement relative to the facing, so sideways and backwards motion gets legs that match.
+        /// </remarks>
+        private static Motion BuildDirectionalLocomotion(
+            AnimatorController controller, Dictionary<string, AnimationClip> clips, CharacterClipTable table)
+        {
+            var tree = new BlendTree
+            {
+                name = "Locomotion",
+                blendType = BlendTreeType.FreeformDirectional2D,
+                blendParameter = CharacterAnimatorParameters.MoveX,
+                blendParameterY = CharacterAnimatorParameters.MoveZ,
+                useAutomaticThresholds = false
+            };
+
+            AssetDatabase.AddObjectToAsset(tree, controller);
+
+            if (table.Locomotion.Length > 0 && clips.TryGetValue(table.Locomotion[0].Clip, out AnimationClip idle))
+            {
+                tree.AddChild(idle, Vector2.zero);
+            }
+
+            var travels = table.Directional
+                .Where(clips.ContainsKey)
+                .Select(name => (Name: name, Travel: ClipTravelMeasure.TravelOf(table, name)))
+                .Where(entry => entry.Travel.magnitude > MinimumTravel)
+                .ToList();
+
+            float fastest = travels.Count > 0 ? travels.Max(entry => entry.Travel.magnitude) : 1f;
+
+            foreach ((string name, Vector2 travel) in travels)
+            {
+                tree.AddChild(clips[name], travel / fastest);
+            }
+
+            return tree;
+        }
+
+        /// <summary>Travel below which a clip is treated as standing, in metres per second.</summary>
+        private const float MinimumTravel = 0.2f;
 
         private static void AddChild(BlendTree tree, Dictionary<string, AnimationClip> clips, string clip, float threshold)
         {

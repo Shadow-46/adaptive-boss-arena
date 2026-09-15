@@ -36,13 +36,18 @@ namespace AdaptiveBossArena.Editor.Art
         /// <param name="clipSources">Asset paths and folders the clips are looked up in, first match wins.</param>
         /// <param name="locomotion">Speed thresholds, from zero to one, and the clip at each.</param>
         /// <param name="states">Every other state and its clip.</param>
+        /// <param name="directional">
+        /// Moving clips for the directional blend - forward, back and both sides - placed by their measured travel.
+        /// Empty keeps the single-speed blend of <paramref name="locomotion"/>.
+        /// </param>
         public CharacterClipTable(
             string name,
             string rigModel,
             float rigScale,
             string[] clipSources,
             (float Speed, string Clip)[] locomotion,
-            IReadOnlyDictionary<string, string> states)
+            IReadOnlyDictionary<string, string> states,
+            string[] directional = null)
         {
             Name = name;
             RigModel = rigModel;
@@ -50,6 +55,7 @@ namespace AdaptiveBossArena.Editor.Art
             ClipSources = clipSources;
             Locomotion = locomotion;
             States = states;
+            Directional = directional ?? new string[0];
         }
 
         /// <summary>The knight: Mixamo's Paladin with the sword and shield set.</summary>
@@ -89,6 +95,12 @@ namespace AdaptiveBossArena.Editor.Art
                 ["Hook"] = "sword and shield kick",
                 ["Dash"] = "sword and shield attack (3)",
                 ["Cast"] = "sword and shield casting (2)"
+            },
+            // walk (2) steps back; strafe and strafe (4) step right, (2) and (3) left - measured, not assumed.
+            new[]
+            {
+                "sword and shield walk", "sword and shield run", "sword and shield walk (2)",
+                "sword and shield strafe", "sword and shield strafe (2)", "sword and shield strafe (3)", "sword and shield strafe (4)"
             });
 
         /// <summary>The boss: Mixamo's Warrok, a hunched brute, with the great sword set.</summary>
@@ -101,7 +113,8 @@ namespace AdaptiveBossArena.Editor.Art
             {
                 (0f, "great sword idle"),
                 (0.3f, "great sword walk"),
-                (1f, "great sword run")
+                // run (2), not run: "great sword run" steps backwards, and the brute ran forwards on it.
+                (1f, "great sword run (2)")
             },
             new Dictionary<string, string>
             {
@@ -129,6 +142,12 @@ namespace AdaptiveBossArena.Editor.Art
                 ["Dash"] = "great sword slide attack",
                 // Shockwaves: a gathering cast that releases outward.
                 ["Cast"] = "spell cast"
+            },
+            // walk (2) steps back; strafe (2) and (4) step right, strafe and (3) left.
+            new[]
+            {
+                "great sword walk", "great sword run (2)", "great sword walk (2)",
+                "great sword strafe", "great sword strafe (2)", "great sword strafe (3)", "great sword strafe (4)"
             });
 
         /// <summary>Name of the generated controller.</summary>
@@ -148,6 +167,9 @@ namespace AdaptiveBossArena.Editor.Art
 
         /// <summary>Every other state and its clip.</summary>
         public IReadOnlyDictionary<string, string> States { get; }
+
+        /// <summary>Moving clips for the directional blend, or empty for the single-speed blend.</summary>
+        public string[] Directional { get; }
 
         /// <summary>The CC0 mannequin both fighters use when the licensed art is absent.</summary>
         /// <param name="name">Name of the generated controller.</param>
