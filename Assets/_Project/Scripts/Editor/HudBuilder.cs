@@ -52,12 +52,29 @@ namespace AdaptiveBossArena.Editor
         private static readonly string MainMenuSceneName =
             System.IO.Path.GetFileNameWithoutExtension(EditorMenus.MainMenuScenePath);
 
-        private static readonly Color PlayerHealthColor = new Color(0.45f, 0.85f, 0.5f);
-        private static readonly Color StaminaColor = new Color(0.95f, 0.8f, 0.35f);
-        private static readonly Color BossHealthColor = new Color(0.9f, 0.3f, 0.32f);
-        private static readonly Color PostureColor = new Color(0.75f, 0.8f, 1f);
-        private static readonly Color FocusColor = new Color(1f, 0.6f, 0.9f);
-        private static readonly Color TrailColor = new Color(1f, 1f, 1f, 0.35f);
+        // Dark, desaturated and set in iron: saturated green, yellow and pink bars on bare quads were a large
+        // part of why the game read as a toy. Each gauge still keeps a distinct hue, so they stay legible.
+        private static readonly Color PlayerHealthColor = new Color(0.62f, 0.1f, 0.08f);
+        private static readonly Color StaminaColor = new Color(0.66f, 0.6f, 0.42f);
+        private static readonly Color BossHealthColor = new Color(0.52f, 0.05f, 0.05f);
+        private static readonly Color PostureColor = new Color(0.62f, 0.64f, 0.68f);
+        private static readonly Color FocusColor = new Color(0.85f, 0.5f, 0.16f);
+        private static readonly Color TrailColor = new Color(0.95f, 0.78f, 0.55f, 0.4f);
+
+        /// <summary>The iron rim around every gauge.</summary>
+        private static readonly Color FrameColor = new Color(0.16f, 0.13f, 0.11f, 0.95f);
+
+        /// <summary>The empty part of a gauge, nearly black so the fill's loss is unmistakable.</summary>
+        private static readonly Color WellColor = new Color(0.03f, 0.02f, 0.02f, 0.9f);
+
+        /// <summary>Bone-coloured lettering.</summary>
+        private static readonly Color LetteringColor = new Color(0.78f, 0.72f, 0.62f);
+
+        /// <summary>The boss's name, spaced out above its gauge.</summary>
+        private const string BossTitle = "T H E   H O L L O W   B R U T E";
+
+        /// <summary>Thickness of a gauge's iron rim, in reference pixels.</summary>
+        private const float FrameThickness = 2f;
         private static readonly Color PanelColor = new Color(0f, 0f, 0f, 0.72f);
 
         /// <summary>Builds the whole interface and returns the objects the director needs.</summary>
@@ -189,6 +206,12 @@ namespace AdaptiveBossArena.Editor
         {
             GameObject group = CreatePanel(root, "BossVitals", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
                 new Vector2(0f, -46f), new Vector2(900f, 78f), Color.clear);
+
+            Text title = CreateText(group.transform, "BossName", BossTitle, 22, TextAnchor.LowerCenter);
+            title.rectTransform.anchoredPosition = new Vector2(0f, 44f);
+            title.rectTransform.sizeDelta = new Vector2(900f, 30f);
+            title.color = LetteringColor;
+            title.gameObject.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.85f);
 
             references.BossHealth = CreateBar(
                 group.transform, "Health", new Vector2(0f, -14f), new Vector2(900f, 22f),
@@ -346,7 +369,8 @@ namespace AdaptiveBossArena.Editor
             rect.pivot = new Vector2(0f, 0f);
             rect.anchoredPosition = new Vector2(44f, 140f);
             rect.sizeDelta = new Vector2(320f, 32f);
-            label.color = new Color(0.85f, 0.88f, 0.95f);
+            label.color = LetteringColor;
+            label.gameObject.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.85f);
 
             var display = root.gameObject.AddComponent<WeaponDisplay>();
             display.Bind(channels.WeaponDrawn, label);
@@ -388,11 +412,22 @@ namespace AdaptiveBossArena.Editor
             Color color,
             FloatEventChannel channel)
         {
+            // The root's own image is the iron rim; the well inside it is the gauge proper, so the fills that
+            // resize to a fraction of their parent stay inside the rim.
             GameObject barRoot = CreatePanel(parent, name, new Vector2(0f, 0f), new Vector2(0f, 0f),
-                anchoredPosition, size, new Color(0f, 0f, 0f, 0.6f));
+                anchoredPosition, size, FrameColor);
 
-            Image trail = CreateFillImage(barRoot.transform, "Trail", TrailColor);
-            Image fill = CreateFillImage(barRoot.transform, "Fill", color);
+            var well = new GameObject("Well", typeof(RectTransform), typeof(Image));
+            well.transform.SetParent(barRoot.transform, false);
+            var wellRect = well.GetComponent<RectTransform>();
+            Stretch(wellRect);
+            wellRect.offsetMin = new Vector2(FrameThickness, FrameThickness);
+            wellRect.offsetMax = new Vector2(-FrameThickness, -FrameThickness);
+            well.GetComponent<Image>().color = WellColor;
+
+            Image trail = CreateFillImage(well.transform, "Trail", TrailColor);
+            Image fill = CreateFillImage(well.transform, "Fill", color);
+            fill.sprite = UiSprites.GaugeShading();
 
             var bar = barRoot.AddComponent<ResourceBar>();
             bar.Bind(channel, fill, trail);
@@ -410,8 +445,8 @@ namespace AdaptiveBossArena.Editor
             var rect = imageObject.GetComponent<RectTransform>();
             Stretch(rect);
 
-            // Left as a simple untextured quad. The bar is sized by stretching this rect, not by
-            // Image.fillAmount, which has no effect without a sprite.
+            // Sized by stretching this rect, not by Image.fillAmount: the fill's shading sprite is stretched
+            // with it, and the trail has no sprite, for which fillAmount does nothing.
             var image = imageObject.GetComponent<Image>();
             image.color = color;
             image.type = Image.Type.Simple;

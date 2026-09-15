@@ -34,15 +34,15 @@ namespace AdaptiveBossArena.UI
 
         [SerializeField]
         [Tooltip("Colour of a phase the boss has not yet reached.")]
-        private Color _pendingColor = new Color(1f, 1f, 1f, 0.25f);
+        private Color _pendingColor = new Color(0.78f, 0.72f, 0.62f, 0.22f);
 
         [SerializeField]
         [Tooltip("Colour of the phase currently in effect.")]
-        private Color _activeColor = new Color(1f, 0.35f, 0.3f, 1f);
+        private Color _activeColor = new Color(0.72f, 0.1f, 0.07f, 1f);
 
         [SerializeField]
         [Tooltip("Colour of a phase already driven through.")]
-        private Color _clearedColor = new Color(0.6f, 0.6f, 0.65f, 0.8f);
+        private Color _clearedColor = new Color(0.78f, 0.72f, 0.62f, 0.7f);
 
         private void OnEnable()
         {
