@@ -35,6 +35,12 @@ namespace AdaptiveBossArena.Combat.Feel
         private CharacterAnimator _procedural;
         private CharacterAnimationBridge _bridge;
 
+        private Vector3[] _previousPositions = new Vector3[0];
+        private Quaternion[] _previousRotations = new Quaternion[0];
+        private Vector3[] _linear = new Vector3[0];
+        private Vector3[] _angular = new Vector3[0];
+        private bool _hasPreviousPose;
+
         /// <summary>Whether the body currently belongs to physics.</summary>
         public bool IsActive { get; private set; }
 
@@ -46,6 +52,55 @@ namespace AdaptiveBossArena.Combat.Feel
             _animator = GetComponentInChildren<Animator>(true);
             _procedural = GetComponent<CharacterAnimator>();
             _bridge = GetComponent<CharacterAnimationBridge>();
+            AllocatePoseHistory();
+        }
+
+        /// <summary>
+        /// Tracks how each bone is moving while the Animator still poses it.
+        /// </summary>
+        /// <remarks>
+        /// After animation, so it measures the pose that was drawn. A frame with no time in it - a hit-stop,
+        /// which is exactly what a killing blow brings - keeps the last real velocities rather than reading
+        /// the frozen body as still.
+        /// </remarks>
+        private void LateUpdate()
+        {
+            if (IsActive || _bodies.Length == 0)
+            {
+                return;
+            }
+
+            float seconds = Time.deltaTime;
+
+            for (int i = 0; i < _bodies.Length; i++)
+            {
+                if (_bodies[i] == null)
+                {
+                    continue;
+                }
+
+                Transform bone = _bodies[i].transform;
+
+                if (_hasPreviousPose && seconds > Mathf.Epsilon)
+                {
+                    _linear[i] = PoseVelocity.Linear(_previousPositions[i], bone.position, seconds);
+                    _angular[i] = PoseVelocity.Angular(_previousRotations[i], bone.rotation, seconds);
+                }
+
+                _previousPositions[i] = bone.position;
+                _previousRotations[i] = bone.rotation;
+            }
+
+            _hasPreviousPose = true;
+        }
+
+        private void AllocatePoseHistory()
+        {
+            _previousPositions = new Vector3[_bodies.Length];
+            _previousRotations = new Quaternion[_bodies.Length];
+            _linear = new Vector3[_bodies.Length];
+            _angular = new Vector3[_bodies.Length];
+            _hasPreviousPose = false;
         }
 
         /// <summary>Assigns the bones. Used by the prefab builder.</summary>
@@ -53,7 +108,14 @@ namespace AdaptiveBossArena.Combat.Feel
         public void Bind(Rigidbody[] bodies)
         {
             _bodies = bodies ?? new Rigidbody[0];
+            AllocatePoseHistory();
         }
+
+        /// <summary>The velocity a body will inherit from the animation if the character dies now.</summary>
+        /// <param name="index">Index into <see cref="Bodies"/>.</param>
+        /// <returns>The inherited linear velocity.</returns>
+        public Vector3 AnimatedVelocity(int index) =>
+            index >= 0 && index < _linear.Length ? _linear[index] : Vector3.zero;
 
         /// <summary>Lets the body fall, thrown along the blow that killed it.</summary>
         /// <param name="throwVelocity">Velocity to give the torso, typically the killing blow's knockback.</param>
@@ -97,9 +159,10 @@ namespace AdaptiveBossArena.Combat.Feel
                 SetCollidersEnabled(body, true);
                 body.isKinematic = false;
 
-                // The torso takes the whole blow and the limbs a share of it, so the body folds around
-                // the hit rather than sliding away rigid.
-                body.linearVelocity = i < 2 ? thrown : thrown * 0.5f;
+                // The motion the animation had, and on top of it the blow: the torso takes the whole blow and
+                // the limbs a share of it, so the body folds around the hit rather than sliding away rigid.
+                body.linearVelocity = _linear[i] + (i < 2 ? thrown : thrown * 0.5f);
+                body.angularVelocity = _angular[i];
             }
         }
 
@@ -112,6 +175,7 @@ namespace AdaptiveBossArena.Combat.Feel
             }
 
             IsActive = false;
+            _hasPreviousPose = false;
 
             foreach (Rigidbody body in _bodies)
             {
