@@ -296,10 +296,21 @@ namespace AdaptiveBossArena.Game
                     return Quaternion.Euler(_config.CameraPitchDegrees, 0f, 0f);
 
                 default:
-                    return Quaternion.Euler(_pitchDegrees, 0f, 0f) *
-                           Quaternion.LookRotation(OrbitForward(), Vector3.up);
+                    return OrbitRotation(OrbitForward(), _pitchDegrees);
             }
         }
+
+        /// <summary>The third-person orientation: looking along a heading, tipped down by a pitch.</summary>
+        /// <remarks>
+        /// The pitch is applied in the camera's own frame, after the heading. It used to be applied first,
+        /// about the world's X axis, which is a pitch only while looking along Z: looking along X the same
+        /// rotation rolls the view, so the horizon tipped over whenever the boss was off to one side.
+        /// </remarks>
+        /// <param name="heading">Horizontal direction to look along.</param>
+        /// <param name="pitchDegrees">How far to look down, in degrees.</param>
+        /// <returns>The camera's rotation.</returns>
+        public static Quaternion OrbitRotation(Vector3 heading, float pitchDegrees) =>
+            Quaternion.LookRotation(heading, Vector3.up) * Quaternion.Euler(pitchDegrees, 0f, 0f);
 
         /// <summary>
         /// The direction the camera looks along.
