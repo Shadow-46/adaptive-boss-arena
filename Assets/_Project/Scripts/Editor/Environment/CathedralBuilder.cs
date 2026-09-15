@@ -63,6 +63,9 @@ namespace AdaptiveBossArena.Editor.Environment
         private static readonly Color CandleFlame = new Color(3.2f, 1.6f, 0.55f);
         private static readonly Color CandleLight = new Color(1f, 0.66f, 0.34f);
         private static readonly Color ShaftColour = new Color(1f, 0.93f, 0.78f, 0.11f);
+
+        /// <summary>Under half the desktop shafts' strength: the browser renders the same additive planes much brighter.</summary>
+        private static readonly Color WebShaftColour = new Color(1f, 0.93f, 0.78f, 0.045f);
         private static readonly Color DustColour = new Color(1f, 0.95f, 0.85f, 0.5f);
 
         private static Material _floor;
@@ -388,6 +391,8 @@ namespace AdaptiveBossArena.Editor.Environment
             shafts.SetParent(root, false);
 
             Material material = GetOrCreateAdditive("LightShaft", ShaftGradient(), ShaftColour);
+            Material webMaterial = GetOrCreateAdditive("LightShaftWeb", ShaftGradient(), WebShaftColour);
+            var renderers = new Renderer[ShaftCount];
             Mesh mesh = GetOrCreateCrossedPlanes();
             Vector3 down = SunRotation * Vector3.forward;
             var random = new XorShiftRandomProvider(LayoutSeed + 2u);
@@ -408,7 +413,105 @@ namespace AdaptiveBossArena.Editor.Environment
                 renderer.sharedMaterial = material;
                 renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 renderer.receiveShadows = false;
+                renderers[i] = renderer;
             }
+
+            root.parent.gameObject.AddComponent<PlatformLighting>().BindShafts(renderers, webMaterial);
+        }
+
+        /// <summary>
+        /// Hands the sun and the broken roof's shadow pattern to the platform lighting, once the light exists.
+        /// </summary>
+        /// <param name="sun">The arena's directional light.</param>
+        public static void BindSun(Light sun)
+        {
+            PlatformLighting lighting = Object.FindAnyObjectByType<PlatformLighting>();
+
+            if (lighting == null || sun == null)
+            {
+                return;
+            }
+
+            // The cookie's size lives on URP's light data, which a light created from code does not carry yet.
+            if (!sun.TryGetComponent(out UnityEngine.Rendering.Universal.UniversalAdditionalLightData _))
+            {
+                sun.gameObject.AddComponent<UnityEngine.Rendering.Universal.UniversalAdditionalLightData>();
+            }
+
+            lighting.BindSun(sun, RoofShadowCookie());
+        }
+
+        /// <summary>
+        /// The shadow the ruined roof throws: four rafters across open sky, and ragged patches of roof still standing.
+        /// </summary>
+        /// <remarks>
+        /// Tileable, because a directional cookie repeats across the whole floor. The patches come from value
+        /// noise on a wrapping grid, seeded, so the pattern is identical in every regeneration.
+        /// </remarks>
+        private static Texture2D RoofShadowCookie()
+        {
+            const int Size = 256;
+            const int Cells = 8;
+            const string Name = "RoofShadowCookie";
+
+            string path = EditorMenus.GeneratedMaterialFolder + "/" + Name + ".asset";
+            var existing = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            var random = new XorShiftRandomProvider(LayoutSeed + 3u);
+            var lattice = new float[Cells, Cells];
+
+            for (int y = 0; y < Cells; y++)
+            {
+                for (int x = 0; x < Cells; x++)
+                {
+                    lattice[x, y] = random.NextFloat01();
+                }
+            }
+
+            var texture = new Texture2D(Size, Size, TextureFormat.RGBA32, true)
+            {
+                name = Name,
+                wrapMode = TextureWrapMode.Repeat
+            };
+
+            for (int py = 0; py < Size; py++)
+            {
+                for (int px = 0; px < Size; px++)
+                {
+                    float u = (float)px / Size;
+                    float v = (float)py / Size;
+
+                    // Smoothly interpolated, wrapping lattice noise: the fallen and standing roof.
+                    float gx = u * Cells, gy = v * Cells;
+                    int x0 = Mathf.FloorToInt(gx) % Cells, y0 = Mathf.FloorToInt(gy) % Cells;
+                    int x1 = (x0 + 1) % Cells, y1 = (y0 + 1) % Cells;
+                    float fx = Mathf.SmoothStep(0f, 1f, gx - Mathf.Floor(gx));
+                    float fy = Mathf.SmoothStep(0f, 1f, gy - Mathf.Floor(gy));
+                    float noise = Mathf.Lerp(
+                        Mathf.Lerp(lattice[x0, y0], lattice[x1, y0], fx),
+                        Mathf.Lerp(lattice[x0, y1], lattice[x1, y1], fx), fy);
+
+                    float roof = Mathf.SmoothStep(0.62f, 0.72f, noise);
+
+                    // Four rafters, a whole number of them per tile so they meet across the seam.
+                    float rafter = Mathf.Abs(Mathf.Sin(u * Mathf.PI * 4f));
+                    float beam = Mathf.SmoothStep(0.06f, 0.14f, rafter);
+
+                    float light = Mathf.Lerp(1f, 0.28f, roof) * Mathf.Lerp(0.35f, 1f, beam);
+                    texture.SetPixel(px, py, new Color(light, light, light, 1f));
+                }
+            }
+
+            texture.Apply(true);
+            AssetAuthoring.EnsureFolderExists(EditorMenus.GeneratedMaterialFolder);
+            AssetDatabase.CreateAsset(texture, path);
+
+            return texture;
         }
 
         /// <summary>Motes drifting in the light. On unscaled time, so the air keeps moving through a hit-stop.</summary>

@@ -72,6 +72,7 @@ namespace AdaptiveBossArena.Editor
 
             BuildArenaGeometry(config);
             Light directionalLight = BuildLighting(config);
+            Environment.CathedralBuilder.BindSun(directionalLight);
             BuildSpawnMarkers(config);
             BuildManagers();
 
