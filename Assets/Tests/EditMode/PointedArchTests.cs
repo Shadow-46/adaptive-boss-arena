@@ -36,11 +36,18 @@ namespace AdaptiveBossArena.Tests.EditMode
         [Test]
         public void TheHeadIsAClosedWallAboveTheArch()
         {
-            Mesh mesh = TiledMeshes.PointedArchHead(1.5f, 8.5f, 7.4f, 5.55f, 2f);
+            Mesh mesh = TiledMeshes.BuildPointedArchHead(1.5f, 8.5f, 7.4f, 5.55f, 2f);
 
-            Assert.Greater(mesh.triangles.Length, 0, "The arch head has no faces.");
-            Assert.AreEqual(8.5f, mesh.bounds.size.y, 0.01f, "The head is not as tall as asked.");
-            Assert.AreEqual(7.4f, mesh.bounds.size.z, 0.01f, "The head does not span the window.");
+            try
+            {
+                Assert.Greater(mesh.triangles.Length, 0, "The arch head has no faces.");
+                Assert.AreEqual(8.5f, mesh.bounds.size.y, 0.01f, "The head is not as tall as asked.");
+                Assert.AreEqual(7.4f, mesh.bounds.size.z, 0.01f, "The head does not span the window.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(mesh);
+            }
         }
     }
 }

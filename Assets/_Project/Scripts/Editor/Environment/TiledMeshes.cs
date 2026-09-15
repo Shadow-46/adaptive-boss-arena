@@ -79,7 +79,7 @@ namespace AdaptiveBossArena.Editor.Environment
                 return existing;
             }
 
-            Mesh mesh = BuildArchHead(thickness, height, span, Mathf.Clamp(rise, span * 0.5f, height * 0.95f), Mathf.Max(0.01f, metresPerTile));
+            Mesh mesh = BuildPointedArchHead(thickness, height, span, rise, metresPerTile);
             mesh.name = name;
 
             AssetAuthoring.EnsureFolderExists(MeshFolder);
@@ -107,8 +107,17 @@ namespace AdaptiveBossArena.Editor.Environment
             return Mathf.Sqrt(Mathf.Max(0f, radius * radius - fromCentre * fromCentre));
         }
 
-        private static Mesh BuildArchHead(float thickness, float height, float span, float rise, float tile)
+        /// <summary>Builds the arch head without saving it; see <see cref="PointedArchHead"/>.</summary>
+        /// <param name="thickness">Wall thickness in metres, along x.</param>
+        /// <param name="height">Slab height from the arch's springing to its top, along y.</param>
+        /// <param name="span">Window width in metres, along z.</param>
+        /// <param name="rise">Height of the arch's point above its springing.</param>
+        /// <param name="metresPerTile">How many metres one repeat of the texture covers.</param>
+        /// <returns>A new mesh the caller owns.</returns>
+        public static Mesh BuildPointedArchHead(float thickness, float height, float span, float rise, float metresPerTile)
         {
+            rise = Mathf.Clamp(rise, span * 0.5f, height * 0.95f);
+            float tile = Mathf.Max(0.01f, metresPerTile);
             const int Slices = 24;
 
             var vertices = new System.Collections.Generic.List<Vector3>();
