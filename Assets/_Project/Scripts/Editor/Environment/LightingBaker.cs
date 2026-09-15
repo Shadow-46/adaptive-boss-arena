@@ -60,8 +60,10 @@ namespace AdaptiveBossArena.Editor.Environment
                 light.lightmapBakeType = LightmapBakeType.Mixed;
             }
 
-            // Stone contributes bounce light; it is lit by the probes rather than by lightmaps, so nothing needs
-            // UVs for lightmapping and no lightmap textures join the download.
+            // Stone contributes bounce light to the bake, but is not lit by the probes afterwards. The floor lies
+            // below the probe grid and the walls and columns beyond it, where the interpolated probes are about
+            // two and a half times darker than the room's ambient light - measured - and letting the stone sample
+            // them turned the whole ruin dark. Probes are for the fighters, who stand inside the grid.
             GameObject cathedral = GameObject.Find(CathedralBuilder.RootName);
 
             if (cathedral != null)
@@ -77,6 +79,7 @@ namespace AdaptiveBossArena.Editor.Environment
                     StaticEditorFlags flags = GameObjectUtility.GetStaticEditorFlags(stone);
                     GameObjectUtility.SetStaticEditorFlags(stone, flags | StaticEditorFlags.ContributeGI);
                     renderer.receiveGI = ReceiveGI.LightProbes;
+                    renderer.lightProbeUsage = LightProbeUsage.Off;
                 }
             }
 

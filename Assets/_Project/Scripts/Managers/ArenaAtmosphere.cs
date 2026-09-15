@@ -97,7 +97,11 @@ namespace AdaptiveBossArena.Game
         private UnityEngine.Rendering.SphericalHarmonicsL2[] _bakedProbes;
 
         private UnityEngine.Rendering.SphericalHarmonicsL2[] _tintedProbes;
-        private Color _probeGain = Color.white;
+        /// <summary>Starts impossible, so the first frame always writes the probes and applies the ambient floor.</summary>
+        private Color _probeGain = Color.clear;
+
+        /// <summary>The room's ambient light as the scene loaded, which the tinted probes never fall below.</summary>
+        private UnityEngine.Rendering.SphericalHarmonicsL2 _ambientFloor;
 
         private int _targetPhase;
         private Color _lightColor;
@@ -138,6 +142,7 @@ namespace AdaptiveBossArena.Game
             if (probes != null && probes.count > 0)
             {
                 _bakedProbes = probes.bakedProbes;
+                _ambientFloor = RenderSettings.ambientProbe;
                 _tintedProbes = new UnityEngine.Rendering.SphericalHarmonicsL2[_bakedProbes.Length];
             }
 
@@ -217,7 +222,7 @@ namespace AdaptiveBossArena.Game
             }
 
             _probeGain = gain;
-            ProbeTint.Apply(_bakedProbes, _tintedProbes, gain);
+            ProbeTint.Apply(_bakedProbes, _tintedProbes, gain, _ambientFloor);
             LightmapSettings.lightProbes.bakedProbes = _tintedProbes;
         }
     }

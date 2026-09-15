@@ -33,11 +33,22 @@ namespace AdaptiveBossArena.Game
             Channel(current.b, baked.b),
             1f);
 
-        /// <summary>Writes the baked probes, scaled by a gain, into a destination array of the same length.</summary>
+        /// <summary>
+        /// Writes the baked probes, scaled by a gain and held above the room's ambient light, into a destination array.
+        /// </summary>
+        /// <remarks>
+        /// The floor matters as much as the tint. The probes bake the sky as the ruin lets it through, which near
+        /// the walls is far less light than the unoccluded ambient everything used before the bake; measured,
+        /// a probe at the wall came out two and a half times darker. A fighter walking to the wall must not go
+        /// dim because a bake happened, so each channel's base term is kept at least at the ambient's. Where
+        /// the sunlit floor bounces more light than that, the bake shows through.
+        /// </remarks>
         /// <param name="baked">The probes as baked. Never modified.</param>
         /// <param name="destination">Receives the tinted probes.</param>
         /// <param name="gain">Per-channel gain.</param>
-        public static void Apply(SphericalHarmonicsL2[] baked, SphericalHarmonicsL2[] destination, Color gain)
+        /// <param name="floor">The room's ambient light, which no probe may fall below.</param>
+        public static void Apply(
+            SphericalHarmonicsL2[] baked, SphericalHarmonicsL2[] destination, Color gain, SphericalHarmonicsL2 floor)
         {
             for (int probe = 0; probe < baked.Length && probe < destination.Length; probe++)
             {
@@ -49,6 +60,11 @@ namespace AdaptiveBossArena.Game
                     tinted[0, coefficient] *= gain.r;
                     tinted[1, coefficient] *= gain.g;
                     tinted[2, coefficient] *= gain.b;
+                }
+
+                for (int channel = 0; channel < 3; channel++)
+                {
+                    tinted[channel, 0] = Mathf.Max(tinted[channel, 0], floor[channel, 0]);
                 }
 
                 destination[probe] = tinted;
