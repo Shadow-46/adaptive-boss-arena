@@ -54,6 +54,15 @@ namespace AdaptiveBossArena.Editor.Environment
         private const int DebrisCount = 34;
         private const int StainCount = 16;
 
+        private const float BannerWidth = 1.5f;
+        private const float BannerHeight = 4.8f;
+
+        /// <summary>Height of a banner's top edge: low enough to hang inside the camera's view over the wall ring.</summary>
+        private const float BannerTop = 7.6f;
+
+        /// <summary>How far in front of the column's face the cloth hangs.</summary>
+        private const float BannerStandOff = 0.06f;
+
         /// <summary>Height of floor stains above the stone: clear of it, and below the scars at 0.02.</summary>
         private const float StainLift = 0.006f;
         private const int ShaftCount = 5;
@@ -347,6 +356,7 @@ namespace AdaptiveBossArena.Editor.Environment
                 }
             }
 
+            BuildBanners(columns, ringRadius);
             GiveColumnsTheirLintels(columns);
         }
 
@@ -375,7 +385,7 @@ namespace AdaptiveBossArena.Editor.Environment
                     columns.Find($"Capital_{i}").GetComponent<MeshRenderer>()
                 };
 
-                foreach (string lintel in new[] { $"Lintel_{i}", $"Lintel_{(i + ColumnCount - 1) % ColumnCount}" })
+                foreach (string lintel in new[] { $"Lintel_{i}", $"Lintel_{(i + ColumnCount - 1) % ColumnCount}", $"Banner_{i}" })
                 {
                     Transform found = columns.Find(lintel);
 
@@ -509,6 +519,189 @@ namespace AdaptiveBossArena.Editor.Environment
                 Block(walls, $"AisleRoof_{face}", new Vector3(bayDepth, 0.6f, faceWidth), 2f, _block,
                     bayCentre + Vector3.up * (OuterWallHeight + 0.3f), facing);
             }
+        }
+
+        /// <summary>
+        /// Rotted banners hanging from the standing columns, on the side facing the fight.
+        /// </summary>
+        /// <remarks>
+        /// Between the wall ring and the roof the camera saw bare stone. On the columns - close, lit by the
+        /// shafts, and always inside the view - cloth that is torn, faded and folded says who held this place
+        /// and how long ago. Parented with the columns so each joins its column's breakable parts, and falls
+        /// with it. Cut-out rather than blended, so it sorts and shadows like the stone.
+        /// </remarks>
+        private static void BuildBanners(Transform columns, float ringRadius)
+        {
+            float step = 360f / ColumnCount;
+            Material cloth = GetOrCreateBannerMaterial();
+            Mesh mesh = BannerMesh();
+
+            for (int i = 0; i < ColumnCount; i++)
+            {
+                if (IsCollapsed(i))
+                {
+                    continue;
+                }
+
+                float angle = step * 0.5f + step * i;
+                Vector3 inward = -OnRing(angle, 1f);
+                Vector3 hang = OnRing(angle, ringRadius) + inward * (ColumnWidth * 0.5f + BannerStandOff)
+                    + Vector3.up * (BannerTop - BannerHeight * 0.5f);
+
+                GameObject banner = Place(columns, $"Banner_{i}", mesh, cloth, hang, Quaternion.LookRotation(-inward, Vector3.up));
+                banner.transform.localScale = new Vector3(BannerWidth, BannerHeight, 1f);
+            }
+        }
+
+        /// <summary>A banner's cloth: a unit-sized grid with shallow folds down its length.</summary>
+        private static Mesh BannerMesh()
+        {
+            string path = TiledMeshes.MeshFolder + "/BannerCloth.asset";
+            var existing = AssetDatabase.LoadAssetAtPath<Mesh>(path);
+
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            const int Columns = 6, Rows = 14;
+            var vertices = new Vector3[(Columns + 1) * (Rows + 1)];
+            var uvs = new Vector2[vertices.Length];
+            var triangles = new int[Columns * Rows * 6];
+
+            for (int row = 0; row <= Rows; row++)
+            {
+                for (int column = 0; column <= Columns; column++)
+                {
+                    float u = column / (float)Columns, v = row / (float)Rows;
+
+                    // Folds deepen toward the free bottom edge, where the cloth hangs loosest.
+                    float fold = Mathf.Sin(u * Mathf.PI * 3f) * 0.05f * (1.2f - v);
+                    vertices[row * (Columns + 1) + column] = new Vector3(u - 0.5f, v - 0.5f, fold);
+                    uvs[row * (Columns + 1) + column] = new Vector2(u, v);
+                }
+            }
+
+            int t = 0;
+
+            for (int row = 0; row < Rows; row++)
+            {
+                for (int column = 0; column < Columns; column++)
+                {
+                    int a = row * (Columns + 1) + column, b = a + 1, c = a + Columns + 1, d = c + 1;
+                    triangles[t++] = a; triangles[t++] = c; triangles[t++] = b;
+                    triangles[t++] = b; triangles[t++] = c; triangles[t++] = d;
+                }
+            }
+
+            var mesh = new Mesh { name = "BannerCloth", vertices = vertices, uv = uvs, triangles = triangles };
+            mesh.RecalculateNormals();
+            mesh.RecalculateTangents();
+            mesh.RecalculateBounds();
+
+            AssetAuthoring.EnsureFolderExists(TiledMeshes.MeshFolder);
+            AssetDatabase.CreateAsset(mesh, path);
+
+            return mesh;
+        }
+
+        /// <summary>
+        /// Faded crimson cloth with a bone sigil, folded, grimed toward its hem and torn away along it.
+        /// </summary>
+        private static Texture2D BannerTexture()
+        {
+            const int Width = 128, Height = 384;
+            string path = EditorMenus.GeneratedMaterialFolder + "/BannerCloth.asset";
+            var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            bool created = texture == null;
+
+            if (created)
+            {
+                texture = new Texture2D(Width, Height, TextureFormat.RGBA32, true) { name = "BannerCloth" };
+            }
+
+            texture.wrapMode = TextureWrapMode.Clamp;
+
+            var crimson = new Color(0.46f, 0.07f, 0.055f);
+            var bone = new Color(0.78f, 0.7f, 0.56f);
+
+            for (int y = 0; y < Height; y++)
+            {
+                for (int x = 0; x < Width; x++)
+                {
+                    float u = (x + 0.5f) / Width, v = (y + 0.5f) / Height;
+
+                    float weave = Mathf.PerlinNoise(u * 50f, v * 140f);
+                    float fade = Mathf.PerlinNoise(u * 4f + 5.5f, v * 5f + 1.7f);
+                    Color colour = crimson * (0.7f + weave * 0.3f) * (0.75f + fade * 0.45f);
+
+                    // A sword pointing down within a ring, in the upper third: whoever raised these, long gone.
+                    float cx = (u - 0.5f) * 2f, cy = (v - 0.7f) * 2f * (Height / (float)Width) * 0.5f;
+                    float ring = Mathf.Abs(Mathf.Sqrt(cx * cx + cy * cy) - 0.55f);
+                    bool blade = Mathf.Abs(cx) < 0.05f && cy > -0.75f && cy < 0.6f;
+                    bool guard = Mathf.Abs(cy - 0.3f) < 0.05f && Mathf.Abs(cx) < 0.3f;
+
+                    if (ring < 0.045f || blade || guard)
+                    {
+                        colour = Color.Lerp(colour, bone * (0.8f + fade * 0.3f), 0.75f);
+                    }
+
+                    // Grime rising from the hem.
+                    colour *= Mathf.Lerp(0.45f, 1f, Mathf.Clamp01(v * 2.2f));
+
+                    // The hem torn away in ragged tongues, and a few holes eaten through higher up.
+                    float tear = 0.12f + Mathf.PerlinNoise(u * 9f, 3.3f) * 0.22f + Mathf.Abs(Mathf.Sin(u * Mathf.PI * 2.5f)) * 0.08f;
+                    bool hole = Mathf.PerlinNoise(u * 11f + 20f, v * 9f + 40f) > 0.8f && v < 0.6f;
+                    float alpha = v < tear || hole ? 0f : 1f;
+
+                    colour.a = alpha;
+                    texture.SetPixel(x, y, colour);
+                }
+            }
+
+            texture.Apply(true);
+
+            // Rewritten in place, so retuning the cloth reaches the existing asset.
+            if (created)
+            {
+                AssetAuthoring.EnsureFolderExists(EditorMenus.GeneratedMaterialFolder);
+                AssetDatabase.CreateAsset(texture, path);
+            }
+            else
+            {
+                EditorUtility.SetDirty(texture);
+            }
+
+            return texture;
+        }
+
+        private static Material GetOrCreateBannerMaterial()
+        {
+            string path = EditorMenus.GeneratedMaterialFolder + "/BannerCloth.mat";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+
+            if (material == null)
+            {
+                material = new Material(shader) { name = "BannerCloth" };
+                AssetAuthoring.EnsureFolderExists(EditorMenus.GeneratedMaterialFolder);
+                AssetDatabase.CreateAsset(material, path);
+            }
+
+            // Cut out and seen from both sides: cloth hangs free, and its torn hem must show as holes.
+            material.shader = shader;
+            material.SetTexture("_BaseMap", BannerTexture());
+            material.SetColor("_BaseColor", Color.white);
+            material.SetFloat("_AlphaClip", 1f);
+            material.SetFloat("_Cutoff", 0.5f);
+            material.EnableKeyword("_ALPHATEST_ON");
+            material.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off);
+            material.SetFloat("_Metallic", 0f);
+            material.SetFloat("_Smoothness", 0.06f);
+            material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.AlphaTest;
+            EditorUtility.SetDirty(material);
+
+            return material;
         }
 
         /// <summary>Stones scattered between the column ring and the outer wall, never on the fighting floor.</summary>
