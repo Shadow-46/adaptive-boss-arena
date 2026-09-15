@@ -43,6 +43,21 @@ namespace AdaptiveBossArena.Combat.Feel
         /// <summary>On the floor, and rising from it.</summary>
         public const string KnockedDownState = "KnockedDown";
 
+        /// <summary>
+        /// The layer a landed blow plays on, masked to the upper body.
+        /// </summary>
+        /// <remarks>
+        /// Masked so the torso and arms take the blow while the legs keep whatever stance or step they were in:
+        /// a hit that does not break the fighter's footing should not reset it either.
+        /// </remarks>
+        public const string HitLayer = "Hits";
+
+        /// <summary>The flinch played on the hit layer.</summary>
+        public const string HitState = "Hit";
+
+        /// <summary>The hit layer's resting state, playing nothing.</summary>
+        public const string HitRestState = "Rest";
+
         /// <summary>Defeat.</summary>
         public const string DeathState = "Death";
 

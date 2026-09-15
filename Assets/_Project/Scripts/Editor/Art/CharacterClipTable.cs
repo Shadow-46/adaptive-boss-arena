@@ -72,6 +72,8 @@ namespace AdaptiveBossArena.Editor.Art
                 [CharacterAnimatorParameters.GuardState] = "sword and shield block idle",
                 [CharacterAnimatorParameters.StaggerState] = "sword and shield impact (2)",
                 [CharacterAnimatorParameters.DeathState] = "sword and shield death",
+                // impact: a short recoil of the shoulders behind the shield, not a stumble.
+                [CharacterAnimatorParameters.HitState] = "sword and shield impact",
                 // Thrown backwards off the feet; the get-up starts from lying on the back to match.
                 [CharacterAnimatorParameters.AirborneState] = "Flying Back Death",
                 [CharacterAnimatorParameters.KnockedDownState] = "Getting Up",
@@ -108,6 +110,7 @@ namespace AdaptiveBossArena.Editor.Art
                 // impact (3): the longest recoil, staggering back a step - a poise break, not a flinch.
                 [CharacterAnimatorParameters.StaggerState] = "great sword impact (3)",
                 [CharacterAnimatorParameters.DeathState] = "two handed sword death",
+                [CharacterAnimatorParameters.HitState] = "great sword impact",
                 [CharacterAnimatorParameters.AirborneState] = "great sword impact (2)",
                 [CharacterAnimatorParameters.KnockedDownState] = "great sword impact (2)",
 
@@ -162,6 +165,7 @@ namespace AdaptiveBossArena.Editor.Art
                 [CharacterAnimatorParameters.GuardState] = "Sword_Block",
                 [CharacterAnimatorParameters.StaggerState] = "Idle_Shield_Break",
                 [CharacterAnimatorParameters.DeathState] = "Death01",
+                [CharacterAnimatorParameters.HitState] = "Hit_Chest",
                 [CharacterAnimatorParameters.AirborneState] = "Hit_Knockback",
                 [CharacterAnimatorParameters.KnockedDownState] = "LayToIdle",
                 ["Light1"] = "Sword_Regular_A",

@@ -70,6 +70,12 @@ namespace AdaptiveBossArena.Editor.Art
 
             foreach (KeyValuePair<string, string> entry in table.States)
             {
+                // The flinch lives on its own layer, below.
+                if (entry.Key == CharacterAnimatorParameters.HitState)
+                {
+                    continue;
+                }
+
                 AnimatorState state = AddClipState(machine, entry.Key, clips, entry.Value);
 
                 if (state == null)
@@ -89,10 +95,69 @@ namespace AdaptiveBossArena.Editor.Art
                 }
             }
 
+            AddHitLayer(controller, clips, table);
+
             EditorUtility.SetDirty(controller);
             AssetDatabase.SaveAssets();
 
             return controller;
+        }
+
+        /// <summary>
+        /// Adds the layer a landed blow plays on: the fighter's own impact clip, masked to the upper body.
+        /// </summary>
+        /// <remarks>
+        /// Weight zero at rest; the bridge raises it for the length of the flinch. Override blending with an upper-
+        /// body mask means the torso and arms take the blow while the legs carry on with the step or stance below.
+        /// </remarks>
+        private static void AddHitLayer(AnimatorController controller, Dictionary<string, AnimationClip> clips, CharacterClipTable table)
+        {
+            if (!table.States.TryGetValue(CharacterAnimatorParameters.HitState, out string clipName) ||
+                !clips.TryGetValue(clipName, out AnimationClip clip))
+            {
+                return;
+            }
+
+            var hits = new AnimatorStateMachine { name = CharacterAnimatorParameters.HitLayer, hideFlags = HideFlags.HideInHierarchy };
+            AssetDatabase.AddObjectToAsset(hits, controller);
+
+            AnimatorState rest = hits.AddState(CharacterAnimatorParameters.HitRestState);
+            hits.defaultState = rest;
+            hits.AddState(CharacterAnimatorParameters.HitState).motion = clip;
+
+            controller.AddLayer(new AnimatorControllerLayer
+            {
+                name = CharacterAnimatorParameters.HitLayer,
+                stateMachine = hits,
+                defaultWeight = 0f,
+                blendingMode = AnimatorLayerBlendingMode.Override,
+                avatarMask = UpperBodyMask()
+            });
+        }
+
+        /// <summary>Loads or creates the mask covering the spine, head and arms, but not the legs or root.</summary>
+        private static AvatarMask UpperBodyMask()
+        {
+            string path = ControllerFolder + "/UpperBody.mask";
+            var mask = AssetDatabase.LoadAssetAtPath<AvatarMask>(path);
+
+            if (mask == null)
+            {
+                mask = new AvatarMask { name = "UpperBody" };
+                AssetDatabase.CreateAsset(mask, path);
+            }
+
+            for (int part = 0; part < (int)AvatarMaskBodyPart.LastBodyPart; part++)
+            {
+                var bodyPart = (AvatarMaskBodyPart)part;
+                bool upper = bodyPart == AvatarMaskBodyPart.Body || bodyPart == AvatarMaskBodyPart.Head ||
+                             bodyPart == AvatarMaskBodyPart.LeftArm || bodyPart == AvatarMaskBodyPart.RightArm ||
+                             bodyPart == AvatarMaskBodyPart.LeftFingers || bodyPart == AvatarMaskBodyPart.RightFingers;
+                mask.SetHumanoidBodyPartActive(bodyPart, upper);
+            }
+
+            EditorUtility.SetDirty(mask);
+            return mask;
         }
 
         /// <summary>
@@ -114,6 +179,18 @@ namespace AdaptiveBossArena.Editor.Art
             }
 
             controller.parameters = new AnimatorControllerParameter[0];
+
+            // Every layer above the base is rebuilt too; keeping them would stack a new hit layer on each run.
+            while (controller.layers.Length > 1)
+            {
+                AnimatorStateMachine extra = controller.layers[controller.layers.Length - 1].stateMachine;
+                controller.RemoveLayer(controller.layers.Length - 1);
+
+                if (extra != null)
+                {
+                    Object.DestroyImmediate(extra, true);
+                }
+            }
 
             AnimatorStateMachine machine = controller.layers[0].stateMachine;
 

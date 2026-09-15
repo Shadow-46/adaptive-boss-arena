@@ -39,6 +39,23 @@ namespace AdaptiveBossArena.Combat.Feel
         private string _currentState;
         private AttackDefinition _currentAttack;
 
+        /// <summary>Index of the upper-body hit layer, or -1 when the controller has none.</summary>
+        private int _hitLayer = -1;
+
+        /// <summary>Seconds since the last flinch began, or a negative value when none is playing.</summary>
+        private float _hitElapsed = -1f;
+
+        private float _hitLength;
+
+        /// <summary>Seconds a flinch takes to reach full weight: quick, so the blow registers on its frame.</summary>
+        private const float HitAttackSeconds = 0.05f;
+
+        /// <summary>
+        /// The share of the flinch spent easing back to the stance underneath, so the torso settles rather than
+        /// snapping back.
+        /// </summary>
+        private const float HitReleaseFraction = 0.45f;
+
         /// <summary>True while a rig with an Animator is present to drive.</summary>
         /// <remarks>
         /// False while the Animator is switched off, which is what a ragdoll does on death: the corpse
@@ -54,6 +71,40 @@ namespace AdaptiveBossArena.Combat.Feel
 
             var procedural = GetComponent<CharacterAnimator>();
             _config = procedural != null ? procedural.Config : null;
+
+            _hitLayer = _animator != null && _animator.runtimeAnimatorController != null
+                ? _animator.GetLayerIndex(CharacterAnimatorParameters.HitLayer)
+                : -1;
+        }
+
+        private void Update()
+        {
+            if (_hitElapsed < 0f || !HasSkeleton || _hitLayer < 0)
+            {
+                return;
+            }
+
+            if (_hitLength <= 0f)
+            {
+                AnimatorStateInfo info = _animator.GetCurrentAnimatorStateInfo(_hitLayer);
+                _hitLength = info.IsName(CharacterAnimatorParameters.HitState) && info.length > 0.05f ? info.length : 0.6f;
+            }
+
+            // Game time: a hit-stop freezes the flinch at the blow, and the release plays out after it.
+            _hitElapsed += Time.deltaTime;
+
+            float release = _hitLength * HitReleaseFraction;
+            float weight = _hitElapsed < HitAttackSeconds
+                ? _hitElapsed / HitAttackSeconds
+                : Mathf.Clamp01((_hitLength - _hitElapsed) / Mathf.Max(0.01f, release));
+
+            _animator.SetLayerWeight(_hitLayer, weight);
+
+            if (_hitElapsed >= _hitLength)
+            {
+                _hitElapsed = -1f;
+                _animator.SetLayerWeight(_hitLayer, 0f);
+            }
         }
 
         /// <summary>Pushes this frame's observable state, and the attack in progress if any.</summary>
@@ -100,16 +151,43 @@ namespace AdaptiveBossArena.Combat.Feel
             }
         }
 
-        /// <summary>Kept for the procedural animator's recoil; the additive shove plays on the rig already.</summary>
+        /// <summary>Plays the fighter's flinch on the upper body, over whatever it is doing.</summary>
+        /// <remarks>
+        /// Not over a fall, a death or a stagger: those are full-body reactions with their own clips, and a flinch
+        /// layered on top would bend a body lying on the floor.
+        /// </remarks>
         public void Recoil()
         {
+            if (!HasSkeleton || _hitLayer < 0 ||
+                _currentState == CharacterAnimatorParameters.DeathState ||
+                _currentState == CharacterAnimatorParameters.AirborneState ||
+                _currentState == CharacterAnimatorParameters.KnockedDownState ||
+                _currentState == CharacterAnimatorParameters.StaggerState)
+            {
+                return;
+            }
+
+            _animator.Play(CharacterAnimatorParameters.HitState, _hitLayer, 0f);
+
+            // The clip's length is known once the Animator has entered the state, on its next update.
+            _hitLength = 0f;
+            _hitElapsed = 0f;
         }
+
+        /// <summary>The upper-body flinch's current weight, from zero at rest to one at full strength.</summary>
+        public float HitWeight => _hitLayer >= 0 && _animator != null ? _animator.GetLayerWeight(_hitLayer) : 0f;
 
         /// <summary>Returns the rig to its idle state for a retry.</summary>
         public void ResetState()
         {
             _currentState = null;
             _currentAttack = null;
+            _hitElapsed = -1f;
+
+            if (HasSkeleton && _hitLayer >= 0)
+            {
+                _animator.SetLayerWeight(_hitLayer, 0f);
+            }
 
             if (HasSkeleton)
             {
