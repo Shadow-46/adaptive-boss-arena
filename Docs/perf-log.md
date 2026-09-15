@@ -54,3 +54,4 @@ is deterministic enough to compare across stages.
 | 2026-09-15 | G4 | 8266be4 | WebGL (local, web tier) | not measured | not measured | — | — | — | 25 MB | tier verified in log; deployed |
 | 2026-09-15 | fixes | 44eb5cd | Windows 1280×720 (desktop tier, Ultra) | 6.95 | 6.95 | 13.89 | 179 | 105.2k | — | rig facing, camera confinement, roof cookie, baked probes + reflection, breakable columns |
 | 2026-09-15 | fixes | 44eb5cd | WebGL (local, web tier) | not measured | not measured | — | — | — | 25 MB | tier verified in log; deployed |
+| 2026-09-16 | grim dark | acf3e4c | Windows 1920×1080 (desktop tier, Ultra) | 6.94 | 6.95 | 20.83 | 259 | 118.4k | — | post-processing live for the first time, blood and blade smear, banners, stains, directional locomotion |
