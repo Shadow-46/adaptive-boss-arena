@@ -111,6 +111,12 @@ namespace AdaptiveBossArena.Editor
                     visualRoot.transform, animationConfig, SilhouetteBuilder.BruteRigMaterial(), out Animator rig))
             {
                 SilhouetteBuilder.AttachBruteCore(rig, BodyRadius * 0.34f);
+
+                // The brute's clips are a two-handed great sword set, swung by nothing until now.
+                Art.ArmsBuilder.MountCleaver(
+                    rig,
+                    MaterialLibrary.GetOrCreateSurface("BruteCleaver", new Color(0.3f, 0.28f, 0.27f), metallic: 0.9f, smoothness: 0.45f),
+                    MaterialLibrary.GetOrCreateSurface("BruteGrip", new Color(0.12f, 0.08f, 0.06f), metallic: 0.1f, smoothness: 0.25f));
             }
             else
             {
