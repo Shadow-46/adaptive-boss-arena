@@ -52,3 +52,5 @@ is deterministic enough to compare across stages.
 | 2026-09-14 | P4 | 43e60a8 | WebGL (local, web tier) | not measured | not measured | — | — | — | 25 MB | tier verified in log; debris seen flying in browser; deployed |
 | 2026-09-15 | G4 | 8266be4 | Windows 1280×720 (desktop tier, Ultra) | 6.94 | 7.10 | 111.09 | 219 | 121.0k | — | final; one 111 ms spike (single hitch, p95 inside budget) |
 | 2026-09-15 | G4 | 8266be4 | WebGL (local, web tier) | not measured | not measured | — | — | — | 25 MB | tier verified in log; deployed |
+| 2026-09-15 | fixes | 44eb5cd | Windows 1280×720 (desktop tier, Ultra) | 6.95 | 6.95 | 13.89 | 179 | 105.2k | — | rig facing, camera confinement, roof cookie, baked probes + reflection, breakable columns |
+| 2026-09-15 | fixes | 44eb5cd | WebGL (local, web tier) | not measured | not measured | — | — | — | 25 MB | tier verified in log; deployed |
