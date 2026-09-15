@@ -257,7 +257,9 @@ namespace AdaptiveBossArena.Editor
 
             var group = panel.AddComponent<CanvasGroup>();
             Text label = CreateText(panel.transform, "Label", string.Empty, 34, TextAnchor.MiddleCenter);
-            label.color = new Color(1f, 0.85f, 0.55f);
+            label.color = new Color(0.86f, 0.74f, 0.56f);
+            label.fontStyle = FontStyle.Italic;
+            label.gameObject.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.9f);
 
             var display = panel.AddComponent<AdaptationTellDisplay>();
             display.Bind(channels.AdaptationAdopted, label, group);
