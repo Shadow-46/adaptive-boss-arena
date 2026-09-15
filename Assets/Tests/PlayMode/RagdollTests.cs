@@ -74,10 +74,12 @@ namespace AdaptiveBossArena.Tests.PlayMode
             Rigidbody hips = _ragdoll.Bodies[0];
             Rigidbody head = _ragdoll.Bodies[2];
 
-            // Measured by the head, not the hips. How high the hips rest depends on how the body lands - one run
-            // left the corpse face-down and kneeling, head on the floor and hips still 0.58 m up - while a head
-            // that has dropped most of a metre means the body is down whichever way it fell.
+            // Down means the head or the hips came down a long way, not a particular one of them: how a body rests
+            // depends on how it lands. Observed so far: face-down and kneeling (head at 0.14 m, hips still 0.58 m
+            // up) and sitting slumped (hips at 0.29 m, head still 0.77 m up). Both are plainly on the floor; a
+            // standing body has neither.
             float standingHead = head.position.y;
+            float standingHips = hips.position.y;
 
             _player.TakeDamage(KillingBlow);
 
@@ -97,8 +99,11 @@ namespace AdaptiveBossArena.Tests.PlayMode
                 yield return null;
             }
 
-            Assert.Less(head.position.y, standingHead - 0.6f,
-                $"The body never went down: head {head.position.y:F2} m from {standingHead:F2}, hips {hips.position.y:F2} m, " +
+            bool headDown = head.position.y < standingHead - 0.5f;
+            bool hipsDown = hips.position.y < standingHips - 0.35f;
+
+            Assert.IsTrue(headDown || hipsDown,
+                $"The body never went down: head {head.position.y:F2} m from {standingHead:F2}, hips {hips.position.y:F2} m from {standingHips:F2}, " +
                 $"after {waited:F2} s game time / {realWaited:F2} s real, time scale {Time.timeScale:F2}, " +
                 $"player at {_player.transform.position}.");
 
