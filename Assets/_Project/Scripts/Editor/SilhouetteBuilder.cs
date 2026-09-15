@@ -80,6 +80,8 @@ namespace AdaptiveBossArena.Editor
                 animator.applyRootMotion = false;
                 animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
 
+                FaceRigForward(animator, instance.transform, visualRoot);
+
                 // Dormant until death. Built here so the knight and the brute get the same body from
                 // the same table, scaled by the same number that sizes the rig.
                 Art.RagdollBuilder.Build(animator, visualRoot.gameObject, config.RigScale);
@@ -104,6 +106,57 @@ namespace AdaptiveBossArena.Editor
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Turns an attached rig so its body faces the character's forward.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Art tools disagree about which way is forward. The Quaternius mannequin is authored facing -Z, and
+        /// attaching it unrotated left both fighters turned away from where they were facing: the boss
+        /// swung behind itself while its hits landed in front. The motors, the hitboxes and the boss's
+        /// perception all use the character root's forward, so the body is the thing that must agree.
+        /// </para>
+        /// <para>
+        /// Measured rather than assumed: the bind pose's hips give the body's facing, and the rig is turned
+        /// to match, snapped to a quarter turn so a slightly asymmetric pelvis cannot tilt it off square.
+        /// A differently authored model therefore lines up too, with nothing to remember to change.
+        /// </para>
+        /// </remarks>
+        /// <param name="animator">The rig's humanoid Animator.</param>
+        /// <param name="rig">The rig instance's root.</param>
+        /// <param name="visualRoot">The character's visual root, whose forward is the character's.</param>
+        private static void FaceRigForward(Animator animator, Transform rig, Transform visualRoot)
+        {
+            if (!animator.isHuman)
+            {
+                return;
+            }
+
+            animator.Rebind();
+
+            Transform left = animator.GetBoneTransform(HumanBodyBones.LeftUpperLeg);
+            Transform right = animator.GetBoneTransform(HumanBodyBones.RightUpperLeg);
+
+            if (left == null || right == null)
+            {
+                return;
+            }
+
+            // A body facing +Z has its right side at +X, and +X cross +Y is +Z: right x up is the facing.
+            Vector3 facing = Vector3.Cross(right.position - left.position, Vector3.up);
+            facing.y = 0f;
+
+            if (facing.sqrMagnitude < 0.0001f)
+            {
+                return;
+            }
+
+            float yaw = Vector3.SignedAngle(facing, visualRoot.forward, Vector3.up);
+            float snapped = Mathf.Round(yaw / 90f) * 90f;
+
+            rig.localRotation = Quaternion.Euler(0f, snapped, 0f) * rig.localRotation;
         }
 
         /// <summary>The material a rigged knight's body is drawn with: the same steel as the generated one.</summary>
