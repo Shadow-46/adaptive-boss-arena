@@ -129,15 +129,12 @@ namespace AdaptiveBossArena.Editor
             // rigged model is a child of this root. A no-op while the player is a primitive.
             visualRoot.AddComponent<CharacterAnimationBridge>();
 
-            // Placed out at arm's length and slightly ahead, so the ribbon traces the arc a blade
-            // would sweep rather than a circle around the character's centre.
-            WeaponTrailBuilder.Attach(
-                visualRoot.transform,
-                new Vector3(CapsuleRadius * 1.4f, CapsuleHeight * 0.55f, CapsuleRadius * 1.2f),
-                new Color(0.6f, 0.85f, 1f),
-                width: 0.3f);
+            Transform socket = BuildWeaponSocket(visualRoot.transform, rig);
 
-            BuildWeaponSocket(visualRoot.transform, rig);
+            // Along the blade, from just past the guard to the point, so the smear is the arc the steel swept.
+            // A cold steel grey: the swing should read as metal moving, not as a coloured ribbon.
+            WeaponTrailBuilder.Attach(socket, Vector3.zero, baseDistance: 0.25f, tipDistance: 0.95f,
+                new Color(0.42f, 0.44f, 0.48f, 1f));
         }
 
         /// <summary>Adds the empty mount a weapon model attaches to, at a placeholder hand position.</summary>
@@ -148,7 +145,8 @@ namespace AdaptiveBossArena.Editor
         /// </remarks>
         /// <param name="visualRoot">The character's visual root.</param>
         /// <param name="rig">The rig's Animator when a rigged body was built, otherwise null.</param>
-        private static void BuildWeaponSocket(Transform visualRoot, Animator rig)
+        /// <returns>The socket's transform.</returns>
+        private static Transform BuildWeaponSocket(Transform visualRoot, Animator rig)
         {
             var socket = new GameObject("WeaponSocket");
 
@@ -177,6 +175,8 @@ namespace AdaptiveBossArena.Editor
             }
 
             socket.AddComponent<WeaponSocket>();
+
+            return socket.transform;
         }
 
         /// <summary>Adds the trigger volume that receives boss attacks.</summary>

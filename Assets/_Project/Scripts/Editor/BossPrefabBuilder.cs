@@ -137,13 +137,22 @@ namespace AdaptiveBossArena.Editor
             // visible on the character rather than only felt in the damage.
             visualRoot.AddComponent<PhaseAura>();
 
-            // Wider and hotter than the player's. The boss's swings cover more ground, and the
-            // ribbon is a large part of how the player judges whether one will reach them.
-            WeaponTrailBuilder.Attach(
-                visualRoot.transform,
-                new Vector3(BodyRadius * 1.5f, BodyHeight * 0.6f, BodyRadius * 1.3f),
-                new Color(1f, 0.45f, 0.35f),
-                width: 0.55f);
+            // Along the cleaver's broad blade when there is one, and out from the body where the primitive's arm
+            // would be when there is not. Longer and faintly warm: the boss's swings cover more ground, and
+            // the smear is a large part of how the player judges whether one will reach them.
+            Transform hand = rig != null && rig.isHuman ? rig.GetBoneTransform(HumanBodyBones.RightHand) : null;
+            Transform cleaver = hand != null ? hand.Find("Cleaver") : null;
+            var warmSteel = new Color(0.5f, 0.36f, 0.3f, 1f);
+
+            if (cleaver != null)
+            {
+                WeaponTrailBuilder.Attach(cleaver, Vector3.zero, baseDistance: 0.45f, tipDistance: 1.6f, warmSteel);
+            }
+            else
+            {
+                WeaponTrailBuilder.Attach(
+                    visualRoot.transform, new Vector3(BodyRadius * 0.8f, BodyHeight * 0.6f, 0f), 0.3f, 1.4f, warmSteel);
+            }
         }
 
         private static void BuildHurtboxes(Transform parent)

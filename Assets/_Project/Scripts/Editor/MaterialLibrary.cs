@@ -304,10 +304,8 @@ namespace AdaptiveBossArena.Editor
         /// Loads or creates the shared material used for weapon trails.
         /// </summary>
         /// <remarks>
-        /// Built on the sprite shader specifically because it honours vertex colours. A trail's shape
-        /// and fade come from <see cref="TrailRenderer.colorGradient"/>, which reaches the shader as
-        /// vertex colour; the pipeline's unlit shader ignores it, so a trail authored against that
-        /// would render as a flat unfading ribbon.
+        /// Built on the particle shader because it honours vertex colour: the smear's fade with age reaches
+        /// the shader that way. The pipeline's plain unlit shader ignores it and would draw an unfading card.
         /// </remarks>
         /// <returns>The trail material, or null when no suitable shader exists.</returns>
         public static Material GetOrCreateWeaponTrail()
@@ -315,29 +313,86 @@ namespace AdaptiveBossArena.Editor
             const string materialName = "WeaponTrail";
             string path = $"{EditorMenus.GeneratedMaterialFolder}/{materialName}.mat";
 
-            var existing = AssetDatabase.LoadAssetAtPath<Material>(path);
-
-            if (existing != null)
-            {
-                return existing;
-            }
-
-            Shader shader = Shader.Find("Sprites/Default");
+            Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
 
             if (shader == null)
             {
                 Debug.LogWarning(
-                    "[Adaptive Boss Arena] Could not resolve a sprite shader; weapon trails will " +
-                    "not render.");
+                    "[Adaptive Boss Arena] Could not resolve the particle shader; weapon trails will not render.");
                 return null;
             }
 
-            var material = new Material(shader) { name = materialName };
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
 
-            AssetAuthoring.EnsureFolderExists(EditorMenus.GeneratedMaterialFolder);
-            AssetDatabase.CreateAsset(material, path);
+            if (material == null)
+            {
+                material = new Material(shader) { name = materialName };
+                AssetAuthoring.EnsureFolderExists(EditorMenus.GeneratedMaterialFolder);
+                AssetDatabase.CreateAsset(material, path);
+            }
+
+            // Reapplied to an existing asset, which was a sprite material for the old single-point ribbon.
+            material.shader = shader;
+            ConfigureParticleBlend(material, additive: true);
+            material.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off);
+            material.SetTexture("_BaseMap", BladeSmearGradient());
+            material.SetColor("_BaseColor", Color.white);
+            EditorUtility.SetDirty(material);
 
             return material;
+        }
+
+        /// <summary>
+        /// The smear's shading: nothing at the blade's base, rising to a thin bright line at its edge.
+        /// </summary>
+        /// <remarks>
+        /// U runs along the smear's age and V across the blade. An evenly lit band read as a solid card; the
+        /// eye takes a bright edge fading inward as the path of the steel.
+        /// </remarks>
+        private static Texture2D BladeSmearGradient()
+        {
+            const int Width = 64, Height = 64;
+            const string Name = "BladeSmearGradient";
+            string path = EditorMenus.GeneratedMaterialFolder + "/" + Name + ".asset";
+
+            var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            bool created = texture == null;
+
+            if (created)
+            {
+                texture = new Texture2D(Width, Height, TextureFormat.RGBA32, true) { name = Name };
+            }
+
+            texture.wrapMode = TextureWrapMode.Clamp;
+
+            for (int y = 0; y < Height; y++)
+            {
+                float across = (y + 0.5f) / Height;
+                float body = Mathf.Pow(across, 2.5f) * 0.55f;
+                float edge = Mathf.Exp(-Mathf.Pow((across - 0.9f) / 0.05f, 2f));
+                float fadeOut = 1f - Environment.CathedralBuilder.Edge(0.92f, 1f, across);
+
+                for (int x = 0; x < Width; x++)
+                {
+                    float age = (x + 0.5f) / Width;
+                    float value = Mathf.Clamp01((body + edge) * fadeOut * (1f - age * 0.6f));
+                    texture.SetPixel(x, y, new Color(1f, 1f, 1f, value));
+                }
+            }
+
+            texture.Apply(true);
+
+            if (created)
+            {
+                AssetAuthoring.EnsureFolderExists(EditorMenus.GeneratedMaterialFolder);
+                AssetDatabase.CreateAsset(texture, path);
+            }
+            else
+            {
+                EditorUtility.SetDirty(texture);
+            }
+
+            return texture;
         }
 
         /// <summary>
