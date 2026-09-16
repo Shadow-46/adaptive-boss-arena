@@ -111,6 +111,14 @@
 
 ## Stage 2 — Weight and movement
 
+Status, 2026-09-16: 7 and 8 done, 9 done differently, 10 deliberately skipped.
+
+- **Task 9 as built:** the packs are in-place clips with no start, stop or turn coverage worth wiring, so instead
+  the locomotion blend became directional (strafes and back-steps), each clip placed by travel measured from its
+  planted foot. That also caught the brute running on a backwards clip. Foot IK is not in.
+- **Task 10 skipped:** the boss's slow turn rate is the design's main lever on how easily it is circled, and
+  slowing the clips further would fight the attack time-warp. Left alone on purpose.
+
 - **Task 7: Directional hit reactions on an additive layer.** Upper-body additive layer with HitFront and HitBack; `CharacterAnimationBridge.PlayHit(Vector3 worldDirection, float weight)` called from both controllers' damage paths. PlayMode: a landed blow raises the layer weight above 0.5 within 3 frames without changing the base state.
 - **Task 8: Heavier impact.** Pure `ImpactWeight.HitStopSeconds(damage, poiseDamage, cap)`; `CameraShaker.PunchDirection(Vector3, float)`; 0.35× slow motion for 0.4 s on a poise break through `ITimeService`. EditMode on the pure rule.
 - **Task 9: Grounded locomotion.** Start and stop clips, 180° turns when the desired heading differs by more than 120°, `Combat/Feel/FootPlanting.cs` foot IK while speed is under 0.1. PlayMode: idle for 1 s moves a foot bone under 2 cm.
@@ -118,10 +126,18 @@
 
 ## Stage 3 — Knockdowns and ragdoll
 
+Status, 2026-09-16: 12 done; 11 not possible with the art in hand.
+
+- **Task 11 blocked:** neither pack has a forward fall, so a blow from behind cannot put the fighter on its face.
+  It needs another Mixamo download, which is the user's to approve.
+
 - **Task 11: Clip-driven falls and get-ups.** FallBack or FallForward chosen by the blow's direction relative to facing; Getting Up for the rise. PlayMode: a blow from behind plays FallForward.
 - **Task 12: Ragdoll from pose and velocity.** `RagdollActivator` gives each body its animated velocity from the last two poses before enabling physics. PlayMode: hips velocity on activation within 30 % of the animated velocity.
 
 ## Stage 4 — Effects
+
+Status, 2026-09-16: 13, 14 and 15 done; 16 partly — the brute's core is a sunk ember, heat haze is not in.
+Beyond the plan: floor blood that fades, footfall dust, and post-processing made to render at all.
 
 - **Task 13:** Impact effects — dark blood and sparks, stone dust, embers.
 - **Task 14:** Textured, fading blade trail.
@@ -131,6 +147,10 @@
 Each: a pure rule where there is logic, a PlayMode test that the effect spawns and pools, screenshot or GIF evidence, commit.
 
 ## Stage 5 — Environment and HUD
+
+Status, 2026-09-16: 17, 18 and 19 done — lancet window heads, banners, floor stains and grime, a drained grade,
+an iron-framed HUD with the boss named above its gauge, and a restyled title and outcome screen. Ribs and
+candelabras are not in; the arches sit above the camera's usual framing, so they read only when it tilts up.
 
 - **Task 17:** Gothic pointed arches and ribs replace box lintels.
 - **Task 18:** Clutter, banners, candelabras, grime and puddle decals; darker, warmer grade.
