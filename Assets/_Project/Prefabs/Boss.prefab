@@ -586,6 +586,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: AdaptiveBossArena.Combat::AdaptiveBossArena.Combat.Feel.FootstepEmitter
   _cueId: step.boss
   _strideLength: 2.4
+  _dustMaterial: {fileID: 2100000, guid: e43eae1c5dd4fd740af7f70dd092cd35, type: 2}
+  _dustSize: 0.5
 --- !u!1 &6201088833949698708
 GameObject:
   m_ObjectHideFlags: 0
