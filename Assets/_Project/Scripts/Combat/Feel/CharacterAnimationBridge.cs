@@ -26,6 +26,15 @@ namespace AdaptiveBossArena.Combat.Feel
     {
         private const float CrossFadeSeconds = 0.08f;
 
+        /// <summary>
+        /// Blend into a swing or a roll: half the usual, so the body answers the button on the frame it is pressed.
+        /// </summary>
+        /// <remarks>
+        /// An eighth of a second blending out of the stance before the swing visibly began read as input lag. The
+        /// attack clip is scrubbed by the attack's own clock, so a shorter blend loses no timing, only the delay.
+        /// </remarks>
+        private const float ResponsiveCrossFadeSeconds = 0.04f;
+
         /// <summary>Clip time around the contact frame the live window plays, as a fraction of the clip.</summary>
         private const float ContactSpanFraction = 0.08f;
 
@@ -149,7 +158,8 @@ namespace AdaptiveBossArena.Combat.Feel
 
             if (target != _currentState || newAttack)
             {
-                _animator.CrossFadeInFixedTime(target, CrossFadeSeconds);
+                bool responsive = attacking || target == CharacterAnimatorParameters.RollState;
+                _animator.CrossFadeInFixedTime(target, responsive ? ResponsiveCrossFadeSeconds : CrossFadeSeconds);
                 _currentState = target;
             }
 
