@@ -60,16 +60,38 @@ namespace AdaptiveBossArena.Game
         private CameraMode _mode = CameraMode.ThirdPerson;
 
         [SerializeField]
-        [Tooltip("Key that cycles through the camera modes.")]
-        private Key _cycleModeKey = Key.C;
-
-        [SerializeField]
-        [Tooltip("Key that toggles lock-on. Weapon swap deliberately lives elsewhere.")]
-        private Key _lockOnKey = Key.Tab;
+        [Tooltip("Generated input actions: camera orbit, lock-on and view cycling are read from here.")]
+        private InputActionAsset _actions;
 
         [SerializeField]
         [Tooltip("Whether lock-on engages automatically at the start of a fight.")]
         private bool _lockOnByDefault = true;
+
+        [Header("Orbit")]
+        [SerializeField]
+        [Range(0.02f, 0.5f)]
+        [Tooltip("Degrees the camera turns per pixel of mouse movement.")]
+        private float _mouseDegreesPerPixel = 0.12f;
+
+        [SerializeField]
+        [Range(30f, 400f)]
+        [Tooltip("Degrees per second the camera turns with the right stick fully deflected.")]
+        private float _stickDegreesPerSecond = 170f;
+
+        [SerializeField]
+        [Range(-30f, 0f)]
+        [Tooltip("Lowest pitch the player can orbit to: slightly looking up.")]
+        private float _minimumPitchDegrees = -10f;
+
+        [SerializeField]
+        [Range(20f, 80f)]
+        [Tooltip("Highest pitch the player can orbit to: looking steeply down.")]
+        private float _maximumPitchDegrees = 55f;
+
+        [SerializeField]
+        [Range(0.02f, 0.5f)]
+        [Tooltip("Half-life of the heading swinging round to the boss while locked on.")]
+        private float _lockOnHeadingHalfLife = 0.1f;
 
         [Header("Third Person")]
         [SerializeField]
@@ -134,6 +156,16 @@ namespace AdaptiveBossArena.Game
         private const float PitchAtCollapsedBoom = 32f;
         private bool _isLockedOn;
 
+        private InputAction _look;
+        private InputAction _lockOn;
+        private InputAction _cycleCamera;
+
+        /// <summary>Heading the third-person camera looks along, in degrees about the vertical.</summary>
+        private float _yawDegrees;
+
+        /// <summary>How far the third-person camera looks down, in degrees, before the wall adds any.</summary>
+        private float _orbitPitchDegrees;
+
         /// <summary>The vantage point currently in use.</summary>
         public CameraMode Mode => _mode;
 
@@ -163,28 +195,114 @@ namespace AdaptiveBossArena.Game
             // player has to discover.
             _isLockedOn = _lockOnByDefault;
 
+            ResolveActions();
+
+            _orbitPitchDegrees = _pitchDegrees;
+            _yawDegrees = HeadingDegrees(_primaryTarget != null ? _primaryTarget.forward : Vector3.forward);
+
+            if (IsLockedOn)
+            {
+                _yawDegrees = HeadingDegrees(_secondaryTarget.position - _primaryTarget.position);
+            }
+
             SnapToTarget();
         }
 
         private void Update()
         {
-            Keyboard keyboard = Keyboard.current;
-
-            if (keyboard == null)
-            {
-                return;
-            }
-
-            if (keyboard[_cycleModeKey].wasPressedThisFrame)
+            if (_cycleCamera != null && _cycleCamera.WasPressedThisFrame())
             {
                 CycleMode();
             }
 
-            if (keyboard[_lockOnKey].wasPressedThisFrame)
+            if (_lockOn != null && _lockOn.WasPressedThisFrame())
             {
                 _isLockedOn = !_isLockedOn;
             }
+
+            UpdateOrbit(Time.unscaledDeltaTime);
         }
+
+        /// <summary>Assigns the input actions the camera reads. Used by the scene generator.</summary>
+        /// <param name="actions">The generated input actions asset.</param>
+        public void SetInputActions(InputActionAsset actions) => _actions = actions;
+
+        /// <summary>
+        /// Turns the orbit by the player's mouse or stick, or swings it round to the boss while locked on.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Nothing read the mouse before this: the free camera looked along the knight's own facing, and movement
+        /// is relative to the camera, so holding a sideways key turned the knight, which turned the camera, which
+        /// turned the direction of the key - the knight ran in circles. The orbit now belongs to the player alone.
+        /// </para>
+        /// <para>
+        /// The mouse turns the camera only while the cursor is captured, so moving the pointer over a menu never
+        /// swings the view. Unscaled time, so the camera stays steerable through hit-stop and slow motion.
+        /// </para>
+        /// </remarks>
+        private void UpdateOrbit(float deltaTime)
+        {
+            Vector2 turn = LookDelta(deltaTime);
+            _orbitPitchDegrees = Mathf.Clamp(_orbitPitchDegrees - turn.y, _minimumPitchDegrees, _maximumPitchDegrees);
+
+            if (IsLockedOn)
+            {
+                Vector3 toBoss = _secondaryTarget.position - _primaryTarget.position;
+                toBoss.y = 0f;
+
+                if (toBoss.sqrMagnitude > Mathf.Epsilon)
+                {
+                    float target = HeadingDegrees(toBoss);
+                    _yawDegrees = Mathf.LerpAngle(_yawDegrees, target, DampFactor(_lockOnHeadingHalfLife, deltaTime));
+                }
+
+                return;
+            }
+
+            _yawDegrees += turn.x;
+        }
+
+        /// <summary>This frame's orbit input in degrees: x turns the heading, y raises the view.</summary>
+        private Vector2 LookDelta(float deltaTime)
+        {
+            if (_look == null)
+            {
+                return Vector2.zero;
+            }
+
+            Vector2 value = _look.ReadValue<Vector2>();
+
+            if (_look.activeControl?.device is Mouse)
+            {
+                return CursorLock.IsCaptured ? value * _mouseDegreesPerPixel : Vector2.zero;
+            }
+
+            return value * (_stickDegreesPerSecond * deltaTime);
+        }
+
+        private void ResolveActions()
+        {
+            InputActionMap map = _actions != null
+                ? _actions.FindActionMap(Player.Controls.InputActionNames.GameplayMap, throwIfNotFound: false)
+                : null;
+
+            if (map == null)
+            {
+                return;
+            }
+
+            _look = map.FindAction(Player.Controls.InputActionNames.Look, throwIfNotFound: false);
+            _lockOn = map.FindAction(Player.Controls.InputActionNames.LockOn, throwIfNotFound: false);
+            _cycleCamera = map.FindAction(Player.Controls.InputActionNames.CycleCamera, throwIfNotFound: false);
+
+            // The player's reader enables the same map; enabling it here too covers a camera that starts first.
+            map.Enable();
+        }
+
+        /// <summary>A horizontal direction's heading in degrees, zero along world forward.</summary>
+        private static float HeadingDegrees(Vector3 direction) =>
+            Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
 
         private void LateUpdate()
         {
@@ -222,6 +340,17 @@ namespace AdaptiveBossArena.Game
 
             _anchor = _primaryTarget.position;
             _smoothedLookahead = Vector3.zero;
+
+            // A snap is a cut, so a locked camera cuts straight to looking at the boss rather than swinging round.
+            if (IsLockedOn)
+            {
+                Vector3 toBoss = _secondaryTarget.position - _primaryTarget.position;
+
+                if (new Vector2(toBoss.x, toBoss.z).sqrMagnitude > Mathf.Epsilon)
+                {
+                    _yawDegrees = HeadingDegrees(toBoss);
+                }
+            }
 
             transform.SetPositionAndRotation(DesiredPosition(), DesiredRotation());
         }
@@ -320,7 +449,7 @@ namespace AdaptiveBossArena.Game
 
                 default:
                     float collapsed = _distance > 0f ? Mathf.Clamp01(_boomLoss / _distance) : 0f;
-                    return OrbitRotation(OrbitForward(), _pitchDegrees + PitchAtCollapsedBoom * collapsed);
+                    return OrbitRotation(OrbitForward(), _orbitPitchDegrees + PitchAtCollapsedBoom * collapsed);
             }
         }
 
@@ -389,27 +518,10 @@ namespace AdaptiveBossArena.Game
         /// The direction the camera looks along.
         /// </summary>
         /// <remarks>
-        /// Locked on, this points from the player to the boss, which is what makes a duel read as a
-        /// duel. Free, it follows the player's own facing and nothing else.
+        /// The orbit's heading: steered by the player in free look, swung round to point from the player to the
+        /// boss while locked on. Never the knight's facing, which is what made him run in circles.
         /// </remarks>
-        private Vector3 OrbitForward()
-        {
-            if (IsLockedOn)
-            {
-                Vector3 toBoss = _secondaryTarget.position - _primaryTarget.position;
-                toBoss.y = 0f;
-
-                if (toBoss.sqrMagnitude > Mathf.Epsilon)
-                {
-                    return toBoss.normalized;
-                }
-            }
-
-            Vector3 facing = _primaryTarget.forward;
-            facing.y = 0f;
-
-            return facing.sqrMagnitude > Mathf.Epsilon ? facing.normalized : Vector3.forward;
-        }
+        private Vector3 OrbitForward() => Quaternion.Euler(0f, _yawDegrees, 0f) * Vector3.forward;
 
         /// <summary>
         /// The point being framed.

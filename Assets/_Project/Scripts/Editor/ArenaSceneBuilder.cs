@@ -439,6 +439,16 @@ namespace AdaptiveBossArena.Editor
         {
             HudReferences hud = HudBuilder.Build(actions, channels);
 
+            // The camera orbits, locks on and cycles views from the same generated actions as the player, and holds
+            // the mouse captured only while no menu needs it.
+            ArenaCameraRig rig = Object.FindAnyObjectByType<ArenaCameraRig>();
+
+            if (rig != null)
+            {
+                rig.SetInputActions(actions);
+                rig.gameObject.AddComponent<CursorLock>().Bind(hud.PauseMenu, hud.EndScreen, hud.SettingsMenu);
+            }
+
             var director = Object.FindAnyObjectByType<EncounterDirector>();
 
             if (director == null)
