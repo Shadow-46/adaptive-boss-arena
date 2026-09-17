@@ -55,3 +55,5 @@ is deterministic enough to compare across stages.
 | 2026-09-15 | fixes | 44eb5cd | Windows 1280×720 (desktop tier, Ultra) | 6.95 | 6.95 | 13.89 | 179 | 105.2k | — | rig facing, camera confinement, roof cookie, baked probes + reflection, breakable columns |
 | 2026-09-15 | fixes | 44eb5cd | WebGL (local, web tier) | not measured | not measured | — | — | — | 25 MB | tier verified in log; deployed |
 | 2026-09-16 | grim dark | acf3e4c | Windows 1920×1080 (desktop tier, Ultra) | 6.94 | 6.95 | 20.83 | 259 | 118.4k | — | post-processing live for the first time, blood and blade smear, banners, stains, directional locomotion |
+| 2026-09-17 | before stage A | bf06164 | WebGL (local, in-app browser pane, web tier) | 14.00 | 21.00 | 1028.00 | 247 | 90.1k | — | post-processing live on web for the first time; one ~1 s hitch |
+| 2026-09-17 | stage A | eb20c1e | WebGL (local, separate Chrome window, web tier) | 7.00 | 8.00 | 69.00 | 172 | 63.0k | — | web post profile, 2 hard cascades, no depth copy, FXAA, thinned shafts/dust/candles/pools; different browser harness from the row above |
