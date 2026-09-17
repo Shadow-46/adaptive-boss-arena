@@ -24,47 +24,93 @@ namespace AdaptiveBossArena.Editor
     {
         private const string ProfilePath = "Assets/_Project/Settings/ArenaVolumeProfile.asset";
 
-        /// <summary>Creates the profile if absent and fills in the effect overrides.</summary>
+        /// <summary>
+        /// The browser's profile: the same grade, without the effects that cost a full-screen pass each.
+        /// </summary>
+        /// <remarks>
+        /// Once post-processing actually rendered, the browser build on a laptop's integrated graphics stuttered.
+        /// Film grain and chromatic aberration each add a full-resolution pass for a look the eye barely separates
+        /// from the grade itself, and bloom at half resolution with high-quality filtering is the most expensive
+        /// bloom there is. The grade - exposure, contrast, split tone, white balance, tonemapping - all folds into
+        /// one lookup table, so it costs the same either way and is kept.
+        /// </remarks>
+        public const string WebProfilePath = "Assets/_Project/Settings/ArenaVolumeProfile_Web.asset";
+
+        /// <summary>Creates both profiles if absent and fills in the effect overrides.</summary>
         [MenuItem(EditorMenus.Setup + "Configure Post Processing",
             priority = EditorMenus.SetupPriorityConfigureProject + 2)]
         public static void ConfigurePostProcessing()
         {
             AssetAuthoring.EnsureFolderExists("Assets/_Project/Settings");
 
-            var profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(ProfilePath);
-            bool created = false;
+            VolumeProfile desktop = LoadOrCreate(ProfilePath);
+            ConfigureBloom(desktop);
+            ConfigureVignette(desktop);
+            ConfigureColorAdjustments(desktop);
+            ConfigureTonemapping(desktop);
+            ConfigureChromaticAberration(desktop);
+            ConfigureFilmGrain(desktop);
+            ConfigureSplitToning(desktop);
+            ConfigureWhiteBalance(desktop);
+            EditorUtility.SetDirty(desktop);
 
-            if (profile == null)
-            {
-                profile = ScriptableObject.CreateInstance<VolumeProfile>();
-                AssetDatabase.CreateAsset(profile, ProfilePath);
-                created = true;
-            }
+            VolumeProfile web = LoadOrCreate(WebProfilePath);
+            ConfigureBloom(web);
+            ConfigureVignette(web);
+            ConfigureColorAdjustments(web);
+            ConfigureTonemapping(web);
+            ConfigureSplitToning(web);
+            ConfigureWhiteBalance(web);
+            MakeCheapForTheBrowser(web);
+            EditorUtility.SetDirty(web);
 
-            // Entries left null by earlier runs, which added effects without saving them; see GetOrAdd.
-            profile.components.RemoveAll(component => component == null);
-
-            ConfigureBloom(profile);
-            ConfigureVignette(profile);
-            ConfigureColorAdjustments(profile);
-            ConfigureTonemapping(profile);
-            ConfigureChromaticAberration(profile);
-            ConfigureFilmGrain(profile);
-            ConfigureSplitToning(profile);
-            ConfigureWhiteBalance(profile);
-
-            EditorUtility.SetDirty(profile);
             AssetDatabase.SaveAssets();
 
-            Debug.Log(
-                $"[Adaptive Boss Arena] Post-processing profile {(created ? "created" : "updated")} " +
-                $"at '{ProfilePath}'.");
+            Debug.Log("[Adaptive Boss Arena] Post-processing profiles written: desktop and web.");
         }
 
         /// <summary>Loads the generated profile, for the scene builder.</summary>
         /// <returns>The profile, or null when it has not been generated yet.</returns>
         public static VolumeProfile LoadProfile() =>
             GeneratedAssets.ForceImportAndLoad<VolumeProfile>(ProfilePath);
+
+        /// <summary>Loads the browser's profile, for the scene builder.</summary>
+        /// <returns>The profile, or null when it has not been generated yet.</returns>
+        public static VolumeProfile LoadWebProfile() =>
+            GeneratedAssets.ForceImportAndLoad<VolumeProfile>(WebProfilePath);
+
+        private static VolumeProfile LoadOrCreate(string path)
+        {
+            var profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(path);
+
+            if (profile == null)
+            {
+                profile = ScriptableObject.CreateInstance<VolumeProfile>();
+                AssetDatabase.CreateAsset(profile, path);
+            }
+
+            // Entries left null by earlier runs, which added effects without saving them; see GetOrAdd.
+            profile.components.RemoveAll(component => component == null);
+
+            return profile;
+        }
+
+        /// <summary>
+        /// Makes the browser's bloom the cheap kind: quarter resolution, simple filtering, fewer passes.
+        /// </summary>
+        /// <remarks>
+        /// Film grain and chromatic aberration are simply never added to this profile. They are not removed
+        /// here, because a component removed from a profile's list leaves its saved sub-asset behind.
+        /// </remarks>
+        private static void MakeCheapForTheBrowser(VolumeProfile profile)
+        {
+            if (profile.TryGet(out Bloom bloom))
+            {
+                bloom.highQualityFiltering.Override(false);
+                bloom.downscale.Override(BloomDownscaleMode.Quarter);
+                bloom.maxIterations.Override(5);
+            }
+        }
 
         /// <summary>
         /// Makes bright surfaces glow.

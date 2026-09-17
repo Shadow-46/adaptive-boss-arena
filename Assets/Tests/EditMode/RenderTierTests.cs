@@ -45,6 +45,21 @@ namespace AdaptiveBossArena.Tests.EditMode
         }
 
         [Test]
+        public void TheWebTierIsCheapEnoughForIntegratedGraphics()
+        {
+            // Once post-processing rendered, the web tier - the desktop's settings with a smaller shadow map -
+            // stuttered in the browser on a laptop's integrated graphics.
+            var web = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(RenderPipelineConfigurator.PipelineAssetPath);
+            var desktop = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(RenderPipelineConfigurator.DesktopPipelineAssetPath);
+
+            Assert.Less(web.shadowCascadeCount, desktop.shadowCascadeCount, "The web tier renders as many shadow cascades as desktop.");
+            Assert.LessOrEqual(web.mainLightShadowmapResolution, 1024, "The web tier's shadow map is too large.");
+            Assert.IsFalse(web.supportsSoftShadows, "The web tier filters its shadows softly.");
+            Assert.IsFalse(web.supportsCameraDepthTexture, "The web tier copies depth every frame for nothing.");
+            Assert.IsFalse(web.supportsAdditionalLightShadows, "The web tier lets point lights cast shadows.");
+        }
+
+        [Test]
         public void OnlyTheDesktopTierCarriesAmbientOcclusion()
         {
             Assert.IsFalse(

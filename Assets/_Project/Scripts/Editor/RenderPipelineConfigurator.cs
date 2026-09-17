@@ -66,24 +66,33 @@ namespace AdaptiveBossArena.Editor
             public int AdditionalShadowResolution { get; init; }
             public int SoftShadowQuality { get; init; }
             public int Msaa { get; init; }
+            public bool SoftShadows { get; init; }
+            public bool AdditionalLightShadows { get; init; }
+            public int LightsPerObject { get; init; }
+            public bool DepthTexture { get; init; }
         }
 
         /// <summary>
-        /// The web tier, exactly as the game shipped before tiers existed.
+        /// The web tier: what a laptop's integrated graphics can hold at sixty frames in a browser.
         /// </summary>
         /// <remarks>
-        /// Deliberately unchanged. Splitting the tiers was to give the desktop build more, not the
-        /// browser less, and the browser build's frame time cannot be measured from the automation
-        /// pane, so cutting it blind would be a guess.
+        /// It was the desktop's settings with a smaller shadow map, which was affordable only while post-processing
+        /// silently never ran. Measured in the browser once it did: p95 21 ms on a dedicated GPU, and the player on
+        /// integrated graphics called it stutter. Two hard-edged cascades over the 16-metre arena still give the
+        /// fighters crisp shadows; no light but the sun ever casts; and nothing on the web reads the depth texture.
         /// </remarks>
         private static readonly TierSettings WebTier = new TierSettings
         {
-            ShadowDistance = 30f,
-            ShadowCascades = 4,
-            MainShadowResolution = 2048,
-            AdditionalShadowResolution = 1024,
-            SoftShadowQuality = 2,
-            Msaa = 1
+            ShadowDistance = 22f,
+            ShadowCascades = 2,
+            MainShadowResolution = 1024,
+            AdditionalShadowResolution = 512,
+            SoftShadowQuality = 1,
+            Msaa = 1,
+            SoftShadows = false,
+            AdditionalLightShadows = false,
+            LightsPerObject = 4,
+            DepthTexture = false
         };
 
         /// <summary>The desktop tier: sharper shadows further out, and multisampled edges.</summary>
@@ -94,7 +103,11 @@ namespace AdaptiveBossArena.Editor
             MainShadowResolution = 4096,
             AdditionalShadowResolution = 2048,
             SoftShadowQuality = 3,
-            Msaa = 4
+            Msaa = 4,
+            SoftShadows = true,
+            AdditionalLightShadows = true,
+            LightsPerObject = 8,
+            DepthTexture = true
         };
 
         /// <summary>
@@ -153,6 +166,10 @@ namespace AdaptiveBossArena.Editor
             EnsurePostProcessData(RendererAssetPath);
             EnsurePostProcessData(DesktopRendererAssetPath);
 
+            // The browser renders straight to the screen whenever it can; "Always" forced an extra full-screen
+            // target and copy on every frame. Desktop keeps it for ambient occlusion.
+            SetIntermediateTexture(RendererAssetPath, IntermediateTextureMode.Auto);
+
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
@@ -188,7 +205,7 @@ namespace AdaptiveBossArena.Editor
             var serialized = new SerializedObject(pipeline);
 
             // Shadows: soft, close, and split so the fighters get real resolution.
-            SetIfPresent(serialized, "m_SoftShadowsSupported", true);
+            SetIfPresent(serialized, "m_SoftShadowsSupported", tier.SoftShadows);
             SetIfPresent(serialized, "m_SoftShadowQuality", tier.SoftShadowQuality);
             SetIfPresent(serialized, "m_ShadowDistance", tier.ShadowDistance);
             SetIfPresent(serialized, "m_ShadowCascadeCount", tier.ShadowCascades);
@@ -198,16 +215,17 @@ namespace AdaptiveBossArena.Editor
             // The braziers could not cast at all: the light asks for shadows, the pipeline forbade
             // them regardless.
             SetIfPresent(serialized, "m_AdditionalLightsRenderingMode", 1);
-            SetIfPresent(serialized, "m_AdditionalLightShadowsSupported", true);
+            SetIfPresent(serialized, "m_AdditionalLightShadowsSupported", tier.AdditionalLightShadows);
             SetIfPresent(serialized, "m_AdditionalLightsShadowmapResolution", tier.AdditionalShadowResolution);
 
             // Four braziers, the boss's phase aura and the flash on every impact can easily want more
             // than four lights on one surface at once, and the ones past the limit simply vanish.
-            SetIfPresent(serialized, "m_AdditionalLightsPerObjectLimit", 8);
+            SetIfPresent(serialized, "m_AdditionalLightsPerObjectLimit", tier.LightsPerObject);
 
             // Ambient occlusion and every depth-reading effect need this. It was off, so no renderer
-            // feature could have worked even if one had been added.
-            SetIfPresent(serialized, "m_RequireDepthTexture", true);
+            // feature could have worked even if one had been added. The web tier has neither, and a depth
+            // copy every frame is a cost it pays for nothing.
+            SetIfPresent(serialized, "m_RequireDepthTexture", tier.DepthTexture);
 
             // Grade in HDR so the ACES curve and the above-one emission behave as intended, rather
             // than being clipped to display range first.
@@ -424,6 +442,17 @@ namespace AdaptiveBossArena.Editor
                 case float number:
                     property.floatValue = number;
                     break;
+            }
+        }
+
+        private static void SetIntermediateTexture(string rendererAssetPath, IntermediateTextureMode mode)
+        {
+            var rendererData = AssetDatabase.LoadAssetAtPath<UniversalRendererData>(rendererAssetPath);
+
+            if (rendererData != null && rendererData.intermediateTextureMode != mode)
+            {
+                rendererData.intermediateTextureMode = mode;
+                EditorUtility.SetDirty(rendererData);
             }
         }
 

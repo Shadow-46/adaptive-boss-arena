@@ -36,6 +36,27 @@ namespace AdaptiveBossArena.Tests.EditMode
             Assert.IsTrue(profile.Has<ColorAdjustments>(), "No grade.");
         }
 
+        [Test]
+        public void TheBrowserProfileKeepsTheGradeButDropsTheExpensivePasses()
+        {
+            var web = AssetDatabase.LoadAssetAtPath<VolumeProfile>(AdaptiveBossArena.Editor.PostProcessingConfigurator.WebProfilePath);
+            Assume.That(web != null, "Setup has not generated the browser profile.");
+
+            foreach (VolumeComponent component in web.components)
+            {
+                Assert.IsNotNull(component, "The browser profile holds an effect that was never saved.");
+            }
+
+            Assert.IsFalse(web.Has<FilmGrain>(), "The browser pays for film grain.");
+            Assert.IsFalse(web.Has<ChromaticAberration>(), "The browser pays for chromatic aberration.");
+            Assert.IsTrue(web.Has<ColorAdjustments>(), "The browser lost the grade.");
+            Assert.IsTrue(web.Has<Tonemapping>(), "The browser lost tonemapping.");
+
+            Assert.IsTrue(web.TryGet(out Bloom bloom), "The browser lost bloom.");
+            Assert.IsFalse(bloom.highQualityFiltering.value, "The browser's bloom uses high-quality filtering.");
+            Assert.AreEqual(BloomDownscaleMode.Quarter, bloom.downscale.value, "The browser's bloom is not quarter resolution.");
+        }
+
         [TestCase("Assets/_Project/Settings/UniversalRenderer.asset")]
         [TestCase("Assets/_Project/Settings/UniversalRenderer_Desktop.asset")]
         public void EveryRendererCarriesThePostProcessingResources(string path)
