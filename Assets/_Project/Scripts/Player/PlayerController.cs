@@ -599,18 +599,28 @@ namespace AdaptiveBossArena.Player
             // own exits, so an attack pressed during the tail comes out of the roll rather than waiting
             // for it to finish and then starting from standing.
             _machine.AddTransition(_dashState, _attackState, WantsToCancelRollIntoAttack, AttackTransitionPriority);
+
+            // The same slow tail can raise the guard, so a roll that lands in front of a swing is not a trap.
+            _machine.AddTransition(_dashState, _parryState, WantsToCancelRollIntoGuard, GuardTransitionPriority);
             _machine.AddTransition(_dashState, _moveState, DashFinishedWithInput);
             _machine.AddTransition(_dashState, _idleState, DashFinished);
 
             // Dash outranks the natural exit, so a player holding dash through recovery escapes the
             // moment they are allowed to rather than after the attack fully resolves.
             _machine.AddTransition(_attackState, _dashState, WantsToDashCancel, DashTransitionPriority);
+            _machine.AddTransition(_attackState, _parryState, WantsToGuardCancel, GuardTransitionPriority);
             _machine.AddTransition(_attackState, _moveState, AttackFinishedWithInput);
             _machine.AddTransition(_attackState, _idleState, AttackFinished);
 
+            // Early in the channel a dodge abandons the heal, and the charge with it.
+            _machine.AddTransition(_healState, _dashState, WantsToAbandonHeal, DashTransitionPriority);
             _machine.AddTransition(_healState, _moveState, HealFinishedWithInput);
             _machine.AddTransition(_healState, _idleState, HealFinished);
 
+            // The guard can be left for a roll or a swing at any moment, not only by letting go. Only letting go
+            // is held to the deflect window's length, so a quick tap still deflects.
+            _machine.AddTransition(_parryState, _dashState, WantsToDash, DashTransitionPriority);
+            _machine.AddTransition(_parryState, _attackState, WantsToAttack, AttackTransitionPriority);
             _machine.AddTransition(_parryState, _moveState, GuardDroppedWithInput);
             _machine.AddTransition(_parryState, _idleState, GuardDropped);
 
@@ -674,6 +684,15 @@ namespace AdaptiveBossArena.Player
 
         private bool WantsToCancelRollIntoAttack(PlayerContext context) =>
             _dashState.CanCancel(context) && WantsToAttack(context);
+
+        private bool WantsToCancelRollIntoGuard(PlayerContext context) =>
+            _dashState.CanCancel(context) && WantsToGuard(context);
+
+        private bool WantsToGuardCancel(PlayerContext context) =>
+            _attackState.CanGuardCancel(context) && WantsToGuard(context);
+
+        private bool WantsToAbandonHeal(PlayerContext context) =>
+            _healState.CanDodgeCancel(context) && WantsToDash(context);
 
         private bool DashFinishedWithInput(PlayerContext context) =>
             _dashState.IsComplete(context) && context.HasMoveInput;
@@ -1140,6 +1159,16 @@ namespace AdaptiveBossArena.Player
         /// </remarks>
         /// <param name="threat">The opponent's transform.</param>
         public void SetThreat(Transform threat) => _threat = threat;
+
+        /// <summary>Tells the character whether the camera is locked onto the boss. Called by the encounter director.</summary>
+        /// <param name="lockedOn">True while locked on.</param>
+        public void SetLockedOn(bool lockedOn)
+        {
+            if (_context != null)
+            {
+                _context.IsLockedOn = lockedOn;
+            }
+        }
 
         /// <summary>
         /// Applies the run's challenge modifiers to the player.

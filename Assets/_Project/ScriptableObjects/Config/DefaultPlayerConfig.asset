@@ -19,8 +19,8 @@ MonoBehaviour:
   _staminaRegenPerSecond: 28
   _staminaRegenDelaySeconds: 0.6
   _moveSpeed: 7
-  _accelerationSeconds: 0.12
-  _decelerationSeconds: 0.16
+  _accelerationSeconds: 0.07
+  _decelerationSeconds: 0.09
   _impulseHalfLifeSeconds: 0.12
   _launchUpwardSpeed: 9
   _maximumAirborneSeconds: 1.2
@@ -32,9 +32,9 @@ MonoBehaviour:
   _wallImpactStaggerSeconds: 0.3
   _turnSpeedFloor: 0.35
   _bodyMass: 1
-  _turnSpeedDegreesPerSecond: 720
+  _turnSpeedDegreesPerSecond: 1080
   _dashDistance: 4.5
-  _dashDurationSeconds: 0.4
+  _dashDurationSeconds: 0.32
   _dashCooldownSeconds: 0.25
   _dashStaminaCost: 22
   _invulnerabilitySeconds: 0.135

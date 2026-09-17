@@ -36,7 +36,7 @@ namespace AdaptiveBossArena.Player.States
         /// <param name="context">The player context.</param>
         /// <returns>Whether a buffered attack may interrupt the roll.</returns>
         public bool CanCancel(PlayerContext context) =>
-            TimeInState >= context.Config.DashDurationSeconds * context.Config.DashCancelFraction;
+            CancelRules.RollCanBeLeft(TimeInState, context.Config.DashDurationSeconds, context.Config.DashCancelFraction);
 
         /// <inheritdoc />
         protected override void OnEnter(PlayerContext context)

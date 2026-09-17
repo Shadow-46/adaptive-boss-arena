@@ -125,6 +125,15 @@ namespace AdaptiveBossArena.Player
         /// </remarks>
         public Vector3 FacingTowardThreat { get; set; } = Vector3.forward;
 
+        /// <summary>
+        /// True while the camera is locked onto the boss.
+        /// </summary>
+        /// <remarks>
+        /// Locked on, the knight keeps facing the boss and moves sideways and backwards around it rather than
+        /// turning to run wherever the stick points - the souls-style duel stance the player asked for.
+        /// </remarks>
+        public bool IsLockedOn { get; set; }
+
         /// <summary>Posture the boss has accumulated, exposed so a riposte can be offered.</summary>
         public bool IsThreatPostureBroken { get; set; }
 

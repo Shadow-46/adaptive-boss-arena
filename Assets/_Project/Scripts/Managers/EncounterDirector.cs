@@ -184,6 +184,8 @@ namespace AdaptiveBossArena.Game
             }
         }
 
+        private ArenaCameraRig _cameraRig;
+
         private void Start()
         {
             ServiceRegistry.Current.TryGet(out _time);
@@ -223,6 +225,14 @@ namespace AdaptiveBossArena.Game
             }
 
             _player.SetThreat(_boss.transform);
+
+            // The camera is the only thing that knows whether the player asked to lock on.
+            if (_cameraRig == null)
+            {
+                _cameraRig = FindAnyObjectByType<ArenaCameraRig>();
+            }
+
+            _player.SetLockedOn(_cameraRig != null && _cameraRig.IsLockedOn);
             _player.SetThreatPostureBroken(_boss.Poise != null && _boss.Poise.IsBroken);
 
             SeparateBodies();

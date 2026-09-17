@@ -757,17 +757,19 @@ namespace AdaptiveBossArena.Editor
                         .Float("_impulseHalfLifeSeconds", 0.12f)
                         .Float("_bodyMass", 1f)
 
-                        // Weight. The knight used to reach top speed in 0.06 s, stop in 0.08 s and
-                        // turn at 1080 degrees a second - no mass at all. These still answer the stick
-                        // at once from rest, but momentum now has to be built, shed and turned.
-                        .Float("_accelerationSeconds", 0.12f)
-                        .Float("_decelerationSeconds", 0.16f)
-                        .Float("_turnSpeedDegreesPerSecond", 720f)
+                        // Responsiveness. The heavier 0.12 s / 0.16 s / 720 degrees a second tried to add
+                        // weight through the stick, and the player's verdict was "no proper control over the
+                        // character". Weight now comes from animation, hit-stop and momentum through turns
+                        // (the turn speed floor), not from lag between the stick and the body.
+                        .Float("_accelerationSeconds", 0.07f)
+                        .Float("_decelerationSeconds", 0.09f)
+                        .Float("_turnSpeedDegreesPerSecond", 1080f)
                         .Float("_turnSpeedFloor", 0.35f)
 
-                        // The dodge is a roll: 0.4 s that bursts out and settles over the same 4.5 m.
-                        // The invincibility stays the absolute 0.135 s the boss was tuned against.
-                        .Float("_dashDurationSeconds", 0.4f)
+                        // The dodge is a roll over the same 4.5 m, now 0.32 s: the 0.4 s version spent its last
+                        // tenth of a second barely moving and could not be left. The invincibility stays the
+                        // absolute 0.135 s the boss was tuned against.
+                        .Float("_dashDurationSeconds", 0.32f)
                         .Float("_invulnerabilitySeconds", 0.135f)
                         .Float("_dashSteerFraction", 0.2f)
                         .Float("_dashCancelFraction", 0.7f)

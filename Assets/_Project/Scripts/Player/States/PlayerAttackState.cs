@@ -65,7 +65,13 @@ namespace AdaptiveBossArena.Player.States
         /// <param name="context">The player context.</param>
         /// <returns>Whether a dash may interrupt the attack.</returns>
         public bool CanDashCancel(PlayerContext context) =>
-            context.Attacks.Phase == AttackPhase.Recovery;
+            CancelRules.AttackCanDodge(context.Attacks.Phase);
+
+        /// <summary>True once the attack's recovery has run far enough to raise the guard out of it.</summary>
+        /// <param name="context">The player context.</param>
+        /// <returns>Whether a guard may interrupt the attack.</returns>
+        public bool CanGuardCancel(PlayerContext context) =>
+            CancelRules.AttackCanGuard(context.Attacks.Phase, context.Attacks.ElapsedSeconds, context.Attacks.CurrentAttack);
 
         /// <inheritdoc />
         protected override void OnExit(PlayerContext context)
@@ -255,6 +261,12 @@ namespace AdaptiveBossArena.Player.States
         public bool IsComplete(PlayerContext context) =>
             _wasInterrupted || TimeInState >= context.Config.HealChannelSeconds;
 
+        /// <summary>True while the heal may still be abandoned for a dodge, losing the charge.</summary>
+        /// <param name="context">The player context.</param>
+        /// <returns>Whether a dodge may interrupt the heal.</returns>
+        public bool CanDodgeCancel(PlayerContext context) =>
+            CancelRules.HealCanDodge(TimeInState, context.Config.HealChannelSeconds);
+
         /// <inheritdoc />
         protected override void OnEnter(PlayerContext context)
         {
@@ -283,7 +295,8 @@ namespace AdaptiveBossArena.Player.States
         /// <inheritdoc />
         protected override void OnExit(PlayerContext context)
         {
-            if (_wasInterrupted)
+            // Hit mid-channel, or abandoned for a dodge before it finished: either way the charge is gone.
+            if (_wasInterrupted || TimeInState < context.Config.HealChannelSeconds)
             {
                 return;
             }
