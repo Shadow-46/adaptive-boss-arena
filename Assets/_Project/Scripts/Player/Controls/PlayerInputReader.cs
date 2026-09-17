@@ -58,7 +58,20 @@ namespace AdaptiveBossArena.Player.Controls
             }
 
             InputAction resolved = _actionLookup[(int)action];
-            return resolved != null && resolved.WasPressedThisFrame();
+
+            if (resolved == null || !resolved.WasPressedThisFrame())
+            {
+                return false;
+            }
+
+            // Shift + click fires the heavy attack, and the light attack sees the same click. The heavy one wins.
+            if (action == PlayerInputAction.LightAttack)
+            {
+                InputAction heavy = _actionLookup[(int)PlayerInputAction.HeavyAttack];
+                return heavy == null || !heavy.WasPressedThisFrame();
+            }
+
+            return true;
         }
 
         /// <inheritdoc />

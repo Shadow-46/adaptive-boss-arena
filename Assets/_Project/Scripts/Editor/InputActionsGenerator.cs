@@ -73,24 +73,66 @@ namespace AdaptiveBossArena.Editor
             InputActionMap map = asset.AddActionMap(InputActionNames.GameplayMap);
 
             BuildMoveAction(map);
+            BuildLookAction(map);
 
             // Dash sits on a key the thumb can reach without leaving the movement keys, because it
             // is pressed under pressure and mid-movement more than any other control.
             BuildButton(map, InputActionNames.Dash, "<Keyboard>/space", "<Gamepad>/buttonEast");
 
-            // Guard sits under the off-hand finger and is held, not tapped, so it needs a control
-            // that can be comfortably kept down while still moving and attacking.
-            BuildButton(map, InputActionNames.Guard, "<Keyboard>/leftShift", "<Gamepad>/leftShoulder");
+            // Guard is held on the right mouse button, the hand that is already on the mouse: the player asked
+            // for block and deflect under the mouse, and Shift is now the heavy-attack modifier.
+            BuildButton(map, InputActionNames.Guard, "<Mouse>/rightButton", "<Gamepad>/leftShoulder");
 
             BuildButton(map, InputActionNames.LightAttack, "<Mouse>/leftButton", "<Gamepad>/buttonWest");
-            BuildButton(map, InputActionNames.HeavyAttack, "<Mouse>/rightButton", "<Gamepad>/buttonNorth");
-            BuildButton(map, InputActionNames.Special, "<Keyboard>/q", "<Gamepad>/rightShoulder");
+            BuildHeavyAttack(map);
+
+            // E, not Q: Q is reserved for the dedicated parry.
+            BuildButton(map, InputActionNames.Special, "<Keyboard>/e", "<Gamepad>/buttonNorth");
             BuildButton(map, InputActionNames.Heal, "<Keyboard>/r", "<Gamepad>/dpad/up");
-            // Deliberately not Tab, which the camera uses for lock-on. Two actions on one key meant
-            // swapping weapon and breaking lock at the same moment, which is exactly the kind of
-            // thing that reads as the game being broken rather than as a binding clash.
+
+            // Deliberately not Tab, which locks on. Two actions on one key meant swapping weapon and
+            // breaking lock at the same moment, which reads as the game being broken.
             BuildButton(map, InputActionNames.SwapWeapon, "<Keyboard>/v", "<Gamepad>/dpad/right");
             BuildButton(map, InputActionNames.Pause, "<Keyboard>/escape", "<Gamepad>/start");
+
+            // Camera controls live in the asset rather than as keys hard-coded in the camera, so they have a
+            // gamepad binding and can be rebound like everything else.
+            InputAction lockOn = map.AddAction(InputActionNames.LockOn, InputActionType.Button);
+            lockOn.AddBinding("<Keyboard>/tab", groups: KeyboardMouseScheme);
+            lockOn.AddBinding("<Mouse>/middleButton", groups: KeyboardMouseScheme);
+            lockOn.AddBinding("<Gamepad>/rightStickPress", groups: GamepadScheme);
+
+            BuildButton(map, InputActionNames.CycleCamera, "<Keyboard>/c", "<Gamepad>/dpad/down");
+        }
+
+        /// <summary>
+        /// Heavy attack: Shift held with the left mouse button, or the right trigger.
+        /// </summary>
+        /// <remarks>
+        /// A modifier composite, so the same button reads as light or heavy by whether Shift is held. The
+        /// reader drops the light press when the heavy one fires on the same frame, since both see the click.
+        /// </remarks>
+        private static void BuildHeavyAttack(InputActionMap map)
+        {
+            InputAction heavy = map.AddAction(InputActionNames.HeavyAttack, InputActionType.Button);
+
+            heavy.AddCompositeBinding("OneModifier")
+                .With("Modifier", "<Keyboard>/leftShift", KeyboardMouseScheme)
+                .With("Binding", "<Mouse>/leftButton", KeyboardMouseScheme);
+
+            heavy.AddBinding("<Gamepad>/rightTrigger", groups: GamepadScheme);
+        }
+
+        /// <summary>Camera orbit: raw mouse movement in pixels, or the right stick as a rate.</summary>
+        private static void BuildLookAction(InputActionMap map)
+        {
+            InputAction look = map.AddAction(
+                InputActionNames.Look,
+                InputActionType.Value,
+                expectedControlLayout: nameof(Vector2));
+
+            look.AddBinding("<Mouse>/delta", groups: KeyboardMouseScheme);
+            look.AddBinding("<Gamepad>/rightStick", groups: GamepadScheme).WithProcessor("stickDeadzone");
         }
 
         /// <summary>Builds the movement axis with keyboard composites and a gamepad stick.</summary>

@@ -42,6 +42,15 @@ namespace AdaptiveBossArena.Player.Controls
         /// <summary>Action map containing all in-combat controls.</summary>
         public const string GameplayMap = "Gameplay";
 
+        /// <summary>Camera orbit: mouse movement or the right stick. Read by the camera, not the character.</summary>
+        public const string Look = "Look";
+
+        /// <summary>Toggles the camera's lock onto the boss. Read by the camera.</summary>
+        public const string LockOn = "LockOn";
+
+        /// <summary>Cycles the camera between third person, top-down and first person. Read by the camera.</summary>
+        public const string CycleCamera = "CycleCamera";
+
         /// <summary>Two-dimensional movement axis.</summary>
         public const string Move = "Move";
 
