@@ -93,6 +93,15 @@ namespace AdaptiveBossArena.Combat
         /// <summary>The phase the current attack has reached.</summary>
         public AttackPhase Phase => _timeline.Phase;
 
+        /// <summary>
+        /// Whether the last swing turned aside was met by a deliberate parry rather than a timed guard.
+        /// </summary>
+        /// <remarks>
+        /// Read by the attacker to decide how long it reels. A parry is a committed, punishable move, so it
+        /// buys a longer opening than a deflect does.
+        /// </remarks>
+        public bool LastParryWasStrike { get; private set; }
+
         /// <summary>Seconds elapsed in the current attack.</summary>
         public float ElapsedSeconds => _timeline.ElapsedSeconds;
 
@@ -240,6 +249,12 @@ namespace AdaptiveBossArena.Combat
                     break;
 
                 case DamageOutcome.Deflected:
+                    LastParryWasStrike = false;
+                    OnParried(attack, contactPoint, direction);
+                    break;
+
+                case DamageOutcome.Parried:
+                    LastParryWasStrike = true;
                     OnParried(attack, contactPoint, direction);
                     break;
             }

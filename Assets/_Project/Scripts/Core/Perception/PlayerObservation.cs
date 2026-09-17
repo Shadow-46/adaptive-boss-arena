@@ -66,7 +66,17 @@ namespace AdaptiveBossArena.Core.Perception
         /// What is visible is the body on the ground. Whether it can be hurt there is not exposed:
         /// the boss has to learn that by swinging at it, the way a person would.
         /// </remarks>
-        KnockedDown = 11
+        KnockedDown = 11,
+
+        /// <summary>
+        /// Striking out with the blade to turn a blow aside.
+        /// </summary>
+        /// <remarks>
+        /// Appended, never inserted. The stance is as plain to see as a raised guard, and a boss that can see
+        /// it can learn to bait it - which is the point of making the parry a committed, punishable move. What
+        /// stays hidden, as with the guard, is whether the window is actually open on this frame.
+        /// </remarks>
+        Parrying = 12
     }
 
     /// <summary>

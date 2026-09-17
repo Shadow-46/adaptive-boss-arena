@@ -45,7 +45,11 @@ namespace AdaptiveBossArena.AI
         private const int ParryTransitionPriority = 200;
 
         /// <summary>Stagger applied to the boss when its poise breaks.</summary>
-        private const float PoiseBreakStaggerSeconds = 1.1f;
+        /// <remarks>
+        /// Long enough to walk in and take the punish: the riposte is now the player pressing attack inside this
+        /// window rather than something that fires itself the instant the guard breaks.
+        /// </remarks>
+        private const float PoiseBreakStaggerSeconds = 1.6f;
 
         /// <summary>
         /// How far two observed swing start times may differ and still count as the same swing.
@@ -585,7 +589,18 @@ namespace AdaptiveBossArena.AI
         /// happened, which is most of why deflecting never felt like winning an exchange.
         /// </remarks>
         private void OnOwnAttackParried() =>
-            _context.RequestStagger(StaggerDurations.InterruptSeconds, StaggerReason.Parried);
+            _context.RequestStagger(
+                _context.Attacks.LastParryWasStrike ? ParriedByStrikeStaggerSeconds : StaggerDurations.InterruptSeconds,
+                StaggerReason.Parried);
+
+        /// <summary>
+        /// How long the boss reels from a deliberate parry, against the shorter recoil a deflect causes.
+        /// </summary>
+        /// <remarks>
+        /// Long enough to swing at, which is what makes the parry worth its commitment; short enough that it is
+        /// not a free riposte on its own.
+        /// </remarks>
+        private const float ParriedByStrikeStaggerSeconds = 0.6f;
 
         /// <summary>
         /// Asks the shared resolver how the boss's stance meets an incoming hit.

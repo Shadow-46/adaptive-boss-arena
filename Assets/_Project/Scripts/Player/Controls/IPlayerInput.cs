@@ -28,7 +28,10 @@ namespace AdaptiveBossArena.Player.Controls
         Guard = 5,
 
         /// <summary>Cycle to the next weapon.</summary>
-        SwapWeapon = 6
+        SwapWeapon = 6,
+
+        /// <summary>Strike a blow aside with the blade. Appended, never inserted.</summary>
+        Parry = 7
     }
 
     /// <summary>Names the runtime looks up in the generated input actions asset.</summary>
@@ -75,6 +78,9 @@ namespace AdaptiveBossArena.Player.Controls
         /// <summary>Cycle to the next weapon.</summary>
         public const string SwapWeapon = "SwapWeapon";
 
+        /// <summary>The dedicated parry, distinct from raising the guard.</summary>
+        public const string Parry = "Parry";
+
         /// <summary>Open the pause menu.</summary>
         public const string Pause = "Pause";
 
@@ -92,6 +98,7 @@ namespace AdaptiveBossArena.Player.Controls
                 case PlayerInputAction.Heal: return Heal;
                 case PlayerInputAction.Guard: return Guard;
                 case PlayerInputAction.SwapWeapon: return SwapWeapon;
+                case PlayerInputAction.Parry: return Parry;
                 default: return string.Empty;
             }
         }

@@ -186,6 +186,10 @@ namespace AdaptiveBossArena.Game
 
         private ArenaCameraRig _cameraRig;
 
+        [SerializeField]
+        [Tooltip("Shown while the boss kneels within reach. Assigned by the interface generator.")]
+        private GameObject _ripostePrompt;
+
         private void Start()
         {
             ServiceRegistry.Current.TryGet(out _time);
@@ -225,6 +229,12 @@ namespace AdaptiveBossArena.Game
             }
 
             _player.SetThreat(_boss.transform);
+
+            // The offer, not the act: the punish now waits for the player to press attack.
+            if (_ripostePrompt != null && _ripostePrompt.activeSelf != _player.RiposteOffered)
+            {
+                _ripostePrompt.SetActive(_player.RiposteOffered);
+            }
 
             // The camera is the only thing that knows whether the player asked to lock on.
             if (_cameraRig == null)
@@ -624,8 +634,10 @@ namespace AdaptiveBossArena.Game
             VoidEventChannel bossDefeated,
             VoidEventChannel deflect,
             VoidEventChannel perfectDodge,
-            VoidEventChannel bossParried)
+            VoidEventChannel bossParried,
+            GameObject ripostePrompt = null)
         {
+            _ripostePrompt = ripostePrompt;
             _arenaConfig = arenaConfig;
             _endScreen = endScreen;
             _pauseMenu = pauseMenu;

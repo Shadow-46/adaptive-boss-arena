@@ -277,6 +277,7 @@ namespace AdaptiveBossArena.Combat.Feel
                     break;
 
                 case ObservableActionState.Guarding:
+                case ObservableActionState.Parrying:
                     offset = new Vector3(0f, -_config.GuardCrouch, 0f);
                     leanDegrees = _config.GuardLeanDegrees;
                     break;

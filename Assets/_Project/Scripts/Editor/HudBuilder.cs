@@ -98,6 +98,7 @@ namespace AdaptiveBossArena.Editor
             BuildWeaponDisplay(root, channels);
             BuildBossBar(root, references, channels);
             BuildAdaptationTell(root, references, channels);
+            BuildRipostePrompt(root, references);
 
             // Built before the pause menu so the pause menu can wire a button to open it.
             references.SettingsMenu = SettingsMenuBuilder.Build(root, actionsAsset);
@@ -246,6 +247,26 @@ namespace AdaptiveBossArena.Editor
 
             var indicator = pipsRoot.AddComponent<BossPhaseIndicator>();
             indicator.Bind(channels.BossPhase, pips);
+        }
+
+        /// <summary>
+        /// Creates the prompt offering the punish while the boss kneels.
+        /// </summary>
+        /// <remarks>
+        /// The riposte used to fire itself the moment the guard broke. Now the player has to walk in and press
+        /// attack, so the offer has to be visible - otherwise the best moment in the fight is a secret.
+        /// </remarks>
+        private static void BuildRipostePrompt(Transform root, HudReferences references)
+        {
+            Text prompt = CreateText(root, "RipostePrompt", "RIPOSTE", 30, TextAnchor.MiddleCenter);
+            prompt.rectTransform.anchoredPosition = new Vector2(0f, -210f);
+            prompt.rectTransform.sizeDelta = new Vector2(600f, 44f);
+            prompt.color = new Color(0.93f, 0.84f, 0.6f);
+            prompt.fontStyle = FontStyle.Bold;
+            prompt.gameObject.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.9f);
+            prompt.gameObject.SetActive(false);
+
+            references.RipostePrompt = prompt.gameObject;
         }
 
         /// <summary>Creates the adaptation tell banner, upper third.</summary>
@@ -626,5 +647,8 @@ namespace AdaptiveBossArena.Editor
 
         /// <summary>Settings panel and its live-applying menu.</summary>
         public SettingsMenu SettingsMenu { get; set; }
+
+        /// <summary>The prompt shown while a kneeling boss can be punished.</summary>
+        public GameObject RipostePrompt { get; set; }
     }
 }

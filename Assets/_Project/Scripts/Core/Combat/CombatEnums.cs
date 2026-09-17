@@ -80,7 +80,13 @@ namespace AdaptiveBossArena.Core.Combat
         /// recoil the swing that caused it, and until this existed a clean deflect and a late block
         /// were indistinguishable from the attacking side, so a parried swing simply carried on.
         /// </remarks>
-        Deflected = 6
+        Deflected = 6,
+
+        /// <summary>
+        /// Turned aside by a deliberate parry, which costs the attacker more than a deflect.
+        /// </summary>
+        /// <remarks>Appended, never inserted: outcomes are recorded and compared by number.</remarks>
+        Parried = 7
     }
 
     /// <summary>How forcefully a hit interrupts what the victim was doing.</summary>

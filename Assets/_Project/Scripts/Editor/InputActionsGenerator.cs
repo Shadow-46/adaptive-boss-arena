@@ -86,7 +86,10 @@ namespace AdaptiveBossArena.Editor
             BuildButton(map, InputActionNames.LightAttack, "<Mouse>/leftButton", "<Gamepad>/buttonWest");
             BuildHeavyAttack(map);
 
-            // E, not Q: Q is reserved for the dedicated parry.
+            // The parry: a committed strike of its own, not a well-timed guard, so it has its own key.
+            BuildButton(map, InputActionNames.Parry, "<Keyboard>/q", "<Gamepad>/rightShoulder");
+
+            // E, not Q: Q is the parry.
             BuildButton(map, InputActionNames.Special, "<Keyboard>/e", "<Gamepad>/buttonNorth");
             BuildButton(map, InputActionNames.Heal, "<Keyboard>/r", "<Gamepad>/dpad/up");
 

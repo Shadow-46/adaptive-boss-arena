@@ -266,7 +266,9 @@ namespace AdaptiveBossArena.Combat.Feel
                 case ObservableActionState.Dashing:
                     return CharacterAnimatorParameters.RollState;
 
+                // The parry has no clip of its own in the packs yet, so it wears the guard stance.
                 case ObservableActionState.Guarding:
+                case ObservableActionState.Parrying:
                     return CharacterAnimatorParameters.GuardState;
 
                 case ObservableActionState.Staggered:

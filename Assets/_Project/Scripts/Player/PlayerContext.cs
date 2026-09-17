@@ -111,6 +111,17 @@ namespace AdaptiveBossArena.Player
         /// <summary>True while a guard is raised.</summary>
         public bool IsGuarding { get; set; }
 
+        /// <summary>True while the blade is striking out to turn a blow aside.</summary>
+        /// <remarks>
+        /// Distinct from <see cref="IsGuarding"/>: a parry is a committed swing with a short window and a long
+        /// recovery, where the guard is a stance that can be held.
+        /// </remarks>
+        public bool IsParryStriking { get; set; }
+
+        /// <summary>Whether the last blow turned aside was met by a parry rather than a timed guard.</summary>
+        /// <remarks>Decides how much of the boss's guard the exchange breaks.</remarks>
+        public bool LastDefenceWasParry { get; set; }
+
         /// <summary>True once the current posture break has been spent on a riposte.</summary>
         /// <remarks>Prevents one break being cashed in repeatedly during a single stagger.</remarks>
         public bool RiposteConsumed { get; set; }
@@ -133,6 +144,10 @@ namespace AdaptiveBossArena.Player
         /// turning to run wherever the stick points - the souls-style duel stance the player asked for.
         /// </remarks>
         public bool IsLockedOn { get; set; }
+
+        /// <summary>How far away the boss is, in metres. Supplied by the controller.</summary>
+        /// <remarks>A riposte has to be walked up to, so the punish needs the distance as well as the direction.</remarks>
+        public float ThreatDistance { get; set; } = float.PositiveInfinity;
 
         /// <summary>Posture the boss has accumulated, exposed so a riposte can be offered.</summary>
         public bool IsThreatPostureBroken { get; set; }

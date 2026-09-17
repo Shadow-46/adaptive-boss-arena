@@ -75,6 +75,42 @@ namespace AdaptiveBossArena.Player
         /// <summary>Transition priority for raising a guard, above attacking but below dashing.</summary>
         private const int GuardTransitionPriority = 95;
 
+        /// <summary>
+        /// Transition priority for the parry, just above the guard.
+        /// </summary>
+        /// <remarks>
+        /// A player holding block who then presses parry meant to parry: it is the riskier, more deliberate
+        /// choice, so it wins. Still below the dash, which is the panic button.
+        /// </remarks>
+        private const int ParryTransitionPriority = 96;
+
+        /// <summary>How close the player must be for the kneeling boss to be within reach of a riposte.</summary>
+        private const float RiposteReachMetres = 2.8f;
+
+        /// <summary>How squarely the player must face the boss to take the punish: within about 60 degrees.</summary>
+        private const float RiposteFacingDot = 0.5f;
+
+        /// <summary>Freeze on a parry: longer than a deflect, because it is the harder thing to do.</summary>
+        private const float ParryHitStopSeconds = 0.14f;
+
+        /// <summary>World speed of the beat a parry buys.</summary>
+        private const float ParrySlowMotionScale = 0.5f;
+
+        /// <summary>How long that beat lasts, in real seconds.</summary>
+        private const float ParrySlowMotionSeconds = 0.25f;
+
+        /// <summary>Camera trauma on a parry.</summary>
+        private const float ParryTrauma = 0.5f;
+
+        /// <summary>
+        /// Guard a parry takes from the boss, against the 28 a deflect takes.
+        /// </summary>
+        /// <remarks>
+        /// Two parries and a deflect break a hundred-point guard, which is the reward for choosing the
+        /// committed answer over the safe one.
+        /// </remarks>
+        private const float ParryPostureDamage = 45f;
+
         /// <summary>Transition priority for a riposte, which outranks every ordinary action.</summary>
         private const int RiposteTransitionPriority = 300;
 
@@ -155,6 +191,7 @@ namespace AdaptiveBossArena.Player
         private PlayerAttackState _attackState;
         private PlayerHealState _healState;
         private PlayerParryState _parryState;
+        private PlayerParryStrikeState _parryStrikeState;
         private PlayerRiposteState _riposteState;
         private PlayerStaggerState _staggerState;
         private PlayerDeadState _deadState;
@@ -381,6 +418,11 @@ namespace AdaptiveBossArena.Player
             // One decision, shared with the boss. A perilous (unblockable) attack resolves as None
             // here and slips past a raised guard entirely; the invulnerability check above still
             // lets a dash avoid it.
+            if (IsParryingThisBlow(damage))
+            {
+                return ResolveParry(damage);
+            }
+
             switch (DescribeDefence(damage))
             {
                 case DefenceOutcome.Deflected:
@@ -577,6 +619,7 @@ namespace AdaptiveBossArena.Player
             _dashState = new PlayerDashState();
             _attackState = new PlayerAttackState();
             _parryState = new PlayerParryState();
+            _parryStrikeState = new PlayerParryStrikeState();
             _riposteState = new PlayerRiposteState();
             _healState = new PlayerHealState();
             _staggerState = new PlayerStaggerState();
@@ -624,6 +667,10 @@ namespace AdaptiveBossArena.Player
             _machine.AddTransition(_parryState, _moveState, GuardDroppedWithInput);
             _machine.AddTransition(_parryState, _idleState, GuardDropped);
 
+            // A parry runs to its end: whiffing one has to be punishable, or it would simply be a better guard.
+            _machine.AddTransition(_parryStrikeState, _moveState, ParryFinishedWithInput);
+            _machine.AddTransition(_parryStrikeState, _idleState, ParryFinished);
+
             _machine.AddTransition(_riposteState, _moveState, RiposteFinishedWithInput);
             _machine.AddTransition(_riposteState, _idleState, RiposteFinished);
 
@@ -657,6 +704,7 @@ namespace AdaptiveBossArena.Player
         private void AddGroundedTransitions(IState<PlayerContext> from)
         {
             _machine.AddTransition(from, _dashState, WantsToDash, DashTransitionPriority);
+            _machine.AddTransition(from, _parryStrikeState, WantsToParry, ParryTransitionPriority);
             _machine.AddTransition(from, _parryState, WantsToGuard, GuardTransitionPriority);
             _machine.AddTransition(from, _attackState, WantsToAttack, AttackTransitionPriority);
             _machine.AddTransition(from, _healState, WantsToHeal, HealTransitionPriority);
@@ -773,14 +821,43 @@ namespace AdaptiveBossArena.Player
         private static bool WantsToGuard(PlayerContext context) =>
             context.Input.IsHeld(PlayerInputAction.Guard);
 
+        /// <summary>Consumes a buffered parry press when there is stamina to swing.</summary>
+        private bool WantsToParry(PlayerContext context) =>
+            context.Stamina.CanSpend(PlayerParryStrikeState.StaminaCost) &&
+            context.InputBuffer.TryConsume(PlayerInputAction.Parry, _time.CombatTime);
+
+        private bool ParryFinished(PlayerContext context) => _parryStrikeState.IsComplete(context);
+
+        private bool ParryFinishedWithInput(PlayerContext context) =>
+            _parryStrikeState.IsComplete(context) && context.HasMoveInput;
+
         private bool GuardDropped(PlayerContext context) => _parryState.IsComplete(context);
 
         private bool GuardDroppedWithInput(PlayerContext context) =>
             _parryState.IsComplete(context) && context.HasMoveInput;
 
         /// <summary>True when the boss's guard is broken and the punish has not been spent.</summary>
-        private static bool CanRiposte(PlayerContext context) =>
-            context.IsThreatPostureBroken && !context.RiposteConsumed && !context.Reactions.IsReacting;
+        private bool CanRiposte(PlayerContext context) =>
+            IsRiposteOffered(context) &&
+            context.InputBuffer.TryConsume(PlayerInputAction.LightAttack, _time.CombatTime);
+
+        /// <summary>
+        /// Whether the boss is kneeling within reach, and the punish has not been spent.
+        /// </summary>
+        /// <remarks>
+        /// The riposte used to fire itself the instant the guard broke, from any state and any distance,
+        /// interrupting whatever the player was doing. It is now an offer: walk in, face it, and press attack
+        /// inside the kneel, or let the chance pass.
+        /// </remarks>
+        private static bool IsRiposteOffered(PlayerContext context) =>
+            context.IsThreatPostureBroken &&
+            !context.RiposteConsumed &&
+            !context.Reactions.IsReacting &&
+            context.ThreatDistance <= RiposteReachMetres &&
+            Vector3.Dot(context.Motor.Facing, context.FacingTowardThreat) >= RiposteFacingDot;
+
+        /// <summary>True while the player could take the punish right now, for the prompt on screen.</summary>
+        public bool RiposteOffered => _context != null && IsRiposteOffered(_context);
 
         private bool RiposteFinished(PlayerContext context) => _riposteState.IsComplete(context);
 
@@ -859,6 +936,7 @@ namespace AdaptiveBossArena.Player
 
             Vector3 toThreat = _threat.position - transform.position;
             toThreat.y = 0f;
+            _context.ThreatDistance = toThreat.magnitude;
 
             if (toThreat.sqrMagnitude > Mathf.Epsilon)
             {
@@ -986,8 +1064,47 @@ namespace AdaptiveBossArena.Player
         /// </summary>
         /// <param name="damage">The incoming hit.</param>
         /// <returns>A result carrying no damage.</returns>
+        /// <summary>
+        /// Whether a parry swing is live and this blow is one a blade can turn aside.
+        /// </summary>
+        /// <remarks>
+        /// Not an unblockable, not an unparryable, and not a shockwave or hazard: those are the attacks the
+        /// fight wants answered by moving, and a parry that stopped everything would remove the reason to dodge.
+        /// </remarks>
+        private bool IsParryingThisBlow(in DamageInfo damage) =>
+            _context.IsParryStriking &&
+            _parryStrikeState.IsWindowOpen &&
+            !damage.Unblockable &&
+            !damage.Unparryable &&
+            damage.Type != DamageType.BossProjectile &&
+            damage.Type != DamageType.Hazard;
+
+        /// <summary>
+        /// Turns a blow aside with the blade, and holds the world for a beat.
+        /// </summary>
+        /// <param name="damage">The incoming hit.</param>
+        /// <returns>A result carrying no damage.</returns>
+        private DamageResult ResolveParry(in DamageInfo damage)
+        {
+            _time.RequestHitStop(ParryHitStopSeconds);
+            _time.RequestSlowMotion(ParrySlowMotionScale, ParrySlowMotionSeconds);
+            _screenShake?.AddTrauma(ParryTrauma);
+            _screenShake?.Punch(ParryTrauma);
+
+            // Reported as a deflect so every listener - sparks, sound, the boss recoiling - already knows what to
+            // do; the outcome returned below is what tells the attacker this one cost more.
+            _context.LastDefenceWasParry = true;
+            _context.PublishCombatEvent(CombatEventKind.Deflected, damage.HitDirection);
+            _deflectChannel?.Raise();
+            _focus?.AddFromDeflect();
+
+            return DamageResult.NoDamage(DamageOutcome.Parried);
+        }
+
         private DamageResult ResolveDeflect(in DamageInfo damage)
         {
+            _context.LastDefenceWasParry = false;
+
             _time.RequestHitStop(DeflectHitStopSeconds);
             _screenShake?.AddTrauma(DeflectTrauma);
             _screenShake?.Punch(DeflectTrauma);
@@ -1317,7 +1434,18 @@ namespace AdaptiveBossArena.Player
         /// cheaper, weaker one were indistinguishable in the only number that matters.
         /// The context falls back to the config when nothing is drawn, so the unarmed path survives.
         /// </remarks>
-        public float DeflectPostureDamage => _context != null ? _context.DeflectPostureDamage : 0f;
+        public float DeflectPostureDamage
+        {
+            get
+            {
+                if (_context == null)
+                {
+                    return 0f;
+                }
+
+                return _context.LastDefenceWasParry ? ParryPostureDamage : _context.DeflectPostureDamage;
+            }
+        }
 
         /// <summary>Assigns the event channels. Used by the prefab generator.</summary>
         /// <param name="health">Normalised health channel.</param>

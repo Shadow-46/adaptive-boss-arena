@@ -123,6 +123,63 @@ namespace AdaptiveBossArena.Player.States
     /// entire payoff of the deflect system — every deflect is a small deposit toward this, which is
     /// what makes standing your ground feel like progress rather than mere survival.
     /// </remarks>
+    /// <summary>
+    /// A committed strike of the blade that turns a blow aside.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The player's verdict on the old defence was that it "doesn't really feel like parrying": there was only a
+    /// guard whose first fifth of a second happened to deflect. This is the other half - a deliberate swing with a
+    /// short window and a recovery long enough to be punished for missing, which is what makes landing one mean
+    /// something. It takes far more of the boss's guard than a deflect and reels it for longer.
+    /// </para>
+    /// <para>
+    /// It cannot answer an unblockable, an unparryable blow or a shockwave. Those still have to be dodged, so the
+    /// parry never becomes the single answer to everything.
+    /// </para>
+    /// </remarks>
+    public sealed class PlayerParryStrikeState : StateBase<PlayerContext>
+    {
+        /// <summary>How long after the swing begins a blow is turned aside.</summary>
+        public const float WindowSeconds = 0.22f;
+
+        /// <summary>The whole move, window and recovery: whiffing one leaves the player open.</summary>
+        public const float DurationSeconds = 0.72f;
+
+        /// <summary>Stamina a parry costs, so it cannot simply be mashed.</summary>
+        public const float StaminaCost = 14f;
+
+        /// <summary>True while a blow arriving now would be turned aside.</summary>
+        public bool IsWindowOpen => TimeInState <= WindowSeconds;
+
+        /// <summary>True once the swing and its recovery are over.</summary>
+        /// <param name="context">The player context.</param>
+        /// <returns>Whether the player may act again.</returns>
+        public bool IsComplete(PlayerContext context) => TimeInState >= DurationSeconds;
+
+        /// <inheritdoc />
+        protected override void OnEnter(PlayerContext context)
+        {
+            context.SetObservableState(ObservableActionState.Parrying);
+            context.IsParryStriking = true;
+            context.Stamina.TrySpend(StaminaCost);
+
+            context.PublishCombatEvent(CombatEventKind.GuardRaised);
+        }
+
+        /// <inheritdoc />
+        protected override void OnTick(PlayerContext context, float deltaTime)
+        {
+            // Rooted, and turned toward the boss: a parry is aimed at the blow, not swung at the air.
+            context.Motor.Decelerate(deltaTime);
+            context.Motor.FaceDirection(context.FacingTowardThreat, deltaTime);
+            context.Motor.Tick(deltaTime);
+        }
+
+        /// <inheritdoc />
+        protected override void OnExit(PlayerContext context) => context.IsParryStriking = false;
+    }
+
     public sealed class PlayerRiposteState : StateBase<PlayerContext>
     {
         /// <summary>True once the riposte has finished.</summary>
