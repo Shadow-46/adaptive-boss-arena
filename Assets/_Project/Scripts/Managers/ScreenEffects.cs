@@ -209,31 +209,59 @@ namespace AdaptiveBossArena.Game
             }
         }
 
+        /// <summary>
+        /// Writes the grade, but only the values that moved.
+        /// </summary>
+        /// <remarks>
+        /// Writing a volume parameter marks the stack for re-evaluation, and a changed saturation rebuilds the
+        /// colour lookup table. At full health with no hit in flight nothing here changes, so a browser on weak
+        /// graphics should not be paying for it sixty times a second.
+        /// </remarks>
         private void Apply()
         {
             if (_vignette != null)
             {
-                _vignette.intensity.value =
-                    _baseVignette + _lowHealthEased * LowHealthVignetteAdd + _damagePulse * DamagePulseVignette;
+                SetIfChanged(_vignette.intensity,
+                    _baseVignette + _lowHealthEased * LowHealthVignetteAdd + _damagePulse * DamagePulseVignette);
 
                 float redward = Mathf.Clamp01(_lowHealthEased * 0.85f + _damagePulse);
-                _vignette.color.value = Color.Lerp(_baseVignetteColor, LowHealthVignetteColor, redward);
+                Color colour = Color.Lerp(_baseVignetteColor, LowHealthVignetteColor, redward);
+
+                if (!Approximately(_vignette.color.value, colour))
+                {
+                    _vignette.color.value = colour;
+                }
             }
 
             if (_color != null)
             {
-                _color.saturation.value = _baseSaturation - _lowHealthEased * LowHealthSaturationDrop;
+                SetIfChanged(_color.saturation, _baseSaturation - _lowHealthEased * LowHealthSaturationDrop);
             }
 
             if (_aberration != null)
             {
-                _aberration.intensity.value = Mathf.Clamp01(_baseAberration + _deflectPunch * DeflectChromaticAdd);
+                SetIfChanged(_aberration.intensity, Mathf.Clamp01(_baseAberration + _deflectPunch * DeflectChromaticAdd));
             }
 
             if (_bloom != null)
             {
-                _bloom.intensity.value = _baseBloom + _deflectPunch * DeflectBloomAdd;
+                SetIfChanged(_bloom.intensity, _baseBloom + _deflectPunch * DeflectBloomAdd);
             }
         }
+
+        /// <summary>Below this, a change to the grade is invisible and not worth a write.</summary>
+        private const float WriteEpsilon = 0.0005f;
+
+        private static void SetIfChanged(VolumeParameter<float> parameter, float value)
+        {
+            if (Mathf.Abs(parameter.value - value) > WriteEpsilon)
+            {
+                parameter.value = value;
+            }
+        }
+
+        private static bool Approximately(Color a, Color b) =>
+            Mathf.Abs(a.r - b.r) <= WriteEpsilon && Mathf.Abs(a.g - b.g) <= WriteEpsilon &&
+            Mathf.Abs(a.b - b.b) <= WriteEpsilon && Mathf.Abs(a.a - b.a) <= WriteEpsilon;
     }
 }

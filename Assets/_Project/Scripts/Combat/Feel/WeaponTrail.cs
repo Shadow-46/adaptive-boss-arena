@@ -76,6 +76,7 @@ namespace AdaptiveBossArena.Combat.Feel
         private int _head;
         private float _clock;
         private float _remaining;
+        private bool _meshEmpty = true;
 
         /// <summary>True while the blade is laying down a smear.</summary>
         public bool IsEmitting => _remaining > 0f;
@@ -180,12 +181,20 @@ namespace AdaptiveBossArena.Combat.Feel
 
         private void Rebuild()
         {
-            _mesh.Clear();
-
             if (_count < 2)
             {
+                // Idle almost all the fight; clearing an already empty mesh every frame was pure waste.
+                if (!_meshEmpty)
+                {
+                    _mesh.Clear();
+                    _meshEmpty = true;
+                }
+
                 return;
             }
+
+            _mesh.Clear();
+            _meshEmpty = false;
 
             int points = (_count - 1) * Subdivisions + 1;
 
