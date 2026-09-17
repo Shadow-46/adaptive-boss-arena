@@ -1095,6 +1095,11 @@ namespace AdaptiveBossArena.Player
             // do; the outcome returned below is what tells the attacker this one cost more.
             _context.LastDefenceWasParry = true;
             _context.PublishCombatEvent(CombatEventKind.Deflected, damage.HitDirection);
+            _context.PublishCombatEvent(CombatEventKind.PlayerParried, damage.HitDirection);
+
+            // The body answers the blow it just turned: without this the knight stood perfectly still through
+            // the one moment the fight is about.
+            _animator?.Recoil(damage.HitDirection);
             _deflectChannel?.Raise();
             _focus?.AddFromDeflect();
 
@@ -1114,6 +1119,7 @@ namespace AdaptiveBossArena.Player
             _context.PublishCombatEvent(CombatEventKind.Deflected, damage.HitDirection);
             _deflectChannel?.Raise();
             _focus?.AddFromDeflect();
+            _animator?.Recoil(damage.HitDirection);
 
             // Deflected, not Blocked. The distinction is for the attacker: this is the outcome that
             // recoils the swing that caused it, and a late block must not.

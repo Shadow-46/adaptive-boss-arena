@@ -79,7 +79,17 @@ namespace AdaptiveBossArena.Core.Combat
         /// Actor is the one who hit the wall. Statistics only: the stagger or lost poise it causes is
         /// decided where it happened, never by a listener.
         /// </remarks>
-        WallImpact = 16
+        WallImpact = 16,
+
+        /// <summary>
+        /// The player turned a blow aside with a deliberate parry.
+        /// </summary>
+        /// <remarks>
+        /// Published alongside <see cref="Deflected"/>, which every existing listener already answers, so this
+        /// one exists purely to tell the parry apart - a harder, riskier act that deserves its own ring and,
+        /// later, its own place in the boss's statistics. Appended, never inserted.
+        /// </remarks>
+        PlayerParried = 17
     }
 
     /// <summary>

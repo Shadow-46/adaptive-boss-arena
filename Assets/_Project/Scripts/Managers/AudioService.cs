@@ -106,6 +106,7 @@ namespace AdaptiveBossArena.Game
 
             // The moments the fight turns on.
             { Cues.Deflect, 1f },
+            { Cues.Parry, 1f },
             { Cues.PostureBreak, 1f },
             { Cues.Execution, 1f },
             { Cues.Peril, 1f },
@@ -147,6 +148,9 @@ namespace AdaptiveBossArena.Game
 
             /// <summary>A clean deflect.</summary>
             public const string Deflect = "guard.deflect";
+
+            /// <summary>A deliberate parry: brighter and harder than a deflect, because it is the harder act.</summary>
+            public const string Parry = "player.parry";
 
             /// <summary>A late block.</summary>
             public const string Block = "guard.block";
@@ -583,6 +587,7 @@ namespace AdaptiveBossArena.Game
             // The deflect is the highest, brightest sound in the game on purpose: it is the moment
             // the player most needs to know they got it exactly right.
             _clips[Cues.Deflect] = ToneGenerator.CreateMetallicRing("guard.deflect", 1180f, 0.45f, 0.85f);
+            _clips[Cues.Parry] = ToneGenerator.CreateMetallicRing("player.parry", 1720f, 0.6f, 1f);
             _clips[Cues.PostureBreak] = ToneGenerator.CreateMetallicRing("guard.break", 320f, 0.9f, 0.9f);
             _clips[Cues.PerfectDodge] = ToneGenerator.CreateMetallicRing("dodge.perfect", 1560f, 0.3f, 0.72f);
 

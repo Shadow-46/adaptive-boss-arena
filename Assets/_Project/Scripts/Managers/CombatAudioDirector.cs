@@ -192,6 +192,12 @@ namespace AdaptiveBossArena.Game
                     _audio.PlayCue(AudioService.Cues.Deflect, combatEvent.Position);
                     break;
 
+                case CombatEventKind.PlayerParried:
+                    // Brighter and harder than the deflect ring that fires with it, so the two are
+                    // never mistaken for each other in the middle of an exchange.
+                    _audio.PlayCue2D(AudioService.Cues.Parry);
+                    break;
+
                 case CombatEventKind.GuardRaised:
                     _audio.PlayCue2D(AudioService.Cues.GuardRaise);
                     break;
