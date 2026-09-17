@@ -23,6 +23,9 @@ namespace AdaptiveBossArena.Combat.Feel
         /// <summary>The most splatters on the floor at once.</summary>
         public const int Capacity = 24;
 
+        /// <summary>The most splatters on the floor at once in a browser, where each is overdraw a weak GPU pays for.</summary>
+        public const int WebCapacity = 12;
+
         /// <summary>How long a splatter stays at full strength before it starts to fade, in seconds.</summary>
         public const float HoldSeconds = 16f;
 
@@ -78,10 +81,11 @@ namespace AdaptiveBossArena.Combat.Feel
         {
             _random = random;
             _block = new MaterialPropertyBlock();
-            _renderers = new MeshRenderer[Capacity];
-            _placedAt = new float[Capacity];
+            int capacity = EffectBudget.IsWebPlayer ? WebCapacity : Capacity;
+            _renderers = new MeshRenderer[capacity];
+            _placedAt = new float[capacity];
 
-            for (int i = 0; i < Capacity; i++)
+            for (int i = 0; i < capacity; i++)
             {
                 GameObject quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
                 quad.name = $"Blood_{i:D2}";
@@ -144,7 +148,15 @@ namespace AdaptiveBossArena.Combat.Feel
                     continue;
                 }
 
-                float alpha = AlphaAt(_clock - _placedAt[i]);
+                float age = _clock - _placedAt[i];
+
+                // Nothing to write while a splatter is still fresh: it was set to full strength when placed.
+                if (age <= HoldSeconds)
+                {
+                    continue;
+                }
+
+                float alpha = AlphaAt(age);
 
                 if (alpha <= 0f)
                 {

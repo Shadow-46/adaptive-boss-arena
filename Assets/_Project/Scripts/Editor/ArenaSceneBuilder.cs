@@ -99,6 +99,13 @@ namespace AdaptiveBossArena.Editor
                 Object.FindAnyObjectByType<UnityEngine.Rendering.Volume>(),
                 channels.PlayerHealth, channels.Deflect);
 
+            // The browser swaps in a cheaper profile and anti-aliasing when the scene starts.
+            Camera mainCamera = Camera.main != null ? Camera.main : Object.FindAnyObjectByType<Camera>();
+            Object.FindAnyObjectByType<PlatformLighting>()?.BindWebBudget(
+                Object.FindAnyObjectByType<UnityEngine.Rendering.Volume>(),
+                PostProcessingConfigurator.LoadWebProfile(),
+                mainCamera != null ? mainCamera.GetComponent<UniversalAdditionalCameraData>() : null);
+
             AssetAuthoring.EnsureFolderExists(EditorMenus.GeneratedSceneFolder);
             EditorSceneManager.SaveScene(scene, EditorMenus.ArenaScenePath);
             AddSceneToBuildSettings(EditorMenus.ArenaScenePath);

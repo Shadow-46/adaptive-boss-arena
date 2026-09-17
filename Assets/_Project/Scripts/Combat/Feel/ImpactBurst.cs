@@ -124,11 +124,16 @@ namespace AdaptiveBossArena.Combat.Feel
             dustSpin.enabled = true;
             dustSpin.z = new ParticleSystem.MinMaxCurve(-0.6f, 0.6f);
 
-            _flash = gameObject.AddComponent<Light>();
-            _flash.type = LightType.Point;
-            _flash.range = 5f;
-            _flash.shadows = LightShadows.None;
-            _flash.enabled = false;
+            // No flash light in a browser: a per-pixel light on every hit is exactly the cost integrated graphics
+            // cannot carry, and the bloom on the sparks still reads as a flash.
+            if (!EffectBudget.IsWebPlayer)
+            {
+                _flash = gameObject.AddComponent<Light>();
+                _flash.type = LightType.Point;
+                _flash.range = 5f;
+                _flash.shadows = LightShadows.None;
+                _flash.enabled = false;
+            }
         }
 
         /// <summary>Emits a burst at a point, thrown along a direction.</summary>
@@ -145,6 +150,11 @@ namespace AdaptiveBossArena.Combat.Feel
             Emit(_sparks, position, axis, profile.Sparks, SparkColour, speedJitter: 0.5f);
             Emit(_blood, position, axis, profile.Blood, BloodColour, speedJitter: 0.45f);
             Emit(_dust, position, axis, profile.Dust, DustColour, speedJitter: 0.6f);
+
+            if (_flash == null)
+            {
+                return;
+            }
 
             _flashIntensity = profile.FlashIntensity;
             _flashRemaining = FlashSeconds;

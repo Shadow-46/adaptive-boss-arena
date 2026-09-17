@@ -77,6 +77,28 @@ namespace AdaptiveBossArena.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator TheWebRendersACheaperFrame()
+        {
+            _lighting.Apply(web: true);
+
+            yield return null;
+
+            Assert.IsTrue(_lighting.RendersWebProfile, "The web still renders the desktop's profile.");
+
+            Transform shafts = GameObject.Find("LightShafts").transform;
+            int lit = shafts.GetComponentsInChildren<Renderer>().Count(r => r.enabled);
+            Assert.AreEqual(PlatformLighting.WebShaftCount, lit, "The web draws every sun shaft.");
+
+            Assert.IsFalse(Object.FindObjectsByType<Light>(FindObjectsSortMode.None)
+                    .Any(l => l.type == LightType.Point && l.enabled && l.name.StartsWith("CandleLight")),
+                "A candle still lights the web build per pixel.");
+
+            // Beside the shafts: impact bursts have "Dust" children of their own.
+            ParticleSystem dust = shafts.parent.Find("Dust").GetComponent<ParticleSystem>();
+            Assert.LessOrEqual(dust.main.maxParticles, PlatformLighting.WebDustParticles, "The web keeps all the dust.");
+        }
+
+        [UnityTest]
         public IEnumerator TheWebDrawsFainterShaftsAndNoCookie()
         {
             // Found under its own parent: the columns have a Shaft_0 of their own.

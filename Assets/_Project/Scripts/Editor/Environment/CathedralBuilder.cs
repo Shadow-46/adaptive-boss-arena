@@ -1,3 +1,4 @@
+using System.Linq;
 using AdaptiveBossArena.Combat;
 using AdaptiveBossArena.Combat.Feel;
 using AdaptiveBossArena.Core.Services;
@@ -128,6 +129,18 @@ namespace AdaptiveBossArena.Editor.Environment
             BuildDebris(root.transform, radius);
             BuildShafts(root.transform);
             BuildDust(root.transform, radius);
+
+            // The dust and the candles are what the web build thins; hand them to the platform lighting, which
+            // BuildShafts has just added beside the cathedral.
+            if (root.transform.parent.TryGetComponent(out PlatformLighting lighting))
+            {
+                Transform dust = root.transform.Find("Dust");
+                Light[] candles = root.GetComponentsInChildren<Light>(true)
+                    .Where(light => light.type == LightType.Point)
+                    .ToArray();
+
+                lighting.BindSceneBudget(dust != null ? dust.GetComponent<ParticleSystem>() : null, candles);
+            }
 
             foreach (MeshRenderer renderer in root.GetComponentsInChildren<MeshRenderer>(true))
             {

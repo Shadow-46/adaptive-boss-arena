@@ -65,13 +65,14 @@ namespace AdaptiveBossArena.Combat.Feel
                 material = CreateParticleMaterial();
             }
 
-            _bursts = new ImpactBurst[_capacity];
+            int capacity = EffectBudget.IsWebPlayer ? Mathf.Min(_capacity, EffectBudget.WebImpactBursts) : _capacity;
+            _bursts = new ImpactBurst[capacity];
 
             // Its own seeded generator: scatter is cosmetic, so it must not draw from the one the boss's
             // decisions are pinned to, and the global generator is off limits.
             var random = new XorShiftRandomProvider(ScatterSeed);
 
-            for (int i = 0; i < _capacity; i++)
+            for (int i = 0; i < capacity; i++)
             {
                 var burstObject = new GameObject($"ImpactBurst_{i}");
                 burstObject.transform.SetParent(transform, worldPositionStays: false);
