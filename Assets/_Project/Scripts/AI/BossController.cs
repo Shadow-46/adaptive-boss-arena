@@ -118,7 +118,20 @@ namespace AdaptiveBossArena.AI
         /// </remarks>
         private const float PhaseTransitionInvulnSeconds = 0.6f;
 
+        /// <summary>How long the death clip plays before physics takes the body.</summary>
+        /// <remarks>
+        /// Long enough to see the brute go down on its own terms, short enough that the corpse still falls
+        /// while the outcome screen is fading in.
+        /// </remarks>
+        private const float DeathClipSeconds = 0.9f;
+
         private float _phaseTransitionInvulnRemaining;
+
+        /// <summary>Seconds of death animation left before the ragdoll takes over, or zero when not dying.</summary>
+        private float _deathClipRemaining;
+
+        /// <summary>The killing blow, held until the death clip has played.</summary>
+        private Vector3 _pendingDeathThrow;
 
         /// <summary>Set when a phase escalation should erupt into the set-piece shockwave, once free.</summary>
         private bool _phaseAttackQueued;
@@ -394,6 +407,18 @@ namespace AdaptiveBossArena.AI
             }
 
             float deltaTime = _time.DeltaTime;
+
+            // Dying: the clip plays, then the body is handed to physics carrying the killing blow. On game
+            // time, so an execution's slow motion draws the fall out with everything else.
+            if (_deathClipRemaining > 0f)
+            {
+                _deathClipRemaining -= deltaTime;
+
+                if (_deathClipRemaining <= 0f)
+                {
+                    _ragdoll?.Activate(_pendingDeathThrow);
+                }
+            }
 
             // The fight is over: stop swinging, stop deciding, and coast to a halt. Animation still
             // runs below so the boss settles visibly instead of freezing mid-pose.
@@ -932,9 +957,14 @@ namespace AdaptiveBossArena.AI
             _poise.Changed += args => _postureChannel?.Raise(args.Normalized);
             _health.Died += _ => _defeatChannel?.Raise();
 
-            // Thrown along the killing blow, so the fall reads as caused by it.
-            _health.Died += args => _ragdoll?.Activate(
-                args.FinalBlow.HitDirection.normalized * args.FinalBlow.KnockbackSpeed);
+            // The clip first, then the body. Handing the corpse to physics on the frame it died meant the
+            // brute's death animation was never seen: it simply folded. The throw is remembered and applied
+            // when the clip has played, so the fall still reads as caused by the killing blow.
+            _health.Died += args =>
+            {
+                _pendingDeathThrow = args.FinalBlow.HitDirection.normalized * args.FinalBlow.KnockbackSpeed;
+                _deathClipRemaining = DeathClipSeconds;
+            };
         }
 
         /// <summary>Reports missing dependencies clearly rather than failing with a null reference.</summary>

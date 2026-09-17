@@ -494,6 +494,14 @@ namespace AdaptiveBossArena.Game
             if (executed)
             {
                 _time?.RequestSlowMotion(ExecutionSlowMotionScale, ExecutionSlowMotionSeconds);
+
+                // The one moment worth watching from somewhere other than behind the knight.
+                if (_cameraRig == null)
+                {
+                    _cameraRig = FindAnyObjectByType<ArenaCameraRig>();
+                }
+
+                _cameraRig?.PlayFinisher(ExecutionSlowMotionSeconds);
                 _screenShake?.AddTrauma(ExecutionTrauma);
                 _screenShake?.Punch(ExecutionTrauma);
             }

@@ -156,6 +156,9 @@ namespace AdaptiveBossArena.Game
         private const float PitchAtCollapsedBoom = 32f;
         private bool _isLockedOn;
 
+        /// <summary>Seconds left of the finishing two-shot, or zero when the camera is playing the fight.</summary>
+        private float _finisherRemaining;
+
         private InputAction _look;
         private InputAction _lockOn;
         private InputAction _cycleCamera;
@@ -311,6 +314,18 @@ namespace AdaptiveBossArena.Game
                 return;
             }
 
+            // Unscaled: the finisher plays through its own slow motion, and the cut must not crawl with it.
+            if (_finisherRemaining > 0f)
+            {
+                _finisherRemaining -= Time.unscaledDeltaTime;
+
+                if (_secondaryTarget != null)
+                {
+                    FrameFinisher(Time.unscaledDeltaTime);
+                    return;
+                }
+            }
+
             float deltaTime = _time?.DeltaTime ?? Time.deltaTime;
 
             UpdateAnchor(deltaTime);
@@ -329,6 +344,16 @@ namespace AdaptiveBossArena.Game
             transform.rotation = Quaternion.Slerp(
                 transform.rotation, DesiredRotation(), DampFactor(_rotationHalfLife, deltaTime));
         }
+
+        /// <summary>
+        /// Cuts to a two-shot of both fighters for the killing blow.
+        /// </summary>
+        /// <remarks>
+        /// Framed from the side, low and close, so the execution is seen as a moment between the two of them
+        /// rather than over the knight's shoulder like every other second of the fight.
+        /// </remarks>
+        /// <param name="seconds">How long to hold the shot.</param>
+        public void PlayFinisher(float seconds) => _finisherRemaining = Mathf.Max(_finisherRemaining, seconds);
 
         /// <summary>Places the camera at its framing position immediately.</summary>
         public void SnapToTarget()
@@ -542,6 +567,41 @@ namespace AdaptiveBossArena.Game
             focus.y = _anchor.y;
             return focus;
         }
+
+        /// <summary>Holds both fighters in frame from the side, close and slightly low.</summary>
+        private void FrameFinisher(float deltaTime)
+        {
+            Vector3 middle = (_primaryTarget.position + _secondaryTarget.position) * 0.5f + Vector3.up * FinisherHeight;
+            Vector3 between = _secondaryTarget.position - _primaryTarget.position;
+            between.y = 0f;
+
+            Vector3 side = between.sqrMagnitude > Mathf.Epsilon
+                ? Vector3.Cross(Vector3.up, between.normalized)
+                : Vector3.right;
+
+            Vector3 desired = middle + side * FinisherDistance;
+            Vector3 confined = ConfineToArena(desired, middle, _config.Radius - WallClearance, out float _);
+
+            transform.position = MathUtil.Damp(transform.position, confined, FinisherHalfLife, deltaTime);
+
+            Vector3 toMiddle = middle - transform.position;
+
+            if (toMiddle.sqrMagnitude > Mathf.Epsilon)
+            {
+                transform.rotation = Quaternion.Slerp(
+                    transform.rotation, Quaternion.LookRotation(toMiddle, Vector3.up),
+                    DampFactor(FinisherHalfLife, deltaTime));
+            }
+        }
+
+        /// <summary>How far to the side of the pair the finishing shot sits.</summary>
+        private const float FinisherDistance = 4.2f;
+
+        /// <summary>Height of the finishing shot above the fighters feet: chest height, not overhead.</summary>
+        private const float FinisherHeight = 1.4f;
+
+        /// <summary>How quickly the finishing shot settles into place.</summary>
+        private const float FinisherHalfLife = 0.12f;
 
         /// <summary>Frame-rate independent interpolation factor for a half-life.</summary>
         private static float DampFactor(float halfLifeSeconds, float deltaTime) =>
