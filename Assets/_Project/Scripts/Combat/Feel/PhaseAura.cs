@@ -61,6 +61,19 @@ namespace AdaptiveBossArena.Combat.Feel
         private float _charge;
         private bool _parryWindowOpen;
 
+        [SerializeField]
+        [Tooltip("Additive material the embers rising off the boss are drawn with. Assigned by the prefab generator.")]
+        private Material _emberMaterial;
+
+        private ParticleSystem _embers;
+
+        /// <summary>Embers per second the boss sheds in each phase, from none while calm to a stream in its last.</summary>
+        private static readonly float[] EmbersPerSecondByPhase = { 0f, 4f, 10f, 20f };
+
+        /// <summary>Assigns the ember material. Used by the prefab generator.</summary>
+        /// <param name="material">Additive spark material.</param>
+        public void SetEmberMaterial(Material material) => _emberMaterial = material;
+
         private void Awake()
         {
             var lightObject = new GameObject("Aura");
@@ -74,13 +87,83 @@ namespace AdaptiveBossArena.Combat.Feel
             _light.intensity = 0f;
             _light.enabled = false;
 
+            BuildEmbers(lightObject.transform);
             SetPhase(0);
+        }
+
+        /// <summary>
+        /// Builds the embers that rise off the boss as its fury grows.
+        /// </summary>
+        /// <remarks>
+        /// A light alone lit the floor around the boss but put nothing on the boss itself. Embers drifting up
+        /// from its core make each escalation visible on the body, and a stream of them in the last phase is the
+        /// "aura" the player asked for. Halved in a browser, where every particle is paid for on weak graphics.
+        /// </remarks>
+        private void BuildEmbers(Transform parent)
+        {
+            if (_emberMaterial == null)
+            {
+                return;
+            }
+
+            var embersObject = new GameObject("Embers");
+            embersObject.transform.SetParent(parent, false);
+
+            _embers = embersObject.AddComponent<ParticleSystem>();
+            _embers.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+            ParticleSystem.MainModule main = _embers.main;
+            main.loop = true;
+            main.playOnAwake = false;
+            main.maxParticles = 64;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.useUnscaledTime = true;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(1.1f, 1.9f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.3f, 0.8f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.025f, 0.055f);
+            main.startColor = new ParticleSystem.MinMaxGradient(new Color(1f, 0.45f, 0.15f), new Color(1f, 0.25f, 0.08f));
+            main.gravityModifier = -0.12f;
+
+            ParticleSystem.EmissionModule emission = _embers.emission;
+            emission.rateOverTime = 0f;
+
+            ParticleSystem.ShapeModule shape = _embers.shape;
+            shape.shapeType = ParticleSystemShapeType.Sphere;
+            shape.radius = 0.45f;
+
+            ParticleSystem.NoiseModule noise = _embers.noise;
+            noise.enabled = true;
+            noise.strength = 0.35f;
+            noise.frequency = 0.8f;
+
+            ParticleSystem.ColorOverLifetimeModule fade = _embers.colorOverLifetime;
+            fade.enabled = true;
+
+            var gradient = new Gradient();
+            gradient.SetKeys(
+                new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(new Color(1f, 0.4f, 0.2f), 1f) },
+                new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.15f), new GradientAlphaKey(0f, 1f) });
+            fade.color = new ParticleSystem.MinMaxGradient(gradient);
+
+            var renderer = embersObject.GetComponent<ParticleSystemRenderer>();
+            renderer.sharedMaterial = _emberMaterial;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+
+            _embers.Play();
         }
 
         /// <summary>Sets the steady glow to match a phase, from calm at zero to furious at the top.</summary>
         /// <param name="phaseIndex">Zero-based phase index.</param>
         public void SetPhase(int phaseIndex)
         {
+            if (_embers != null)
+            {
+                float rate = EmbersPerSecondByPhase[Mathf.Clamp(phaseIndex, 0, EmbersPerSecondByPhase.Length - 1)];
+                ParticleSystem.EmissionModule emission = _embers.emission;
+                emission.rateOverTime = EffectBudget.IsWebPlayer ? rate * 0.5f : rate;
+            }
+
             switch (phaseIndex)
             {
                 case 0:

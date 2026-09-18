@@ -40,7 +40,17 @@ namespace AdaptiveBossArena.Combat.Feel
         /// <summary>Height the dust starts at: just off the floor, where a boot meets the stone.</summary>
         private const float DustHeight = 0.05f;
 
+        [SerializeField]
+        [Tooltip("Camera trauma each footfall adds when the camera is close. Zero for none: only the brute's " +
+                 "steps are heavy enough to be felt.")]
+        [Range(0f, 0.3f)]
+        private float _tremor;
+
+        /// <summary>Distance within which a heavy footfall is felt through the camera.</summary>
+        private const float TremorRange = 7f;
+
         private IAudioService _audio;
+        private IScreenShake _shake;
         private ParticleSystem _dust;
         private Vector3 _lastPosition;
         private float _accumulated;
@@ -64,12 +74,15 @@ namespace AdaptiveBossArena.Combat.Feel
         /// <param name="strideLength">Distance between steps.</param>
         /// <param name="dustMaterial">Material for the dust a footfall lifts, or null for none.</param>
         /// <param name="dustSize">Rough width of that dust, in metres.</param>
-        public void Configure(string cueId, float strideLength, Material dustMaterial = null, float dustSize = 0.35f)
+        /// <param name="tremor">Camera trauma per footfall when close; zero for none.</param>
+        public void Configure(
+            string cueId, float strideLength, Material dustMaterial = null, float dustSize = 0.35f, float tremor = 0f)
         {
             _cueId = cueId;
             _strideLength = Mathf.Max(0.2f, strideLength);
             _dustMaterial = dustMaterial;
             _dustSize = dustSize;
+            _tremor = tremor;
         }
 
         private void OnEnable()
@@ -108,6 +121,7 @@ namespace AdaptiveBossArena.Combat.Feel
             {
                 _accumulated -= _strideLength;
                 _audio?.PlayCue(_cueId, position);
+                Tremble(position);
 
                 // Speed measured against four strides a second, roughly a run: enough to tell a walk from a
                 // sprint without this component being told anything about the character it is on.
@@ -117,6 +131,41 @@ namespace AdaptiveBossArena.Combat.Feel
                     : 0f;
 
                 LiftDust(position, travel, speed01);
+            }
+        }
+
+        /// <summary>
+        /// Shakes the camera a little under a heavy footfall nearby.
+        /// </summary>
+        /// <remarks>
+        /// The brute's weight should be felt as well as seen: a step close by jolts the view, fading to nothing
+        /// with distance, so its slow approach carries a physical threat. Judged from the camera, which sits by
+        /// the player, so this needs no knowledge of the player at all.
+        /// </remarks>
+        private void Tremble(Vector3 position)
+        {
+            if (_tremor <= 0f)
+            {
+                return;
+            }
+
+            _shake ??= ServiceRegistry.Current != null && ServiceRegistry.Current.TryGet(out IScreenShake shake)
+                ? shake
+                : null;
+
+            Camera view = Camera.main;
+
+            if (_shake == null || view == null)
+            {
+                return;
+            }
+
+            float distance = Vector3.Distance(view.transform.position, position);
+            float closeness = 1f - Mathf.Clamp01(distance / TremorRange);
+
+            if (closeness > 0f)
+            {
+                _shake.AddTrauma(_tremor * closeness);
             }
         }
 

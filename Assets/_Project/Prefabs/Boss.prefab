@@ -588,6 +588,7 @@ MonoBehaviour:
   _strideLength: 2.4
   _dustMaterial: {fileID: 2100000, guid: e43eae1c5dd4fd740af7f70dd092cd35, type: 2}
   _dustSize: 0.5
+  _tremor: 0.07
 --- !u!1 &6201088833949698708
 GameObject:
   m_ObjectHideFlags: 0
@@ -791,6 +792,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d915e4b17e0c90d49bdc07fa995010ea, type: 3}
   m_Name: 
   m_EditorClassIdentifier: AdaptiveBossArena.Combat::AdaptiveBossArena.Combat.Feel.PhaseAura
+  _emberMaterial: {fileID: 2100000, guid: 1672d035545a7de48b12ec37400669ec, type: 2}
 --- !u!1 &7564358746392985252
 GameObject:
   m_ObjectHideFlags: 0

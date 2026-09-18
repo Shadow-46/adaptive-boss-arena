@@ -135,7 +135,7 @@ namespace AdaptiveBossArena.Editor
 
             // Lights the boss from within, dark at the start and hotter each phase, so escalation is
             // visible on the character rather than only felt in the damage.
-            visualRoot.AddComponent<PhaseAura>();
+            visualRoot.AddComponent<PhaseAura>().SetEmberMaterial(MaterialLibrary.GetOrCreateImpactSparks());
 
             // Along the cleaver's broad blade when there is one, and out from the body where the primitive's arm
             // would be when there is not. Longer and faintly warm: the boss's swings cover more ground, and
@@ -221,7 +221,7 @@ namespace AdaptiveBossArena.Editor
             root.AddComponent<Combat.Feel.FootstepEmitter>()
                 .Configure(
                     Game.AudioService.Cues.FootstepBoss, strideLength: 2.4f,
-                    MaterialLibrary.GetOrCreateImpactMatter(), dustSize: 0.5f);
+                    MaterialLibrary.GetOrCreateImpactMatter(), dustSize: 0.5f, tremor: 0.07f);
 
             BossConfig config = GeneratedAssets.Config<BossConfig>("DefaultBossConfig");
 

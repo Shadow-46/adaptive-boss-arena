@@ -262,9 +262,10 @@ namespace AdaptiveBossArena.Game
                 return AudioService.Cues.Peril;
             }
 
+            // The brute swings a great sword, and should sound like it: a heavy cleave, not a generic whoosh.
             return combatEvent.Actor == CombatantTeam.Player
                 ? _playerSwingCue
-                : AudioService.Cues.Whoosh;
+                : AudioService.Cues.SwingGreatsword;
         }
 
         /// <summary>Remembers which weapon the player is now holding.</summary>
