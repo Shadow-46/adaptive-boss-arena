@@ -27,6 +27,9 @@ namespace AdaptiveBossArena.Utilities.Statistics
         private const string ShotsFlag = "-perfShots";
         private const string ShotEveryFlag = "-perfShotEvery";
 
+        /// <summary>Starts the frame sequence during the frozen intro rather than once the fight runs.</summary>
+        private const string ShotsIntroFlag = "-perfShotsIntro";
+
         /// <summary>Default spacing of a frame sequence: ten frames a second, enough to read a swing's arc.</summary>
         public const float DefaultShotEverySeconds = 0.1f;
         private const string CaptureQueryKey = "perf";
@@ -54,6 +57,15 @@ namespace AdaptiveBossArena.Utilities.Statistics
         /// <summary>Whether the application should quit once the capture is written.</summary>
         public bool QuitWhenDone { get; init; }
 
+        /// <summary>
+        /// Whether the frame sequence also covers the intro, which the frame timings never do.
+        /// </summary>
+        /// <remarks>
+        /// The entrance is a camera move played while time is frozen, so the only way to look at it headlessly is to
+        /// photograph those frames too. Opt-in, so existing sequences keep their frame numbering.
+        /// </remarks>
+        public bool ShotsIncludeIntro { get; init; }
+
         /// <summary>Whether a capture was requested at all.</summary>
         public bool IsRequested => Seconds > 0f;
 
@@ -69,6 +81,7 @@ namespace AdaptiveBossArena.Utilities.Statistics
             string shotFolder = null;
             float shotEvery = DefaultShotEverySeconds;
             bool quit = false;
+            bool shotsIntro = false;
 
             if (arguments != null)
             {
@@ -88,6 +101,10 @@ namespace AdaptiveBossArena.Utilities.Statistics
 
                         case QuitFlag:
                             quit = true;
+                            break;
+
+                        case ShotsIntroFlag:
+                            shotsIntro = true;
                             break;
 
                         case ShotFlag when !string.IsNullOrEmpty(next):
@@ -117,7 +134,8 @@ namespace AdaptiveBossArena.Utilities.Statistics
                 QuitWhenDone = quit,
                 ShotPath = shotPath,
                 ShotFolder = shotFolder,
-                ShotEverySeconds = shotEvery
+                ShotEverySeconds = shotEvery,
+                ShotsIncludeIntro = shotsIntro
             };
         }
 

@@ -396,7 +396,67 @@ namespace AdaptiveBossArena.Game
             _pauseMenu?.SetSuppressed(true);
             _time?.SetPaused(true);
 
+            // The first attempt of a run opens on the boss: its name, a roar, the camera on it. Retries skip
+            // straight to the quick ready and fight - the player has met it.
+            if (!_entranceShown)
+            {
+                _entranceShown = true;
+                PlayEntrance();
+                return;
+            }
+
             _roundIntro.Begin(OnIntroComplete);
+        }
+
+        /// <summary>The boss's name, shown as it is met.</summary>
+        private const string BossTitle = "T H E   H O L L O W   B R U T E";
+
+        /// <summary>Shake under the entrance roar.</summary>
+        private const float EntranceRoarTrauma = 0.35f;
+
+        /// <summary>Whether this run has already opened on the boss's entrance.</summary>
+        private bool _entranceShown;
+
+        /// <summary>Holds the camera on the boss under its name and a roar, then hands the fight over.</summary>
+        private void PlayEntrance()
+        {
+            _roundIntro.BeginEntrance(BossTitle, OnIntroComplete);
+
+            if (_cameraRig == null)
+            {
+                _cameraRig = FindAnyObjectByType<ArenaCameraRig>();
+            }
+
+            _cameraRig?.PlayEntrance(_roundIntro.HoldSeconds);
+
+            if (ServiceRegistry.Current != null && ServiceRegistry.Current.TryGet(out IAudioService audio))
+            {
+                audio.PlayCue2D(AudioService.Cues.BossRoar);
+            }
+
+            _screenShake?.AddTrauma(EntranceRoarTrauma);
+        }
+
+        /// <summary>Lets any key or click skip the intro, so a player who has seen it is never held.</summary>
+        private void Update()
+        {
+            if (_roundIntro == null || !_roundIntro.IsRunning || !SkipPressed())
+            {
+                return;
+            }
+
+            _cameraRig?.EndEntrance();
+            _roundIntro.Skip();
+        }
+
+        /// <summary>Whether a key or the left mouse button went down this frame.</summary>
+        private static bool SkipPressed()
+        {
+            var keyboard = UnityEngine.InputSystem.Keyboard.current;
+            var mouse = UnityEngine.InputSystem.Mouse.current;
+
+            return (keyboard != null && keyboard.anyKey.wasPressedThisFrame) ||
+                   (mouse != null && mouse.leftButton.wasPressedThisFrame);
         }
 
         /// <summary>Releases the fight once the intro has finished.</summary>

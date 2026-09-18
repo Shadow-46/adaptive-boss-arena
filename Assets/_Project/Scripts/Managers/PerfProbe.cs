@@ -65,6 +65,12 @@ namespace AdaptiveBossArena.Game
         private bool _shotTaken;
         private string _shotFolder;
         private float _shotEvery;
+
+        /// <summary>Whether the sequence also photographs the frozen intro, on its own unscaled clock.</summary>
+        private bool _shotsIncludeIntro;
+
+        private float _introElapsed;
+        private float _nextIntroShot;
         private float _nextSequenceShot;
         private int _sequenceIndex;
 
@@ -108,6 +114,7 @@ namespace AdaptiveBossArena.Game
             // time scale is fine; only TimeService may write it.
             if (Time.timeScale <= 0f)
             {
+                PhotographIntro();
                 return;
             }
 
@@ -141,6 +148,23 @@ namespace AdaptiveBossArena.Game
             if (_captured >= _captureSeconds)
             {
                 FinishCapture();
+            }
+        }
+
+        /// <summary>Photographs the frozen intro, when a sequence was asked to include it.</summary>
+        private void PhotographIntro()
+        {
+            if (!_shotsIncludeIntro || !IsCapturing || string.IsNullOrEmpty(_shotFolder))
+            {
+                return;
+            }
+
+            _introElapsed += Time.unscaledDeltaTime;
+
+            if (_introElapsed >= _nextIntroShot)
+            {
+                _nextIntroShot += _shotEvery;
+                StartCoroutine(SaveFrame(System.IO.Path.Combine(_shotFolder, $"frame_{_sequenceIndex++:D4}.raw")));
             }
         }
 
@@ -282,6 +306,7 @@ namespace AdaptiveBossArena.Game
             _shotPath = request.ShotPath;
             _shotFolder = request.ShotFolder;
             _shotEvery = Mathf.Max(0.02f, request.ShotEverySeconds);
+            _shotsIncludeIntro = request.ShotsIncludeIntro;
 
             if (!string.IsNullOrEmpty(_shotFolder))
             {

@@ -159,6 +159,27 @@ namespace AdaptiveBossArena.Game
         /// <summary>Seconds left of the finishing two-shot, or zero when the camera is playing the fight.</summary>
         private float _finisherRemaining;
 
+        /// <summary>Seconds left of the boss's entrance shot, or zero.</summary>
+        private float _entranceRemaining;
+
+        /// <summary>
+        /// The last stretch of the entrance, over which the shot blends back to the ordinary framing.
+        /// </summary>
+        /// <remarks>
+        /// It ends exactly on the camera's usual position behind the knight, so releasing the fight is not a cut
+        /// or a whip - the view has already settled where the player needs it.
+        /// </remarks>
+        private const float EntranceBlendSeconds = 0.9f;
+
+        /// <summary>How far in front of the boss the entrance shot sits.</summary>
+        private const float EntranceDistance = 5f;
+
+        /// <summary>Height of the point the entrance shot looks at: the brute's chest.</summary>
+        private const float EntranceHeight = 1.9f;
+
+        /// <summary>How far below the chest the lens sits, so the brute is looked up at.</summary>
+        private const float EntranceLensDrop = 0.6f;
+
         private InputAction _look;
         private InputAction _lockOn;
         private InputAction _cycleCamera;
@@ -314,6 +335,14 @@ namespace AdaptiveBossArena.Game
                 return;
             }
 
+            // The entrance plays while the fight is paused, so it runs on unscaled time.
+            if (_entranceRemaining > 0f && _secondaryTarget != null)
+            {
+                _entranceRemaining -= Time.unscaledDeltaTime;
+                FrameEntrance();
+                return;
+            }
+
             // Unscaled: the finisher plays through its own slow motion, and the cut must not crawl with it.
             if (_finisherRemaining > 0f)
             {
@@ -354,6 +383,22 @@ namespace AdaptiveBossArena.Game
         /// </remarks>
         /// <param name="seconds">How long to hold the shot.</param>
         public void PlayFinisher(float seconds) => _finisherRemaining = Mathf.Max(_finisherRemaining, seconds);
+
+        /// <summary>
+        /// Opens on the boss: a low shot from in front of it, easing back behind the knight as the fight begins.
+        /// </summary>
+        /// <param name="seconds">How long the whole entrance lasts, blend included.</param>
+        public void PlayEntrance(float seconds) => _entranceRemaining = Mathf.Max(0f, seconds);
+
+        /// <summary>Stops the entrance now, leaving the camera at its ordinary framing.</summary>
+        public void EndEntrance()
+        {
+            if (_entranceRemaining > 0f)
+            {
+                _entranceRemaining = 0f;
+                SnapToTarget();
+            }
+        }
 
         /// <summary>Places the camera at its framing position immediately.</summary>
         public void SnapToTarget()
@@ -566,6 +611,35 @@ namespace AdaptiveBossArena.Game
 
             focus.y = _anchor.y;
             return focus;
+        }
+
+        /// <summary>
+        /// Looks up at the boss from in front of it, blending into the ordinary shot over the entrance's last stretch.
+        /// </summary>
+        private void FrameEntrance()
+        {
+            Vector3 chest = _secondaryTarget.position + Vector3.up * EntranceHeight;
+            Vector3 front = _secondaryTarget.forward;
+            front.y = 0f;
+            front = front.sqrMagnitude > Mathf.Epsilon ? front.normalized : Vector3.back;
+
+            Vector3 shotPosition = ConfineToArena(
+                chest + front * EntranceDistance - Vector3.up * EntranceLensDrop, chest,
+                _config.Radius - WallClearance, out float _);
+            Quaternion shotRotation = Quaternion.LookRotation(chest - shotPosition, Vector3.up);
+
+            // The ordinary framing, computed as a snap would, so the blend lands on it exactly.
+            _anchor = _primaryTarget.position;
+            _smoothedLookahead = Vector3.zero;
+            Vector3 normalPosition = DesiredPosition();
+            Quaternion normalRotation = DesiredRotation();
+
+            float shot = Mathf.Clamp01(_entranceRemaining / EntranceBlendSeconds);
+            float eased = shot * shot * (3f - 2f * shot);
+
+            transform.SetPositionAndRotation(
+                Vector3.Lerp(normalPosition, shotPosition, eased),
+                Quaternion.Slerp(normalRotation, shotRotation, eased));
         }
 
         /// <summary>Holds both fighters in frame from the side, close and slightly low.</summary>

@@ -46,8 +46,27 @@ namespace AdaptiveBossArena.UI
         [Tooltip("How long the 'fight' cue stays up as it fades.")]
         private float _fightSeconds = 0.6f;
 
-        private static readonly Color ReadyColor = new Color(0.85f, 0.9f, 1f);
-        private static readonly Color FightColor = new Color(1f, 0.55f, 0.3f);
+        // Bone and old blood, in the lettering of the rest of the interface.
+        private static readonly Color ReadyColor = new Color(0.84f, 0.77f, 0.66f);
+        private static readonly Color FightColor = new Color(0.72f, 0.12f, 0.07f);
+
+        /// <summary>How long the boss's name holds on the first attempt, before the fight is released.</summary>
+        private const float TitleSeconds = 2.6f;
+
+        /// <summary>Size of the boss's name: smaller than the cue, so the widely spaced letters fit the screen.</summary>
+        private const int TitleFontSize = 60;
+
+        /// <summary>The boss's name, when this run opens on its entrance; null for an ordinary ready and fight.</summary>
+        private string _title;
+
+        /// <summary>The banner's own size, restored after a title.</summary>
+        private int _cueFontSize;
+
+        /// <summary>Where the title sits: the lower third, clear of the face the camera is framing.</summary>
+        private static readonly Vector2 TitlePosition = new Vector2(0f, -300f);
+
+        /// <summary>The banner's own position, restored after a title.</summary>
+        private Vector2 _cuePosition;
 
         private Action _onComplete;
         private bool _isRunning;
@@ -61,8 +80,20 @@ namespace AdaptiveBossArena.UI
 
         /// <summary>Starts the intro, calling back once it finishes.</summary>
         /// <param name="onComplete">Invoked when the fight should be released. Always called once.</param>
-        public void Begin(Action onComplete)
+        public void Begin(Action onComplete) => BeginEntrance(null, onComplete);
+
+        /// <summary>
+        /// Starts the intro opening on the boss's name, calling back once it finishes.
+        /// </summary>
+        /// <remarks>
+        /// The first attempt of a run opens on the boss: its name held while the camera looks at it, instead of a
+        /// "READY?" over the back of the knight. Retries go straight to the quick ready and fight.
+        /// </remarks>
+        /// <param name="title">The name to show, or null for the ordinary ready cue.</param>
+        /// <param name="onComplete">Invoked when the fight should be released. Always called once.</param>
+        public void BeginEntrance(string title, Action onComplete)
         {
+            _title = title;
             _onComplete = onComplete;
             _isRunning = true;
             _elapsed = 0f;
@@ -85,7 +116,9 @@ namespace AdaptiveBossArena.UI
 
             _elapsed += Time.unscaledDeltaTime;
 
-            if (!_releasedShown && _elapsed >= _readySeconds)
+            float hold = HoldSeconds;
+
+            if (!_releasedShown && _elapsed >= hold)
             {
                 ShowFight();
             }
@@ -94,11 +127,23 @@ namespace AdaptiveBossArena.UI
             {
                 // Fade the banner out across the 'fight' window so the last thing the player sees
                 // before acting is the cue thinning away rather than blinking off.
-                float fightElapsed = _elapsed - _readySeconds;
+                float fightElapsed = _elapsed - hold;
                 _group.alpha = Mathf.Clamp01(1f - fightElapsed / _fightSeconds);
             }
 
-            if (_elapsed >= _readySeconds + _fightSeconds)
+            if (_elapsed >= hold + _fightSeconds)
+            {
+                Complete();
+            }
+        }
+
+        /// <summary>How long the opening cue holds: the boss's name on an entrance, the ready cue otherwise.</summary>
+        public float HoldSeconds => _title != null ? TitleSeconds : _readySeconds;
+
+        /// <summary>Cuts the intro short and releases the fight now, for a player who has seen it.</summary>
+        public void Skip()
+        {
+            if (_isRunning)
             {
                 Complete();
             }
@@ -129,8 +174,17 @@ namespace AdaptiveBossArena.UI
 
             if (_label != null)
             {
-                _label.text = "READY?";
+                if (_cueFontSize == 0)
+                {
+                    _cueFontSize = _label.fontSize;
+                    _cuePosition = _label.rectTransform.anchoredPosition;
+                }
+
+                _label.rectTransform.anchoredPosition = _title != null ? TitlePosition : _cuePosition;
+
+                _label.text = _title ?? "READY?";
                 _label.color = ReadyColor;
+                _label.fontSize = _title != null ? TitleFontSize : _cueFontSize;
             }
         }
 
@@ -142,6 +196,12 @@ namespace AdaptiveBossArena.UI
             {
                 _label.text = "FIGHT!";
                 _label.color = FightColor;
+
+                if (_cueFontSize != 0)
+                {
+                    _label.fontSize = _cueFontSize;
+                    _label.rectTransform.anchoredPosition = _cuePosition;
+                }
             }
         }
 
