@@ -24,8 +24,12 @@ MonoBehaviour:
   _parryCooldownSeconds: 1.2
   _moveSpeed: 5
   _turnSpeedDegreesPerSecond: 220
+  _stalkSpeedFraction: 0.35
+  _approachRunDistance: 6
+  _approachWalkFraction: 0.45
+  _turnSmoothingSeconds: 0.25
   _impulseHalfLifeSeconds: 0.08
-  _accelerationSeconds: 0.25
+  _accelerationSeconds: 0.6
   _lungeBrakeDeceleration: 120
   _wallImpactSpeed: 9
   _wallImpactPoiseDamage: 45

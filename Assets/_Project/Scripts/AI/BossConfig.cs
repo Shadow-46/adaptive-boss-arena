@@ -139,6 +139,29 @@ namespace AdaptiveBossArena.AI
         private float _turnSpeedDegreesPerSecond = 220f;
 
         [SerializeField]
+        [Tooltip("Fraction of top speed the boss walks at while circling and measuring the player. Low, so it " +
+                 "stalks with weight instead of running laps.")]
+        [Range(0.1f, 1f)]
+        private float _stalkSpeedFraction = 0.35f;
+
+        [SerializeField]
+        [Tooltip("Metres beyond its chosen attack's reach at and past which the boss breaks into a run. Closer " +
+                 "than this it walks in.")]
+        [Min(0f)]
+        private float _approachRunDistance = 6f;
+
+        [SerializeField]
+        [Tooltip("Fraction of top speed the boss walks at when its attack is almost in reach.")]
+        [Range(0.1f, 1f)]
+        private float _approachWalkFraction = 0.45f;
+
+        [SerializeField]
+        [Tooltip("Seconds the boss's turning takes to ease up to speed. A heavy body winds into a turn instead " +
+                 "of snapping round at a constant rate.")]
+        [Range(0f, 1f)]
+        private float _turnSmoothingSeconds = 0.25f;
+
+        [SerializeField]
         [Tooltip("How long a shove such as knockback takes to lose half its speed. Shorter than the " +
                  "player's: the boss is heavy, and sheds a blow faster.")]
         [Range(0.02f, 0.6f)]
@@ -305,6 +328,18 @@ namespace AdaptiveBossArena.AI
 
         /// <summary>Seconds the boss takes to reach or shed full speed.</summary>
         public float AccelerationSeconds => _accelerationSeconds;
+
+        /// <summary>Fraction of top speed the boss walks at while circling the player.</summary>
+        public float StalkSpeedFraction => _stalkSpeedFraction;
+
+        /// <summary>Distance beyond reach at and past which the boss runs to close in.</summary>
+        public float ApproachRunDistance => _approachRunDistance;
+
+        /// <summary>Fraction of top speed the boss walks at when its attack is almost in reach.</summary>
+        public float ApproachWalkFraction => _approachWalkFraction;
+
+        /// <summary>Seconds the boss's turning takes to ease up to speed.</summary>
+        public float TurnSmoothingSeconds => _turnSmoothingSeconds;
 
         /// <summary>Speed a lunge loses per second once its wind-up ends.</summary>
         public float LungeBrakeDeceleration => _lungeBrakeDeceleration;

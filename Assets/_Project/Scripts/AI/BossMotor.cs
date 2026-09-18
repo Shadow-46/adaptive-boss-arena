@@ -52,6 +52,9 @@ namespace AdaptiveBossArena.AI
         /// <summary>The imposed shove, such as knockback, still playing out on top of the character's own movement.</summary>
         public Vector3 ImpulseVelocity => _motion.Impulse;
 
+        /// <summary>Angular speed of the eased turn, carried between frames.</summary>
+        private float _yawVelocity;
+
         /// <summary>Current horizontal speed.</summary>
         public float Speed => _planarVelocity.magnitude;
 
@@ -71,15 +74,20 @@ namespace AdaptiveBossArena.AI
         /// <param name="multiplier">Multiplier on base movement speed.</param>
         public void SetSpeedMultiplier(float multiplier) => _speedMultiplier = Mathf.Max(0f, multiplier);
 
-        /// <summary>Accelerates toward a direction at full speed.</summary>
-        /// <param name="direction">World direction to travel. Need not be normalised.</param>
+        /// <summary>Accelerates toward a velocity: a direction whose length is the fraction of top speed to move at.</summary>
+        /// <remarks>
+        /// The length used to be thrown away - every direction was normalised to full speed - so the brute ran
+        /// everywhere, including the slow circling that is meant to show its weight. A length of one is full
+        /// speed; anything longer is capped there.
+        /// </remarks>
+        /// <param name="direction">World direction to travel, its length the fraction of top speed.</param>
         /// <param name="deltaTime">Elapsed scaled time.</param>
         public void MoveInDirection(Vector3 direction, float deltaTime)
         {
             direction.y = 0f;
 
             Vector3 target = direction.sqrMagnitude > Mathf.Epsilon
-                ? direction.normalized * CurrentTopSpeed
+                ? Vector3.ClampMagnitude(direction, 1f) * CurrentTopSpeed
                 : Vector3.zero;
 
             float rate = _config.AccelerationSeconds <= 0f
@@ -177,9 +185,15 @@ namespace AdaptiveBossArena.AI
                 return;
             }
 
-            Quaternion target = Quaternion.LookRotation(direction, Vector3.up);
-            _transform.rotation = Quaternion.RotateTowards(
-                _transform.rotation, target, _config.TurnSpeedDegreesPerSecond * deltaTime);
+            // Eased rather than turned at a constant rate: the brute winds into a turn and settles out of it, which
+            // is most of what makes it read as heavy. The same top rate caps it, so it is no easier to face down
+            // and no harder to circle than before.
+            float target = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
+            float yaw = Mathf.SmoothDampAngle(
+                _transform.eulerAngles.y, target, ref _yawVelocity,
+                _config.TurnSmoothingSeconds, _config.TurnSpeedDegreesPerSecond, deltaTime);
+
+            _transform.rotation = Quaternion.Euler(0f, yaw, 0f);
         }
 
         /// <summary>

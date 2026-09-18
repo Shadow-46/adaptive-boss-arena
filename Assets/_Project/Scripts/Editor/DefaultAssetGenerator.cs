@@ -1075,7 +1075,15 @@ namespace AdaptiveBossArena.Editor
                         // Four times the knight: leaning into the boss shoves it a little and throws
                         // the knight back a lot, and a charge drives the knight before it.
                         .Float("_bodyMass", 4f)
-                        .Float("_accelerationSeconds", 0.25f)
+
+                        // Presence. It stalks at a third of its speed, walks the last stretch to a blow and
+                        // runs only across real distance; it takes 0.6 s to reach speed and eases into turns.
+                        // The player asked for "slow and heavy walks", not a fast, twitchy boss.
+                        .Float("_accelerationSeconds", 0.6f)
+                        .Float("_stalkSpeedFraction", 0.35f)
+                        .Float("_approachRunDistance", 6f)
+                        .Float("_approachWalkFraction", 0.45f)
+                        .Float("_turnSmoothingSeconds", 0.25f)
                         .Float("_lungeBrakeDeceleration", 120f)
 
                         // A charge the player sidesteps into a wall is the brute's own mistake, and

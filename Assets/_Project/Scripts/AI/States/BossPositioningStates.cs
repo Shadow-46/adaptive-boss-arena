@@ -40,12 +40,6 @@ namespace AdaptiveBossArena.AI.States
     /// </remarks>
     public sealed class BossObserveState : StateBase<BossContext>
     {
-        /// <summary>Tolerance around the preferred distance within which no repositioning happens.</summary>
-        private const float RangeDeadZone = 0.75f;
-
-        /// <summary>Sideways drift while observing, so the boss circles rather than standing still.</summary>
-        private const float StrafeWeight = 0.45f;
-
         /// <inheritdoc />
         protected override void OnEnter(BossContext context)
         {
@@ -72,32 +66,15 @@ namespace AdaptiveBossArena.AI.States
             }
 
             context.Motor.FaceDirection(context.DirectionToPlayer, deltaTime);
-            context.Motor.MoveInDirection(ResolveMovement(context), deltaTime);
+
+            // A slow, circling stalk that eases between closing and giving ground; see BossPacing.
+            context.Motor.MoveInDirection(
+                BossPacing.Stalk(
+                    context.DirectionToPlayer, context.DistanceToPlayer, context.PreferredRange,
+                    context.Config.StalkSpeedFraction),
+                deltaTime);
+
             context.Motor.Tick(deltaTime);
-        }
-
-        /// <summary>Decides whether to close, back off, or circle.</summary>
-        private static Vector3 ResolveMovement(BossContext context)
-        {
-            Vector3 toPlayer = context.DirectionToPlayer;
-            float distance = context.DistanceToPlayer;
-            float preferred = context.PreferredRange;
-
-            Vector3 strafe = Vector3.Cross(Vector3.up, toPlayer) * StrafeWeight;
-
-            if (distance > preferred + RangeDeadZone)
-            {
-                return toPlayer + strafe;
-            }
-
-            if (distance < preferred - RangeDeadZone)
-            {
-                return -toPlayer + strafe;
-            }
-
-            // Comfortable. Circling keeps the boss reading as alive and attentive rather than as a
-            // turret waiting for a cooldown.
-            return strafe;
         }
     }
 
@@ -132,18 +109,18 @@ namespace AdaptiveBossArena.AI.States
             Vector3 toPlayer = context.DirectionToPlayer;
 
             context.Motor.FaceDirection(toPlayer, deltaTime);
-            context.Motor.MoveInDirection(toPlayer * AggressionScale(context), deltaTime);
+
+            // Walks in when the blow is nearly in reach and runs only across real distance, scaled by learned
+            // aggression; see BossPacing.
+            float reach = context.PendingAttack != null ? context.PendingAttack.EffectiveReach : 0f;
+            float speed = BossPacing.ApproachSpeed(
+                context.DistanceToPlayer - reach,
+                context.Config.ApproachRunDistance,
+                context.Config.ApproachWalkFraction,
+                context.Tuning.Get(BossTuningParameter.Aggression));
+
+            context.Motor.MoveInDirection(toPlayer.normalized * speed, deltaTime);
             context.Motor.Tick(deltaTime);
         }
-
-        /// <summary>
-        /// Scales approach speed by learned aggression.
-        /// </summary>
-        /// <remarks>
-        /// Kept above a floor so an unaggressive boss still closes eventually. A boss that stopped
-        /// approaching entirely would leave the fight with nothing happening in it.
-        /// </remarks>
-        private static float AggressionScale(BossContext context) =>
-            Mathf.Lerp(0.6f, 1f, Mathf.Clamp01(context.Tuning.Get(BossTuningParameter.Aggression)));
     }
 }
