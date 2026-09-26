@@ -22,7 +22,15 @@ namespace AdaptiveBossArena.Editor.Art
         /// <summary>The states whose clip is scrubbed by the attack's own timeline rather than played by the clock.</summary>
         public static readonly IReadOnlyCollection<string> AttackStateNames = new[]
         {
-            "Light1", "Light2", "Light3", "Heavy", "Special", "Overhead", "Hook", "Dash", "Cast"
+            "Light1", "Light2", "Light3", "Heavy", "Special", "Overhead", "Hook", "Dash", "Cast",
+
+            // The brute's second moveset: a kick, a grab, a leap, and the frenzy's bare-handed strings. Named
+            // for what the body does rather than for the move that uses them, so one clip can serve several.
+            "Kick", "Spin", "Grab", "Leap", "Claw", "Rip", "Roar",
+
+            // The execution, which used to borrow a passing slash. The parry stance is not here: it is
+            // cross-faded as a state by the bridge, not scrubbed by an attack's timeline.
+            "Riposte"
         };
 
         private const string Mixamo = LicensedArtPostprocessor.MixamoFolder;
@@ -74,7 +82,9 @@ namespace AdaptiveBossArena.Editor.Art
             },
             new Dictionary<string, string>
             {
-                [CharacterAnimatorParameters.RollState] = "Roll",
+                // A full committed roll, rather than the CC0 library's stand-in: the sword and shield set has
+                // none of its own, and a dodge is the move the player makes most.
+                [CharacterAnimatorParameters.RollState] = "Sprinting Forward Roll",
                 [CharacterAnimatorParameters.GuardState] = "sword and shield block idle",
                 [CharacterAnimatorParameters.StaggerState] = "sword and shield impact (2)",
                 [CharacterAnimatorParameters.DeathState] = "sword and shield death",
@@ -94,7 +104,14 @@ namespace AdaptiveBossArena.Editor.Art
                 ["Overhead"] = "sword and shield attack",
                 ["Hook"] = "sword and shield kick",
                 ["Dash"] = "sword and shield attack (3)",
-                ["Cast"] = "sword and shield casting (2)"
+                ["Cast"] = "sword and shield casting (2)",
+
+                // The shield thrown forward into the blow, rather than the held guard the parry used to borrow.
+                // Not the Mixamo punch: its wind-up turns the body 77 degrees off forward, which the facing
+                // rule rejects for a stance the player steers from.
+                ["Parry"] = "sword and shield block",
+                // The execution: a thrust driven in with both hands, rather than another passing slash.
+                ["Riposte"] = "Stabbing"
             },
             // walk (2) steps back; strafe and strafe (4) step right, (2) and (3) left - measured, not assumed.
             new[]
@@ -141,7 +158,22 @@ namespace AdaptiveBossArena.Editor.Art
                 // The Charge: a driving slide into a cut.
                 ["Dash"] = "great sword slide attack",
                 // Shockwaves: a gathering cast that releases outward.
-                ["Cast"] = "spell cast"
+                ["Cast"] = "spell cast",
+
+                // The guard-breaker: a boot driven out, with the sword still held.
+                ["Kick"] = "great sword kick",
+                // The spin string: the blade carried the whole way round the body.
+                ["Spin"] = "great sword high spin attack",
+                // The grab: both arms thrown forward to take hold of the knight.
+                ["Grab"] = "Zombie Attack",
+                // The leap: the body thrown through the air to land on the knight.
+                ["Leap"] = "Mutant Jump Attack",
+                // The frenzy's bare-handed swipe, once the sword is gone.
+                ["Claw"] = "Mutant Swiping",
+                // Tearing a pillar out of the floor, thrown with the weight of the shoulder behind it.
+                ["Rip"] = "Mutant Punch",
+                // The roar: head thrown back, chest open. Also the phase transitions.
+                ["Roar"] = "Mutant Roaring"
             },
             // walk (2) steps back; strafe (2) and (4) step right, strafe and (3) left.
             new[]

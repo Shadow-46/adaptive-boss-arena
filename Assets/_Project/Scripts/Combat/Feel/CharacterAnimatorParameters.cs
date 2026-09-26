@@ -43,6 +43,9 @@ namespace AdaptiveBossArena.Combat.Feel
         /// <summary>A broken stance.</summary>
         public const string StaggerState = "Stagger";
 
+        /// <summary>The parry stance: a bash thrown forward to turn a blow aside.</summary>
+        public const string ParryState = "Parry";
+
         /// <summary>Thrown through the air.</summary>
         public const string AirborneState = "Airborne";
 

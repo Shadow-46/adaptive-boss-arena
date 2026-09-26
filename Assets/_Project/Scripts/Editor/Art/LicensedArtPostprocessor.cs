@@ -47,7 +47,25 @@ namespace AdaptiveBossArena.Editor.Art
 
         /// <summary>Bumped whenever the import rules change, so files already imported pick them up.</summary>
         /// <returns>The version of these import rules.</returns>
-        public override uint GetVersion() => 2;
+        public override uint GetVersion() => 3;
+
+        /// <summary>
+        /// A clip's name: its file name, with the character Mixamo previewed it on removed.
+        /// </summary>
+        /// <remarks>
+        /// Mixamo names a download either "walk.fbx" or "Warrok W Kurniawan@Mutant Roaring.fbx" depending on how
+        /// it was fetched, and which one a clip arrives as is not worth encoding in every clip table. The
+        /// character in that prefix is the preview body, not the skeleton the clip is retargeted onto here.
+        /// </remarks>
+        /// <param name="assetPath">The animation file's asset path.</param>
+        /// <returns>The clip's name.</returns>
+        public static string ClipNameFor(string assetPath)
+        {
+            string name = Path.GetFileNameWithoutExtension(assetPath);
+            int character = name.LastIndexOf('@');
+
+            return character >= 0 && character + 1 < name.Length ? name.Substring(character + 1) : name;
+        }
 
         /// <summary>The character whose skeleton an animation file drives.</summary>
         /// <param name="animationPath">The animation file's asset path.</param>
@@ -65,7 +83,10 @@ namespace AdaptiveBossArena.Editor.Art
         public static bool IsLooping(string clipName)
         {
             string[] words = clipName.ToLowerInvariant().Split(' ', '(', ')');
-            return LoopingWords.Any(words.Contains);
+
+            // Matched on the start of a word, so "Mutant Walking" and "Mutant Run" loop alongside "great sword
+            // walk", while "180 turn" and "Sprinting Forward Roll" still play once.
+            return words.Any(word => LoopingWords.Any(word.StartsWith));
         }
 
         private bool IsLicensed =>
@@ -130,7 +151,7 @@ namespace AdaptiveBossArena.Editor.Art
             }
 
             var importer = (ModelImporter)assetImporter;
-            string name = Path.GetFileNameWithoutExtension(assetPath);
+            string name = ClipNameFor(assetPath);
             ModelImporterClipAnimation[] clips = importer.defaultClipAnimations;
 
             foreach (ModelImporterClipAnimation clip in clips)

@@ -62,7 +62,9 @@ namespace AdaptiveBossArena.Tests.EditMode
                 Assert.AreEqual(LicensedArtPostprocessor.CharacterFor(file), AssetDatabase.GetAssetPath(importer.sourceAvatar),
                     file + " copies the wrong character's skeleton.");
                 Assert.AreEqual(1, clips.Length, file + " should hold exactly one clip.");
-                Assert.AreEqual(Path.GetFileNameWithoutExtension(file), clips[0].name, file + "'s clip is not named after its file.");
+                Assert.AreEqual(LicensedArtPostprocessor.ClipNameFor(file), clips[0].name,
+                    file + "'s clip is not named after its file. Mixamo prefixes some downloads with the character " +
+                    "it previewed them on, and that prefix is dropped.");
                 Assert.IsTrue(clips[0].isHumanMotion, file + "'s clip is not humanoid motion.");
             }
         }
