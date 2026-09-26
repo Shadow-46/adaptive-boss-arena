@@ -35,6 +35,28 @@ namespace AdaptiveBossArena.Tests.EditMode
             Assert.AreEqual(expected, attack.Strikers, attackName + " strikes with the wrong part of the body.");
         }
 
+        [TestCase("BossSweep")]
+        [TestCase("BossJab")]
+        [TestCase("BossPerilousOverhead")]
+        [TestCase("BossDelayedOverhead")]
+        [TestCase("BossSpinCleave")]
+        [TestCase("BossCharge")]
+        [TestCase("BossKick")]
+        [TestCase("BossGrab")]
+        [TestCase("BossLeapSmash")]
+        public void TheBossPlansEachBlowFromAReachItsBodyHas(string attackName)
+        {
+            // The boss plans every swing from this range. Measured from a direct clip sample it kept each clip's
+            // travel across the floor, which play discards, and planned a slide attack from over six metres - it
+            // would have opened from out of reach and cut air. A great sword on this body covers under four and
+            // a half metres, knight included.
+            var attack = AssetDatabase.LoadAssetAtPath<AttackDefinition>($"{AttackFolder}/{attackName}.asset");
+
+            Assert.IsNotNull(attack, attackName + " was not generated.");
+            Assert.That(attack.Range, Is.InRange(1f, 4.5f),
+                attackName + " is planned from a reach its body does not have.");
+        }
+
         [TestCase("BossSlam")]
         [TestCase("BossShockwave")]
         [TestCase("BossPhaseShockwave")]

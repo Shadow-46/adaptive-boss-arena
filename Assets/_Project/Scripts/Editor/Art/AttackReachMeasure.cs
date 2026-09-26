@@ -58,15 +58,15 @@ namespace AdaptiveBossArena.Editor.Art
                 foreach (AttackClipBinding binding in config.AttackClips)
                 {
                     AttackDefinition attack = binding.Attack;
-                    AnimationClip clip = ClipIn(controller, binding.State);
 
-                    if (attack == null || attack.Strikers == StrikerParts.None || clip == null)
+                    if (attack == null || attack.Strikers == StrikerParts.None ||
+                        !animator.HasState(0, Animator.StringToHash(binding.State)))
                     {
                         continue;
                     }
 
                     float contact = binding.ContactFraction > 0f ? binding.ContactFraction : ClipContact.DefaultContact;
-                    float reach = Reach(body.transform, animator.gameObject, clip, contact, attack.Strikers, strikers);
+                    float reach = Reach(body.transform, animator, binding.State, contact, attack.Strikers, strikers);
 
                     if (reach <= 0f)
                     {
@@ -88,15 +88,25 @@ namespace AdaptiveBossArena.Editor.Art
         }
 
         /// <summary>The furthest, across the ground, the attack's parts get from the body's centre around contact.</summary>
+        /// <remarks>
+        /// Posed through the Animator exactly as play poses it - the attack state, scrubbed by its time parameter,
+        /// with root motion discarded - rather than by sampling the clip directly. A direct sample keeps the
+        /// clip's travel across the floor, which play throws away, and measured a slide attack at over six metres.
+        /// </remarks>
         private static float Reach(
-            Transform root, GameObject rig, AnimationClip clip, float contact, StrikerParts parts, StrikeVolume[] strikers)
+            Transform root, Animator animator, string state, float contact, StrikerParts parts, StrikeVolume[] strikers)
         {
             float reach = 0f;
+            int attackTime = Animator.StringToHash(CharacterAnimatorParameters.AttackTime);
+
+            animator.Rebind();
 
             for (int i = 0; i < Samples; i++)
             {
                 float fraction = Mathf.Clamp01(contact + Mathf.Lerp(-ContactHalfWindow, ContactHalfWindow, i / (Samples - 1f)));
-                clip.SampleAnimation(rig, fraction * clip.length);
+                animator.SetFloat(attackTime, fraction);
+                animator.Play(state, 0, fraction);
+                animator.Update(0f);
 
                 foreach (StrikeVolume striker in strikers)
                 {
@@ -119,19 +129,6 @@ namespace AdaptiveBossArena.Editor.Art
             offset.y = 0f;
 
             return offset.magnitude;
-        }
-
-        private static AnimationClip ClipIn(AnimatorController controller, string state)
-        {
-            foreach (ChildAnimatorState child in controller.layers[0].stateMachine.states)
-            {
-                if (child.state.name == state)
-                {
-                    return child.state.motion as AnimationClip;
-                }
-            }
-
-            return null;
         }
     }
 }

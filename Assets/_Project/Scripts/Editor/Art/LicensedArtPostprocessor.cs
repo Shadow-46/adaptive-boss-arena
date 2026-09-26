@@ -47,7 +47,7 @@ namespace AdaptiveBossArena.Editor.Art
 
         /// <summary>Bumped whenever the import rules change, so files already imported pick them up.</summary>
         /// <returns>The version of these import rules.</returns>
-        public override uint GetVersion() => 3;
+        public override uint GetVersion() => 4;
 
         /// <summary>
         /// A clip's name: its file name, with the character Mixamo previewed it on removed.
@@ -161,7 +161,13 @@ namespace AdaptiveBossArena.Editor.Art
 
                 clip.lockRootRotation = true;
                 clip.lockRootHeightY = true;
-                clip.lockRootPositionXZ = true;
+
+                // Travel across the floor is extracted as root motion, which the game discards, rather than baked
+                // into the pose. Baked, a slide or a charge carried the body metres away from the root the motor
+                // moves and the hurtbox rides on - it lunged twice, drifted off its own hitbox, and snapped back
+                // when the clip ended. Extracted, every clip plays over its root, and the motor alone moves it.
+                // The locomotion clips are in place already, so they are unchanged.
+                clip.lockRootPositionXZ = false;
                 clip.keepOriginalOrientation = true;
                 clip.keepOriginalPositionY = true;
                 clip.keepOriginalPositionXZ = true;

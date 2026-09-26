@@ -27,7 +27,7 @@ MonoBehaviour:
   _recoverySeconds: 0.32
   _shape: 2
   _offset: {x: 0, y: 1, z: 1}
-  _range: 3.1432805
+  _range: 2.8831053
   _arcDegrees: 70
   _boxHalfExtents: {x: 0.6, y: 0.6, z: 1}
   _staminaCost: 0
