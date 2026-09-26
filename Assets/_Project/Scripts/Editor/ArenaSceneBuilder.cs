@@ -450,6 +450,19 @@ namespace AdaptiveBossArena.Editor
             {
                 rig.SetInputActions(actions);
                 rig.gameObject.AddComponent<CursorLock>().Bind(hud.PauseMenu, hud.EndScreen, hud.SettingsMenu);
+
+                // A ring over the brute while locked on, in the bone colour of the rest of the lettering.
+                var boss = Object.FindAnyObjectByType<AI.BossController>();
+                Transform canvasRoot = hud.RoundIntro.transform;
+                var marker = new GameObject("LockOnReticle", typeof(RectTransform), typeof(UnityEngine.UI.Image));
+                marker.transform.SetParent(canvasRoot, false);
+                var markerRect = (RectTransform)marker.transform;
+                markerRect.sizeDelta = new Vector2(44f, 44f);
+                marker.GetComponent<UnityEngine.UI.Image>().color = new Color(0.84f, 0.77f, 0.66f, 0.9f);
+                marker.SetActive(false);
+
+                canvasRoot.gameObject.AddComponent<LockOnReticle>()
+                    .Bind(rig, boss != null ? boss.transform : null, markerRect);
             }
 
             var director = Object.FindAnyObjectByType<EncounterDirector>();
