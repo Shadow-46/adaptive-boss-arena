@@ -173,6 +173,18 @@ namespace AdaptiveBossArena.Editor
             // The demo should keep simulating when the tab loses focus mid-fight rather than freezing.
             PlayerSettings.runInBackground = true;
 
+            // Native WebAssembly exceptions rather than JavaScript ones. With JavaScript exceptions every call made inside
+            // a try block goes out through a JS trampoline and back, so each level of a deep call chain costs a JS
+            // frame as well as a wasm one. Firefox's stack is the smallest of the major browsers, and a player hit
+            // "too much recursion" there on a chain Chrome and Windows ran through without trouble. Every current
+            // browser supports the 2023 feature set; Firefox has since version 100.
+            PlayerSettings.WebGL.wasm2023 = true;
+
+            // A browser reports a crash only as numbered wasm functions. Every build writes a symbol map beside it that
+            // names them, so a player's screenshot of a crash can be read against the exact build they were running.
+            // The map is kept locally and not deployed.
+            PlayerSettings.WebGL.debugSymbolMode = WebGLDebugSymbolMode.External;
+
             Build(BuildTarget.WebGL, WebGLOutput);
         }
 
