@@ -51,6 +51,10 @@ namespace AdaptiveBossArena.Editor
             InputActionsGenerator.GenerateInputActions();
             PlayerPrefabBuilder.GeneratePlayerPrefab();
             BossPrefabBuilder.GenerateBossPrefab();
+
+            // After the prefab: the reach is measured on the brute's real body, cleaver and all.
+            Art.AttackReachMeasure.MeasureBossReach();
+
             ArenaSceneBuilder.BuildArenaScene();
 
             // Built last so its explicit build-order write — title first, arena second — is the one

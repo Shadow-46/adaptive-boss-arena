@@ -22,39 +22,51 @@ MonoBehaviour:
   - _attack: {fileID: 11400000, guid: c36e1a4c0c2652e44a0844711735c22a, type: 2}
     _state: Light2
     _contactFraction: 0.19148937
+    _frenzyContactFraction: 0.4680851
   - _attack: {fileID: 11400000, guid: 9a2b3bde94dd7424783e41b43ef210e0, type: 2}
     _state: Overhead
     _contactFraction: 0.4893617
+    _frenzyContactFraction: 0.44680852
   - _attack: {fileID: 11400000, guid: 5c47ed3ac6dcb0648801a9e6e503bc50, type: 2}
     _state: Dash
     _contactFraction: 0.70212764
+    _frenzyContactFraction: 0.44680852
   - _attack: {fileID: 11400000, guid: a85d1e6c062cdc148afac1575b1b5abb, type: 2}
     _state: Cast
     _contactFraction: 0.25531915
+    _frenzyContactFraction: 0.17021276
   - _attack: {fileID: 11400000, guid: 126f8a091d25e214590b283ab2bcce93, type: 2}
     _state: Hook
     _contactFraction: 0.42553192
+    _frenzyContactFraction: 0.4680851
   - _attack: {fileID: 11400000, guid: 1b8a10dd73636cc43b5fa064f62ca83f, type: 2}
     _state: Heavy
     _contactFraction: 0.44680852
+    _frenzyContactFraction: 0.27659574
   - _attack: {fileID: 11400000, guid: d2dc5bf9fb135f244ab52724961d8436, type: 2}
     _state: Cast
     _contactFraction: 0.25531915
+    _frenzyContactFraction: 0.17021276
   - _attack: {fileID: 11400000, guid: 2ffac267f222c6747b5a9093aa942059, type: 2}
     _state: Heavy
     _contactFraction: 0.44680852
+    _frenzyContactFraction: 0.27659574
   - _attack: {fileID: 11400000, guid: a2f4db4a340166947994341b802d5a33, type: 2}
     _state: Spin
     _contactFraction: 0.5744681
+    _frenzyContactFraction: 0.4680851
   - _attack: {fileID: 11400000, guid: 8f337d6a7fb31bb4ca3ad885ceeed93a, type: 2}
     _state: Kick
-    _contactFraction: 0.21276596
+    _contactFraction: 0.4893617
+    _frenzyContactFraction: 0.78723407
   - _attack: {fileID: 11400000, guid: 8218301b8a51376488695751b0fb0de3, type: 2}
     _state: Grab
     _contactFraction: 0.38297874
+    _frenzyContactFraction: 0.38297874
   - _attack: {fileID: 11400000, guid: a1128dd1475eb5a4993c2f2db26ddc4a, type: 2}
     _state: Leap
-    _contactFraction: 0.44680852
+    _contactFraction: 0.17021276
+    _frenzyContactFraction: 0.17021276
   _clipContactFraction: 0.45
   _idleBobAmplitude: 0.04
   _idleBobFrequency: 1

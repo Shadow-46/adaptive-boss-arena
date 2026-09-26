@@ -306,6 +306,20 @@ namespace AdaptiveBossArena.Editor
             ("BossLeapSmash", StrikerParts.Body)
         };
 
+        /// <summary>The parts an attack strikes with, by asset name; none for one not in the table.</summary>
+        private static StrikerParts StrikersFor(string attackName)
+        {
+            foreach ((string name, StrikerParts parts) in StrikerBindings)
+            {
+                if (name == attackName)
+                {
+                    return parts;
+                }
+            }
+
+            return StrikerParts.None;
+        }
+
         /// <summary>
         /// Writes which parts each attack strikes with.
         /// </summary>
@@ -393,8 +407,15 @@ namespace AdaptiveBossArena.Editor
                 entry.FindPropertyRelative("_attack").objectReferenceValue =
                     AssetDatabase.LoadAssetAtPath<AttackDefinition>($"{AttackFolder}/{bindings[i].Attack}.asset");
                 entry.FindPropertyRelative("_state").stringValue = bindings[i].State;
+                HumanBodyBones bone = Art.ClipContactMeasure.BoneFor(StrikersFor(bindings[i].Attack));
+
                 entry.FindPropertyRelative("_contactFraction").floatValue =
-                    Art.ClipContactMeasure.ContactFor(table, bindings[i].State);
+                    Art.ClipContactMeasure.ContactFor(table, bindings[i].State, bone);
+
+                // The frenzy has no blade, so a weapon attack there is timed off the fist that throws it.
+                entry.FindPropertyRelative("_frenzyContactFraction").floatValue = frenzyTable != null
+                    ? Art.ClipContactMeasure.ContactFor(frenzyTable, bindings[i].State, bone)
+                    : 0f;
             }
 
             serialized.ApplyModifiedPropertiesWithoutUndo();

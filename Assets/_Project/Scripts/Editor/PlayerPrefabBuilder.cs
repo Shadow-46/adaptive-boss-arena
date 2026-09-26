@@ -35,7 +35,8 @@ namespace AdaptiveBossArena.Editor
         private const float CapsuleRadius = 0.4f;
 
         /// <summary>Slightly under the body radius so attacks must overlap the character properly.</summary>
-        private const float HurtboxRadius = 0.38f;
+        /// <summary>Radius of the knight's hurtbox: how far past a blade's tip the knight's centre can be and still be struck.</summary>
+        public const float HurtboxRadius = 0.38f;
 
         private const float StepOffset = 0.3f;
         private const float SkinWidth = 0.03f;

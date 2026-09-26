@@ -218,12 +218,26 @@ namespace AdaptiveBossArena.Combat.Feel
         /// cut and a two-second leap do not strike at the same fraction of their length.
         /// </remarks>
         /// <param name="attack">The attack in progress.</param>
+        /// <param name="frenzied">
+        /// Whether the frenzy's controller is playing. The same state plays a different clip there - a thrown fist
+        /// instead of a raised blade - and the blow lands at a different point in it.
+        /// </param>
         /// <returns>The contact fraction, falling back to the config's default where none was measured.</returns>
-        public float ContactFractionFor(AttackDefinition attack)
+        public float ContactFractionFor(AttackDefinition attack, bool frenzied = false)
         {
             foreach (AttackClipBinding binding in _attackClips)
             {
-                if (binding.Attack == attack && binding.ContactFraction > 0f)
+                if (binding.Attack != attack)
+                {
+                    continue;
+                }
+
+                if (frenzied && binding.FrenzyContactFraction > 0f)
+                {
+                    return binding.FrenzyContactFraction;
+                }
+
+                if (binding.ContactFraction > 0f)
                 {
                     return binding.ContactFraction;
                 }
@@ -231,6 +245,9 @@ namespace AdaptiveBossArena.Combat.Feel
 
             return _clipContactFraction;
         }
+
+        /// <summary>Every attack's clip binding, for the generator's measurements.</summary>
+        public System.Collections.Generic.IReadOnlyList<AttackClipBinding> AttackClips => _attackClips;
 
         /// <summary>The attack state an attack plays.</summary>
         /// <param name="attack">The attack in progress.</param>
@@ -358,8 +375,13 @@ namespace AdaptiveBossArena.Combat.Feel
 
         [SerializeField]
         [Range(0f, 1f)]
-        [Tooltip("Fraction of the clip at which the blow lands, measured from the weapon hand. Zero uses the config's default.")]
+        [Tooltip("Fraction of the clip at which the blow lands, measured from the striking limb. Zero uses the config's default.")]
         private float _contactFraction;
+
+        [SerializeField]
+        [Range(0f, 1f)]
+        [Tooltip("The same, for the clip the frenzy plays in this state. Zero falls back to the armed fraction.")]
+        private float _frenzyContactFraction;
 
         /// <summary>The attack.</summary>
         public AttackDefinition Attack => _attack;
@@ -369,5 +391,8 @@ namespace AdaptiveBossArena.Combat.Feel
 
         /// <summary>Fraction of the clip at which the blow lands, or zero when unmeasured.</summary>
         public float ContactFraction => _contactFraction;
+
+        /// <summary>Fraction of the frenzy's clip at which the blow lands, or zero when unmeasured.</summary>
+        public float FrenzyContactFraction => _frenzyContactFraction;
     }
 }

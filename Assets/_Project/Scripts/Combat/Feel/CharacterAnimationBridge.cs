@@ -119,6 +119,7 @@ namespace AdaptiveBossArena.Combat.Feel
             }
 
             _animator.runtimeAnimatorController = wanted;
+            _frenzied = frenzied && wanted == _config.FrenzyController;
 
             // The layer index belongs to the controller, so it has to be found again.
             _hitLayer = _animator.GetLayerIndex(CharacterAnimatorParameters.HitLayer);
@@ -126,6 +127,9 @@ namespace AdaptiveBossArena.Combat.Feel
 
             SetWeaponVisible(!frenzied);
         }
+
+        /// <summary>Whether the frenzy's controller is the one playing, which times every blow off its own clips.</summary>
+        private bool _frenzied;
 
         /// <summary>Shows or hides the mounted weapon, which the frenzy has thrown away.</summary>
         private void SetWeaponVisible(bool visible)
@@ -337,7 +341,7 @@ namespace AdaptiveBossArena.Combat.Feel
 
         private AttackClipTimeWarp WarpFor(AttackDefinition attack)
         {
-            float contact = _config != null ? _config.ContactFractionFor(attack) : ClipContact.DefaultContact;
+            float contact = _config != null ? _config.ContactFractionFor(attack, _frenzied) : ClipContact.DefaultContact;
 
             // Normalised clip space: a clip of length one, so no clip lengths need storing anywhere.
             return new AttackClipTimeWarp(
