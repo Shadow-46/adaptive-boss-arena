@@ -48,6 +48,9 @@ MonoBehaviour:
   - _attack: {fileID: 11400000, guid: 817e8f6a6ab3fd247b3803288036af66, type: 2}
     _state: Dash
     _contactFraction: 0.44680852
+  - _attack: {fileID: 11400000, guid: ebc03bd400ae8a040892263c650ed6c0, type: 2}
+    _state: Riposte
+    _contactFraction: 0.63829786
   _clipContactFraction: 0.45
   _idleBobAmplitude: 0.04
   _idleBobFrequency: 1.4

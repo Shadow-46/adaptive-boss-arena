@@ -146,7 +146,12 @@ namespace AdaptiveBossArena.Editor
                 AttackDefinition shockwave,
                 AttackDefinition jab,
                 AttackDefinition perilous,
-                AttackDefinition phaseShockwave)
+                AttackDefinition phaseShockwave,
+                AttackDefinition delayedOverhead,
+                AttackDefinition spin,
+                AttackDefinition kick,
+                AttackDefinition grab,
+                AttackDefinition leap)
             {
                 Sweep = sweep;
                 Slam = slam;
@@ -155,6 +160,11 @@ namespace AdaptiveBossArena.Editor
                 Jab = jab;
                 Perilous = perilous;
                 PhaseShockwave = phaseShockwave;
+                DelayedOverhead = delayedOverhead;
+                Spin = spin;
+                Kick = kick;
+                Grab = grab;
+                Leap = leap;
             }
 
             public AttackDefinition Sweep { get; }
@@ -172,6 +182,21 @@ namespace AdaptiveBossArena.Editor
 
             /// <summary>The arena-wide unblockable shockwave for phase transitions and the gambit.</summary>
             public AttackDefinition PhaseShockwave { get; }
+
+            /// <summary>The held overhead that punishes dodging on reflex.</summary>
+            public AttackDefinition DelayedOverhead { get; }
+
+            /// <summary>The spinning cleave that covers every side at once.</summary>
+            public AttackDefinition Spin { get; }
+
+            /// <summary>The boot that breaks a held guard.</summary>
+            public AttackDefinition Kick { get; }
+
+            /// <summary>The seize: neither blockable nor parryable, so only distance answers it.</summary>
+            public AttackDefinition Grab { get; }
+
+            /// <summary>The leap that closes the arena and scars where it lands.</summary>
+            public AttackDefinition Leap { get; }
         }
 
         private static ReactionProfile CreateReactionProfile()
@@ -224,7 +249,9 @@ namespace AdaptiveBossArena.Editor
             ("PlayerLight1", "Light1"), ("PlayerLight2", "Light2"), ("PlayerLight3", "Light3"),
             ("GreatswordLight1", "Light1"), ("GreatswordLight2", "Light3"),
             ("EnergyLight1", "Light1"), ("EnergyLight2", "Light2"), ("EnergyLight3", "Light3"), ("EnergyLight4", "Light1"),
-            ("EnergyHeavy", "Dash")
+            ("EnergyHeavy", "Dash"),
+            // The execution is a thrust driven in with both hands, not another passing slash.
+            ("PlayerExecution", "Riposte")
         };
 
         /// <summary>Which attack state each of the boss's attacks plays.</summary>
@@ -238,7 +265,12 @@ namespace AdaptiveBossArena.Editor
         {
             ("BossSweep", "Light2"), ("BossSlam", "Overhead"), ("BossCharge", "Dash"),
             ("BossShockwave", "Cast"), ("BossJab", "Hook"), ("BossPerilousOverhead", "Heavy"),
-            ("BossPhaseShockwave", "Cast")
+            ("BossPhaseShockwave", "Cast"),
+
+            // The held overhead wears the same raised blade as the perilous one and is stretched over its
+            // longer wind-up by the time-warp, which is the whole read: the pose is familiar, the timing is not.
+            ("BossDelayedOverhead", "Heavy"), ("BossSpinCleave", "Spin"), ("BossKick", "Kick"),
+            ("BossGrab", "Grab"), ("BossLeapSmash", "Leap")
         };
 
         /// <summary>
@@ -451,7 +483,56 @@ namespace AdaptiveBossArena.Editor
                 leavesHazard: true, hazardRadius: 4f, hazardDamagePerTick: 3f, hazardDuration: 4.5f,
                 reaction: ImpactReaction.Launch);
 
-            return new BossAttacks(sweep, slam, charge, shockwave, jab, perilous, phaseShockwave);
+            // The answer to dodging on reflex. The wind-up is the perilous overhead's, held nearly half a
+            // second longer at its peak before the blade falls fast: a player who rolls when the arms go up
+            // is on the floor recovering when it lands. It is blockable, so reading it has two answers.
+            AttackDefinition delayedOverhead = CreateAttack(
+                "BossDelayedOverhead", "Held Overhead", DamageType.BossMelee,
+                damage: 22f, startup: 1.15f, active: 0.10f, recovery: 0.62f,
+                range: 3.4f, arc: 110f, poise: 40f, knockback: 6f, hitStop: 0.11f, trauma: 0.45f,
+                stagger: StaggerStrength.Interrupt, telegraph: true,
+                reaction: ImpactReaction.Knockdown);
+
+            // The answer to circling. A sweep leaves a flank to move to; this one does not, so the player
+            // has to leave its reach rather than walk around it. Its long active window is the cost: the
+            // brute is committed to the spin for a quarter of a second and is open behind it.
+            AttackDefinition spin = CreateAttack(
+                "BossSpinCleave", "Spin Cleave", DamageType.BossMelee,
+                damage: 14f, startup: 0.52f, active: 0.26f, recovery: 0.62f,
+                range: 3.8f, arc: 360f, poise: 28f, knockback: 6f, hitStop: 0.07f, trauma: 0.32f,
+                telegraph: false, reaction: ImpactReaction.Knockback);
+
+            // The answer to holding guard. It barely cuts, and it takes half a stance: a player who waits
+            // behind the shield is opened by it rather than killed by it, which is the trade it is for.
+            AttackDefinition kick = CreateAttack(
+                "BossKick", "Guard Breaker", DamageType.BossMelee,
+                damage: 6f, startup: 0.34f, active: 0.08f, recovery: 0.44f,
+                range: 2.6f, arc: 60f, poise: 55f, knockback: 7f, hitStop: 0.06f, trauma: 0.26f,
+                stagger: StaggerStrength.Interrupt, telegraph: false,
+                reaction: ImpactReaction.Knockback);
+
+            // The answer to standing in its face. Neither blockable nor parryable, so the only counter is
+            // not being there - and its short reach and long recovery mean backing off always beats it.
+            AttackDefinition grab = CreateAttack(
+                "BossGrab", "Seize", DamageType.BossMelee,
+                damage: 24f, startup: 0.55f, active: 0.12f, recovery: 0.95f,
+                range: 2.4f, arc: 60f, poise: 30f, knockback: 3f, hitStop: 0.14f, trauma: 0.5f,
+                lungeSpeed: 7f, stagger: StaggerStrength.Interrupt, telegraph: true,
+                unblockable: true, unparryable: true, reaction: ImpactReaction.Launch);
+
+            // The answer to running. It crosses the arena in one jump and scars the floor where it lands,
+            // so distance stops being safety without the brute having to sprint the whole way.
+            AttackDefinition leap = CreateAttack(
+                "BossLeapSmash", "Leap Smash", DamageType.BossMelee,
+                damage: 20f, startup: 0.78f, active: 0.16f, recovery: 0.82f,
+                range: 3.2f, arc: 360f, poise: 42f, knockback: 9f, hitStop: 0.12f, trauma: 0.55f,
+                lungeSpeed: 12f, shape: AttackShape.Sphere, stagger: StaggerStrength.Interrupt,
+                telegraph: true, leavesHazard: true, hazardRadius: 3f, hazardDamagePerTick: 3f,
+                hazardDuration: 3.5f, reaction: ImpactReaction.Knockdown);
+
+            return new BossAttacks(
+                sweep, slam, charge, shockwave, jab, perilous, phaseShockwave,
+                delayedOverhead, spin, kick, grab, leap);
         }
 
         private static AttackDefinition CreateAttack(
@@ -1098,19 +1179,21 @@ namespace AdaptiveBossArena.Editor
                     phases.GetArrayElementAtIndex(0), ShouldWriteTuning(created), "Measured", threshold: 1f,
                     moveMultiplier: 1f, cooldown: 1.15f, adaptationRate: 1f,
                     signature: attacks.Slam,
-                    attacks.Sweep, attacks.Slam);
+                    attacks.Sweep, attacks.Slam, attacks.DelayedOverhead);
 
                 WritePhase(
                     phases.GetArrayElementAtIndex(1), ShouldWriteTuning(created), "Pressing", threshold: 0.66f,
                     moveMultiplier: 1.15f, cooldown: 0.85f, adaptationRate: 1.4f,
                     signature: attacks.Charge,
-                    attacks.Sweep, attacks.Slam, attacks.Charge, attacks.Jab, attacks.Perilous);
+                    attacks.Sweep, attacks.Slam, attacks.Charge, attacks.Jab, attacks.Perilous,
+                    attacks.DelayedOverhead, attacks.Spin, attacks.Kick);
 
                 WritePhase(
                     phases.GetArrayElementAtIndex(2), ShouldWriteTuning(created), "Relentless", threshold: 0.33f,
                     moveMultiplier: 1.3f, cooldown: 0.6f, adaptationRate: 2f,
                     signature: attacks.Shockwave,
-                    attacks.Sweep, attacks.Slam, attacks.Charge, attacks.Shockwave, attacks.Jab, attacks.Perilous);
+                    attacks.Sweep, attacks.Slam, attacks.Charge, attacks.Shockwave, attacks.Jab, attacks.Perilous,
+                    attacks.DelayedOverhead, attacks.Spin, attacks.Kick, attacks.Grab, attacks.Leap);
 
                 // Last Stand: the desperation phase. It flows through the same escalation beat as the
                 // others — roar, shockwave, invulnerable rear-up — but arrives with the fullest
@@ -1120,7 +1203,8 @@ namespace AdaptiveBossArena.Editor
                     phases.GetArrayElementAtIndex(3), ShouldWriteTuning(created), "Last Stand", threshold: 0.15f,
                     moveMultiplier: 1.4f, cooldown: 0.45f, adaptationRate: 2.5f,
                     signature: attacks.Shockwave,
-                    attacks.Sweep, attacks.Slam, attacks.Charge, attacks.Shockwave, attacks.Jab, attacks.Perilous);
+                    attacks.Sweep, attacks.Slam, attacks.Charge, attacks.Shockwave, attacks.Jab, attacks.Perilous,
+                    attacks.DelayedOverhead, attacks.Spin, attacks.Kick, attacks.Grab, attacks.Leap);
             }
         }
 

@@ -39,6 +39,21 @@ MonoBehaviour:
   - _attack: {fileID: 11400000, guid: d2dc5bf9fb135f244ab52724961d8436, type: 2}
     _state: Cast
     _contactFraction: 0.25531915
+  - _attack: {fileID: 11400000, guid: 2ffac267f222c6747b5a9093aa942059, type: 2}
+    _state: Heavy
+    _contactFraction: 0.44680852
+  - _attack: {fileID: 11400000, guid: a2f4db4a340166947994341b802d5a33, type: 2}
+    _state: Spin
+    _contactFraction: 0.5744681
+  - _attack: {fileID: 11400000, guid: 8f337d6a7fb31bb4ca3ad885ceeed93a, type: 2}
+    _state: Kick
+    _contactFraction: 0.21276596
+  - _attack: {fileID: 11400000, guid: 8218301b8a51376488695751b0fb0de3, type: 2}
+    _state: Grab
+    _contactFraction: 0.38297874
+  - _attack: {fileID: 11400000, guid: a1128dd1475eb5a4993c2f2db26ddc4a, type: 2}
+    _state: Leap
+    _contactFraction: 0.44680852
   _clipContactFraction: 0.45
   _idleBobAmplitude: 0.04
   _idleBobFrequency: 1
