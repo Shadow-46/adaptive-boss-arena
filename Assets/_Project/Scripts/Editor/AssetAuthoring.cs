@@ -121,9 +121,12 @@ namespace AdaptiveBossArena.Editor
             {
                 SerializedProperty property = Require(fieldName);
 
+                // The enum's value, not its position in the member list. They agree for an enum numbered 0, 1,
+                // 2 in order, which every enum here was until a flags enum arrived: writing a combined value such
+                // as 17 as a position is out of range, and Unity stored it silently as zero.
                 if (property.propertyType == SerializedPropertyType.Enum)
                 {
-                    property.enumValueIndex = value;
+                    property.enumValueFlag = value;
                 }
                 else
                 {
