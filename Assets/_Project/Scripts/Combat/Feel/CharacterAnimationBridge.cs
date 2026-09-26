@@ -26,14 +26,16 @@ namespace AdaptiveBossArena.Combat.Feel
     {
         private const float CrossFadeSeconds = 0.08f;
 
-        /// <summary>
-        /// Blend into a swing or a roll: half the usual, so the body answers the button on the frame it is pressed.
-        /// </summary>
+        /// <summary>Blend from standing or moving into a swing.</summary>
         /// <remarks>
-        /// An eighth of a second blending out of the stance before the swing visibly began read as input lag. The
-        /// attack clip is scrubbed by the attack's own clock, so a shorter blend loses no timing, only the delay.
+        /// 0.04 s read as a pop: the whole body jumped into the wind-up's first pose. A tenth of a second is still
+        /// inside the swing's own wind-up, which is scrubbed by the attack's clock, so no timing is lost - only the
+        /// snap.
         /// </remarks>
-        private const float ResponsiveCrossFadeSeconds = 0.04f;
+        private const float EnterAttackCrossFadeSeconds = 0.1f;
+
+        /// <summary>Blend from one swing of a chain into the next, or into a roll: quick, because the body is already moving.</summary>
+        private const float ChainCrossFadeSeconds = 0.06f;
 
         /// <summary>Clip time around the contact frame the live window plays, as a fraction of the clip.</summary>
         private const float ContactSpanFraction = 0.08f;
@@ -219,10 +221,24 @@ namespace AdaptiveBossArena.Combat.Feel
             // restarts the state even when its name has not changed.
             bool newAttack = attacking && !ReferenceEquals(attack, _currentAttack);
 
-            if (target != _currentState || newAttack)
+            if (target != BaseState(_currentState) || newAttack)
             {
-                bool responsive = attacking || target == CharacterAnimatorParameters.RollState;
-                _animator.CrossFadeInFixedTime(target, responsive ? ResponsiveCrossFadeSeconds : CrossFadeSeconds);
+                bool fromAttack = _currentAttack != null;
+
+                // A swing that repeats the last one's clip blends into that state's twin: a state cannot be
+                // cross-faded into itself, and restarting it jumped the body from one swing's end to the next's start.
+                if (attacking && target == BaseState(_currentState))
+                {
+                    target = _currentState == target ? target + CharacterAnimatorParameters.AlternateSuffix : target;
+                }
+
+                float blend = !attacking && target != CharacterAnimatorParameters.RollState
+                    ? CrossFadeSeconds
+                    : fromAttack || target == CharacterAnimatorParameters.RollState
+                        ? ChainCrossFadeSeconds
+                        : EnterAttackCrossFadeSeconds;
+
+                _animator.CrossFadeInFixedTime(target, blend);
                 _currentState = target;
             }
 
@@ -263,6 +279,12 @@ namespace AdaptiveBossArena.Combat.Feel
         /// <summary>Whether the roar may play over the state the fighter is otherwise in.</summary>
         private static bool CanRoarOver(ObservableActionState state) =>
             state == ObservableActionState.Idle || state == ObservableActionState.Moving;
+
+        /// <summary>A state's name without its twin's suffix, so a swing's two copies count as one state.</summary>
+        private static string BaseState(string state) =>
+            state != null && state.EndsWith(CharacterAnimatorParameters.AlternateSuffix)
+                ? state.Substring(0, state.Length - CharacterAnimatorParameters.AlternateSuffix.Length)
+                : state;
 
         /// <summary>Plays the fighter's flinch on the upper body, over whatever it is doing.</summary>
         /// <remarks>

@@ -96,6 +96,12 @@ namespace AdaptiveBossArena.Editor.Art
                 {
                     state.timeParameterActive = true;
                     state.timeParameter = CharacterAnimatorParameters.AttackTime;
+
+                    // Its twin, for a swing that follows another on the same clip.
+                    AnimatorState twin = machine.AddState(entry.Key + CharacterAnimatorParameters.AlternateSuffix);
+                    twin.motion = state.motion;
+                    twin.timeParameterActive = true;
+                    twin.timeParameter = CharacterAnimatorParameters.AttackTime;
                 }
             }
 

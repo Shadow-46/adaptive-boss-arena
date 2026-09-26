@@ -49,6 +49,16 @@ namespace AdaptiveBossArena.Combat.Feel
         /// <summary>The roar a phase transition plays, scrubbed across the transformation.</summary>
         public const string RoarState = "Roar";
 
+        /// <summary>
+        /// Suffix of each attack state's identical twin, which a repeated swing blends into.
+        /// </summary>
+        /// <remarks>
+        /// Unity cannot cross-fade a state into itself: asked to, it restarts the state with no blend, and the body
+        /// jumps from the end of one swing to the start of the next. Two copies of every attack state let a
+        /// combo that repeats a clip blend from one into the other.
+        /// </remarks>
+        public const string AlternateSuffix = " B";
+
         /// <summary>Thrown through the air.</summary>
         public const string AirborneState = "Airborne";
 
