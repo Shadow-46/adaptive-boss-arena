@@ -128,6 +128,59 @@ namespace AdaptiveBossArena.Tests.PlayMode
             Assert.AreEqual(0, occluded, $"The wall hid the player from the camera on {occluded} of {frames} sides (camera at radius {worstRadius:F1} m).");
         }
 
+        [UnityTest]
+        public IEnumerator LockOnKeepsTheBruteInViewThroughACircleStrafe()
+        {
+            // The player reported lock-on as wrong. Its whole job is that the brute never leaves the screen however
+            // the knight moves around it, so the knight is carried in a full circle around the brute, faster than
+            // any real strafe, and the brute's chest is checked on screen every frame.
+            var rig = Object.FindAnyObjectByType<ArenaCameraRig>();
+            var player = Object.FindAnyObjectByType<PlayerController>();
+            var boss = Object.FindAnyObjectByType<BossController>();
+
+            var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+            var context = (PlayerContext)typeof(PlayerController).GetField("_context", flags).GetValue(player);
+            typeof(ArenaCameraRig).GetField("_isLockedOn", flags).SetValue(rig, true);
+
+            // Nothing else moves the brute while the knight circles it.
+            boss.enabled = false;
+            Vector3 centre = new Vector3(0f, boss.transform.position.y, 0f);
+            boss.transform.position = centre;
+
+            Camera camera = rig.GetComponentInChildren<Camera>();
+            const float Radius = 4f;
+            const float DegreesPerSecond = 120f;
+            float elapsed = 0f;
+            int frames = 0, lost = 0;
+
+            while (elapsed < 3.4f)
+            {
+                float angle = elapsed * DegreesPerSecond * Mathf.Deg2Rad;
+                context.Motor.Teleport(centre + new Vector3(Mathf.Sin(angle), 0f, -Mathf.Cos(angle)) * Radius);
+
+                yield return null;
+                elapsed += Time.unscaledDeltaTime;
+
+                // A moment to settle on the first frame, then every frame counts.
+                if (elapsed < 0.4f)
+                {
+                    continue;
+                }
+
+                Vector3 seen = camera.WorldToViewportPoint(centre + Vector3.up * 1.9f);
+                frames++;
+
+                if (seen.z <= 0f || seen.x < 0.05f || seen.x > 0.95f || seen.y < 0.05f || seen.y > 0.95f)
+                {
+                    lost++;
+                }
+            }
+
+            Debug.Log($"[CAMERA] lock-on circle strafe: brute off screen on {lost} of {frames} frames");
+
+            Assert.LessOrEqual(lost, frames / 20, $"Locked on, the brute left the screen on {lost} of {frames} frames.");
+        }
+
         private static Vector3 Flat(Vector3 v)
         {
             v.y = 0f;

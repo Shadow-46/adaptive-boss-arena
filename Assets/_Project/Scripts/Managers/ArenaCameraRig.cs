@@ -65,13 +65,13 @@ namespace AdaptiveBossArena.Game
 
         [SerializeField]
         [Tooltip("Whether lock-on engages automatically at the start of a fight.")]
-        private bool _lockOnByDefault = true;
+        private bool _lockOnByDefault;
 
         [Header("Orbit")]
         [SerializeField]
         [Range(0.02f, 0.5f)]
-        [Tooltip("Degrees the camera turns per pixel of mouse movement.")]
-        private float _mouseDegreesPerPixel = 0.12f;
+        [Tooltip("Degrees the camera turns per pixel of mouse movement, before the player's sensitivity setting.")]
+        private float _mouseDegreesPerPixel = 0.22f;
 
         [SerializeField]
         [Range(30f, 400f)]
@@ -80,55 +80,55 @@ namespace AdaptiveBossArena.Game
 
         [SerializeField]
         [Range(-30f, 0f)]
-        [Tooltip("Lowest pitch the player can orbit to: slightly looking up.")]
-        private float _minimumPitchDegrees = -10f;
+        [Tooltip("Lowest pitch the player can orbit to: looking up at the brute.")]
+        private float _minimumPitchDegrees = -25f;
 
         [SerializeField]
         [Range(20f, 80f)]
         [Tooltip("Highest pitch the player can orbit to: looking steeply down.")]
-        private float _maximumPitchDegrees = 55f;
+        private float _maximumPitchDegrees = 60f;
 
         [SerializeField]
         [Range(0.02f, 0.5f)]
         [Tooltip("Half-life of the heading swinging round to the boss while locked on.")]
-        private float _lockOnHeadingHalfLife = 0.1f;
+        private float _lockOnHeadingHalfLife = 0.08f;
 
         [Header("Third Person")]
         [SerializeField]
-        [Range(2f, 12f)]
-        [Tooltip("Distance behind the player.")]
-        private float _distance = 6f;
+        [Range(1.5f, 12f)]
+        [Tooltip("Distance behind the pivot at the player's shoulders.")]
+        private float _distance = 2.8f;
 
         [SerializeField]
-        [Range(1f, 6f)]
-        [Tooltip("Height above the player.")]
-        private float _height = 2.8f;
+        [Range(0.8f, 3f)]
+        [Tooltip("Height of the pivot above the player's feet: the shoulders.")]
+        private float _pivotHeight = 1.55f;
 
         [SerializeField]
-        [Range(0f, 40f)]
-        [Tooltip("Downward pitch.")]
-        private float _pitchDegrees = 16f;
+        [Range(0f, 1.5f)]
+        [Tooltip("How far right of the pivot the camera sits, so it looks past the shoulder rather than through the body.")]
+        private float _shoulderOffset = 0.55f;
+
+        [SerializeField]
+        [Range(-10f, 40f)]
+        [Tooltip("Downward pitch the camera starts at.")]
+        private float _pitchDegrees = 12f;
 
         [Header("Feel")]
         [SerializeField]
-        [Range(0.02f, 0.6f)]
-        [Tooltip("Half-life of positional follow. Lower is tighter and more responsive.")]
-        private float _positionHalfLife = 0.09f;
+        [Range(0.01f, 0.6f)]
+        [Tooltip("Half-life of the pivot following the player. Short: the camera is planted on the knight.")]
+        private float _positionHalfLife = 0.05f;
 
         [SerializeField]
         [Range(0.02f, 0.6f)]
-        [Tooltip("Half-life of rotational follow. Kept faster than position so aiming stays crisp.")]
+        [Tooltip("Half-life of the top-down view's rotation. The third-person and first-person views are never eased.")]
         private float _rotationHalfLife = 0.06f;
 
         [SerializeField]
-        [Range(0f, 2f)]
-        [Tooltip("Radius the target may move within before the camera follows at all.")]
-        private float _deadzoneRadius = 0.6f;
-
-        [SerializeField]
-        [Range(0f, 3f)]
-        [Tooltip("How far ahead of the player's motion the camera leads.")]
-        private float _lookaheadDistance = 1.4f;
+        [Range(0.05f, 1f)]
+        [Tooltip("Half-life of the boom easing back out after a column or wall pushed it in.")]
+        private float _boomReturnHalfLife = 0.2f;
 
         [Header("First Person")]
         [SerializeField]
@@ -137,8 +137,21 @@ namespace AdaptiveBossArena.Game
         private float _eyeHeight = 1.6f;
 
         private ITimeService _time;
+
+        /// <summary>Where the camera pivots from: the player's position, followed with a short half-life.</summary>
         private Vector3 _anchor;
-        private Vector3 _smoothedLookahead;
+
+        /// <summary>The boom's current length, shortened at once by an obstacle and eased back out.</summary>
+        private float _boom;
+
+        /// <summary>Radius of the sphere swept along the boom, so the lens never grazes a column.</summary>
+        private const float BoomProbeRadius = 0.25f;
+
+        /// <summary>The player's own sensitivity multiplier.</summary>
+        private float _sensitivity = 1f;
+
+        /// <summary>Whether moving the mouse up looks down.</summary>
+        private bool _invertLook;
 
         /// <summary>How much of the boom the arena wall took away this frame, in metres.</summary>
         private float _boomLoss;
@@ -234,6 +247,9 @@ namespace AdaptiveBossArena.Game
 
         private void Update()
         {
+            // Read every frame, so a change in the settings menu applies the moment the slider moves.
+            SetLookSettings(LookSettings.Sensitivity, LookSettings.InvertY);
+
             if (_cycleCamera != null && _cycleCamera.WasPressedThisFrame())
             {
                 CycleMode();
@@ -268,6 +284,12 @@ namespace AdaptiveBossArena.Game
         private void UpdateOrbit(float deltaTime)
         {
             Vector2 turn = LookDelta(deltaTime);
+
+            if (_invertLook)
+            {
+                turn.y = -turn.y;
+            }
+
             _orbitPitchDegrees = Mathf.Clamp(_orbitPitchDegrees - turn.y, _minimumPitchDegrees, _maximumPitchDegrees);
 
             if (IsLockedOn)
@@ -299,10 +321,21 @@ namespace AdaptiveBossArena.Game
 
             if (_look.activeControl?.device is Mouse)
             {
-                return CursorLock.IsCaptured ? value * _mouseDegreesPerPixel : Vector2.zero;
+                return CursorLock.IsCaptured ? value * (_mouseDegreesPerPixel * _sensitivity) : Vector2.zero;
             }
 
-            return value * (_stickDegreesPerSecond * deltaTime);
+            return value * (_stickDegreesPerSecond * _sensitivity * deltaTime);
+        }
+
+        /// <summary>
+        /// Applies the player's look settings.
+        /// </summary>
+        /// <param name="sensitivity">Multiplier on how far the view turns per unit of mouse or stick; one is the default.</param>
+        /// <param name="invert">Whether moving the mouse up looks down.</param>
+        public void SetLookSettings(float sensitivity, bool invert)
+        {
+            _sensitivity = Mathf.Clamp(sensitivity, 0.1f, 4f);
+            _invertLook = invert;
         }
 
         private void ResolveActions()
@@ -359,10 +392,11 @@ namespace AdaptiveBossArena.Game
 
             UpdateAnchor(deltaTime);
 
-            if (_mode == CameraMode.FirstPerson)
+            if (_mode == CameraMode.FirstPerson || _mode == CameraMode.ThirdPerson)
             {
-                // Snapped, because any lag between the head and the camera in first person reads as
-                // the world sliding rather than as smoothing.
+                // Placed, not eased. In first person any lag reads as the world sliding. In third person the pivot
+                // already follows the knight on a short half-life, and the view turns exactly as far as the mouse
+                // did: easing the rotation on top made the camera trail the player's hand and swim after it.
                 transform.SetPositionAndRotation(DesiredPosition(), DesiredRotation());
                 return;
             }
@@ -409,7 +443,7 @@ namespace AdaptiveBossArena.Game
             }
 
             _anchor = _primaryTarget.position;
-            _smoothedLookahead = Vector3.zero;
+            _boom = _distance;
 
             // A snap is a cut, so a locked camera cuts straight to looking at the boss rather than swinging round.
             if (IsLockedOn)
@@ -458,26 +492,18 @@ namespace AdaptiveBossArena.Game
         /// not move at all, which is what stops small corrections from dragging the whole view and
         /// is most of the difference between a camera that feels attached and one that feels towed.
         /// </remarks>
+        /// <summary>
+        /// Follows the player with the pivot on a short half-life.
+        /// </summary>
+        /// <remarks>
+        /// There used to be a deadzone the knight could move within before the camera followed, and a lead in
+        /// the direction the knight faced. Together they made the view drift and then catch up - it swam - and
+        /// every turn of the knight slid it sideways. The pivot now simply stays on the knight, a few hundredths
+        /// of a second behind, which reads as planted.
+        /// </remarks>
         private void UpdateAnchor(float deltaTime)
         {
-            Vector3 targetPosition = _primaryTarget.position;
-            Vector3 offset = targetPosition - _anchor;
-            offset.y = 0f;
-
-            float distance = offset.magnitude;
-
-            if (distance > _deadzoneRadius)
-            {
-                // Pulled only as far as the deadzone edge, so the target sits exactly on the
-                // boundary rather than being re-centred.
-                _anchor += offset.normalized * (distance - _deadzoneRadius);
-            }
-
-            _anchor.y = targetPosition.y;
-
-            Vector3 lookahead = _primaryTarget.forward * _lookaheadDistance;
-            _smoothedLookahead = MathUtil.Damp(
-                _smoothedLookahead, lookahead, _positionHalfLife * 2f, deltaTime);
+            _anchor = MathUtil.Damp(_anchor, _primaryTarget.position, _positionHalfLife, deltaTime);
         }
 
         /// <summary>Where the camera wants to be for the current vantage point.</summary>
@@ -493,13 +519,14 @@ namespace AdaptiveBossArena.Game
                            + new Vector3(0f, _config.CameraHeight, -_config.CameraDistance);
 
                 default:
-                    Vector3 focus = FocusPoint();
-                    Vector3 desired = focus - OrbitForward() * _distance + Vector3.up * _height;
+                    Vector3 pivot = _anchor + Vector3.up * _pivotHeight;
+                    Quaternion view = OrbitRotation(OrbitForward(), _orbitPitchDegrees);
+                    Vector3 desired = ShoulderPosition(pivot, view, BoomLength(pivot, view), _shoulderOffset);
 
-                    // Knockback and wall shoves pin the player against the ring all the time now, and the
-                    // boom then put the camera outside it, looking at the back of the wall. Kept inside,
-                    // it rises for what it lost and looks over the player instead.
-                    Vector3 confined = ConfineToArena(desired, focus, _config.Radius - WallClearance, out _boomLoss);
+                    // Knockback and wall shoves pin the player against the ring all the time, and the boom
+                    // then put the camera outside it, looking at the back of the wall. Kept inside, it rises
+                    // for what it lost and looks over the player instead.
+                    Vector3 confined = ConfineToArena(desired, pivot, _config.Radius - WallClearance, out _boomLoss);
                     confined.y += _boomLoss * RisePerLostMetre;
 
                     return confined;
@@ -521,6 +548,50 @@ namespace AdaptiveBossArena.Game
                     float collapsed = _distance > 0f ? Mathf.Clamp01(_boomLoss / _distance) : 0f;
                     return OrbitRotation(OrbitForward(), _orbitPitchDegrees + PitchAtCollapsedBoom * collapsed);
             }
+        }
+
+        /// <summary>
+        /// Where the camera sits for an over-the-shoulder view: behind the pivot along the view, off to one side.
+        /// </summary>
+        /// <remarks>
+        /// The camera looks parallel to the line through the pivot rather than at it, so the knight stands to the
+        /// left of the frame and the space in front of them - where the brute is - fills the rest. Looking at the
+        /// knight's centre from close behind would put the knight's back over everything the player needs to see.
+        /// </remarks>
+        /// <param name="pivot">The point the view turns about: the knight's shoulders.</param>
+        /// <param name="view">The camera's orientation.</param>
+        /// <param name="boom">How far behind the pivot, along the view.</param>
+        /// <param name="shoulder">How far to the right of the pivot.</param>
+        /// <returns>The camera's position.</returns>
+        public static Vector3 ShoulderPosition(Vector3 pivot, Quaternion view, float boom, float shoulder) =>
+            pivot - view * Vector3.forward * boom + view * Vector3.right * shoulder;
+
+        /// <summary>
+        /// How long the boom can be before a column or wall comes between the camera and the knight.
+        /// </summary>
+        /// <remarks>
+        /// Shortened at once when something is in the way - a lens inside a column shows nothing - and eased back
+        /// out afterwards, so walking past a pillar does not snap the view back and forth.
+        /// </remarks>
+        private float BoomLength(Vector3 pivot, Quaternion view)
+        {
+            Vector3 full = ShoulderPosition(pivot, view, _distance, _shoulderOffset);
+            Vector3 along = full - pivot;
+            float reach = along.magnitude;
+            float allowed = _distance;
+
+            if (reach > Mathf.Epsilon &&
+                Physics.SphereCast(pivot, BoomProbeRadius, along / reach, out RaycastHit hit, reach,
+                    1 << Core.Constants.Layers.Arena, QueryTriggerInteraction.Ignore))
+            {
+                allowed = Mathf.Max(0.4f, _distance * (hit.distance / reach));
+            }
+
+            _boom = allowed < _boom || _boom <= 0f
+                ? allowed
+                : MathUtil.Damp(_boom, allowed, _boomReturnHalfLife, Time.unscaledDeltaTime);
+
+            return _boom;
         }
 
         /// <summary>
@@ -602,7 +673,7 @@ namespace AdaptiveBossArena.Game
         /// </remarks>
         private Vector3 FocusPoint()
         {
-            Vector3 focus = _anchor + _smoothedLookahead;
+            Vector3 focus = _anchor;
 
             if (IsLockedOn)
             {
@@ -630,7 +701,6 @@ namespace AdaptiveBossArena.Game
 
             // The ordinary framing, computed as a snap would, so the blend lands on it exactly.
             _anchor = _primaryTarget.position;
-            _smoothedLookahead = Vector3.zero;
             Vector3 normalPosition = DesiredPosition();
             Quaternion normalRotation = DesiredRotation();
 
