@@ -1135,10 +1135,12 @@ namespace AdaptiveBossArena.Editor
                 {
                     // Written explicitly rather than left to the C# field defaults, which only apply
                     // at the moment an asset is first created and are unreachable afterwards.
-                    // 650 against a player dealing roughly 25 a second is about half a minute of
-                    // sustained pressure, which is where a single-encounter slice wants to sit. The
-                    // 1000 it started at read as a sponge.
-                    writer.Float("_maxHealth", 650f)
+                    // 900 against a player dealing roughly 25 a second is about 36 seconds of pure
+                    // uptime - which, spent between dodging, waiting out recoveries and healing, is the
+                    // three-to-five-minute winning fight this slice is aimed at. It was 650, tuned when
+                    // the brute had six moves and no second form; with eleven moves and the frenzy it
+                    // ran out of fight before it ran out of ideas. The 1000 it started at read as a sponge.
+                    writer.Float("_maxHealth", 900f)
                         .Float("_maxPoise", 100f)
                         .Float("_poiseRegenPerSecond", 12f)
                         .Float("_resolveThreshold", 100f)

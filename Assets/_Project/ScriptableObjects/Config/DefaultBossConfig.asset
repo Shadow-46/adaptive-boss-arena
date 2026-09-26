@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: AdaptiveBossArena.AI::AdaptiveBossArena.AI.BossConfig
   _id: boss.default
   _designerNotes: 
-  _maxHealth: 650
+  _maxHealth: 900
   _maxPoise: 100
   _poiseRegenPerSecond: 12
   _baselineParryChance: 0.12
@@ -81,8 +81,8 @@ MonoBehaviour:
     _moveSpeedMultiplier: 1.3
     _attackCooldownSeconds: 0.6
     _adaptationRateMultiplier: 2
-  - _name: Last Stand
-    _healthThreshold: 0.15
+  - _name: Frenzied
+    _healthThreshold: 0.25
     _attacks:
     - {fileID: 11400000, guid: c36e1a4c0c2652e44a0844711735c22a, type: 2}
     - {fileID: 11400000, guid: 9a2b3bde94dd7424783e41b43ef210e0, type: 2}
@@ -96,8 +96,8 @@ MonoBehaviour:
     - {fileID: 11400000, guid: 8218301b8a51376488695751b0fb0de3, type: 2}
     - {fileID: 11400000, guid: a1128dd1475eb5a4993c2f2db26ddc4a, type: 2}
     _signatureAttack: {fileID: 11400000, guid: a85d1e6c062cdc148afac1575b1b5abb, type: 2}
-    _moveSpeedMultiplier: 1.4
-    _attackCooldownSeconds: 0.45
+    _moveSpeedMultiplier: 1.55
+    _attackCooldownSeconds: 0.4
     _adaptationRateMultiplier: 2.5
   _phaseShockwave: {fileID: 11400000, guid: d2dc5bf9fb135f244ab52724961d8436, type: 2}
   _counterStrategies:
