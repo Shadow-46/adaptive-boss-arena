@@ -57,6 +57,18 @@ namespace AdaptiveBossArena.Combat
         /// <summary>Cue played when a hazard erupts. A string, since Combat sits below the audio service.</summary>
         private const string HazardCueId = "hazard.erupt";
 
+        /// <summary>Cue played at the knight on every tick that burns them. Matches the audio service's hazard burn.</summary>
+        private const string BurnCueId = "hazard.burn";
+
+        /// <summary>How long the scar flares after a tick that burned someone.</summary>
+        private const float FlareSeconds = 0.22f;
+
+        /// <summary>How much brighter the scar burns at the peak of a flare.</summary>
+        private const float FlareBoost = 1.6f;
+
+        /// <summary>Seconds of flare left, counting down on combat time.</summary>
+        private float _flare;
+
         private readonly Collider[] _overlap = new Collider[8];
 
         private Transform _disc;
@@ -147,11 +159,15 @@ namespace AdaptiveBossArena.Combat
 
             float deltaTime = _time?.DeltaTime ?? Time.deltaTime;
 
-            if (_ticker.Advance(deltaTime))
+            // Each tick that burns someone flares the scar and hisses where they stand. A floor that quietly took
+            // health away read as damage from nowhere; now every tick is seen and heard as the ground's doing.
+            if (_ticker.Advance(deltaTime) && DamageOccupants(out Vector3 burned))
             {
-                DamageOccupants();
+                _flare = FlareSeconds;
+                _audio?.PlayCue(BurnCueId, burned);
             }
 
+            _flare = Mathf.Max(0f, _flare - deltaTime);
             ApplyVisual(_ticker.VisualPresence);
 
             if (_ticker.IsExpired)
@@ -162,8 +178,13 @@ namespace AdaptiveBossArena.Combat
         }
 
         /// <summary>Applies one tick of damage to every player hurtbox inside the zone.</summary>
-        private void DamageOccupants()
+        /// <param name="burned">Where the last one burned stood.</param>
+        /// <returns>True when anyone was burned.</returns>
+        private bool DamageOccupants(out Vector3 burned)
         {
+            burned = _center;
+            bool any = false;
+
             int count = Physics.OverlapSphereNonAlloc(
                 _center, _radius, _overlap, Layers.BossAttackMask, QueryTriggerInteraction.Collide);
 
@@ -198,7 +219,12 @@ namespace AdaptiveBossArena.Combat
                     HitStopSeconds = 0f,
                     IgnoresInvulnerability = true
                 });
+
+                any = true;
+                burned = hurtbox.transform.position;
             }
+
+            return any;
         }
 
         /// <summary>Fades the disc's opacity to match the hazard's presence.</summary>
@@ -209,8 +235,9 @@ namespace AdaptiveBossArena.Combat
                 return;
             }
 
-            Color color = HazardColor;
-            color.a = presence * MaxAlpha;
+            float flare = _flare / FlareSeconds;
+            Color color = HazardColor * (1f + FlareBoost * flare);
+            color.a = Mathf.Clamp01(presence * MaxAlpha + flare);
 
             _properties.SetColor(BaseColorId, color);
             _renderer.SetPropertyBlock(_properties);

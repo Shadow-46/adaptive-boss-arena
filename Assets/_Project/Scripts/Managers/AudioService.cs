@@ -188,6 +188,9 @@ namespace AdaptiveBossArena.Game
             /// <summary>A ground hazard erupting.</summary>
             public const string Hazard = "hazard.erupt";
 
+            /// <summary>A hiss where scorched ground burns the knight, on every tick.</summary>
+            public const string HazardBurn = "hazard.burn";
+
             /// <summary>A guard being raised.</summary>
             public const string GuardRaise = "guard.raise";
 
@@ -628,6 +631,11 @@ namespace AdaptiveBossArena.Game
             // A low, broadband rumble for a hazard erupting from the ground.
             _clips[Cues.Hazard] =
                 ToneGenerator.CreateWeightedImpact("hazard.erupt", 44f, 380f, 0.62f, 0.8f, 0.75f, seed: 41);
+
+            // A short bright hiss for scorched ground burning the knight: high and noisy, so it is never mistaken
+            // for a blow, and short, because it repeats every tick the knight stays in the fire.
+            _clips[Cues.HazardBurn] =
+                ToneGenerator.CreateImpact("hazard.burn", 0.2f, 3200f, seed: 53, peak: 0.3f);
 
             // A short, soft shift for raising a guard.
             _clips[Cues.GuardRaise] =
