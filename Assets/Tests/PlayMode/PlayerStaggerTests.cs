@@ -104,6 +104,8 @@ namespace AdaptiveBossArena.Tests.PlayMode
                 "No time service.");
 
             Vector3 before = body.transform.localPosition;
+            var rig = body.GetComponent<Combat.Feel.CharacterAnimationBridge>();
+            bool rigged = rig != null && rig.HasSkeleton;
 
             time.RequestHitStop(0.5f);
             _player.TakeDamage(BossBlow(1f));
@@ -114,9 +116,24 @@ namespace AdaptiveBossArena.Tests.PlayMode
             Vector3 shove = body.transform.localPosition - before;
             shove.y = 0f;
 
-            Assert.Greater(
-                shove.magnitude, 0.15f,
-                "The recoil had faded before the freeze it belongs to was over.");
+            if (rigged)
+            {
+                // A rigged body takes the blow in its own flinch clip, and is never pushed bodily across the
+                // floor: shoving the whole model on top of a motion-captured clip is what made it slide off
+                // the hitbox the fight is decided on.
+                Assert.Greater(
+                    rig.HitWeight, 0.5f,
+                    "The flinch had faded before the freeze it belongs to was over.");
+                Assert.Less(
+                    shove.magnitude, 0.001f,
+                    "A rigged body was pushed bodily by the recoil, which slides it off its hitbox.");
+            }
+            else
+            {
+                Assert.Greater(
+                    shove.magnitude, 0.15f,
+                    "The recoil had faded before the freeze it belongs to was over.");
+            }
         }
 
         /// <summary>Starts a roll directly, so the test does not depend on simulated input.</summary>

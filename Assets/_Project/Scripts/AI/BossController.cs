@@ -115,11 +115,12 @@ namespace AdaptiveBossArena.AI
         /// How long the boss shrugs off hits while transforming into a new phase.
         /// </summary>
         /// <remarks>
-        /// Short and heavily telegraphed — a roar, a rear-up and a flare of the aura — so it reads as
-        /// the boss powering up rather than as a hit that failed to register. It stops the player from
-        /// simply bursting through the escalation the moment it begins.
+        /// Heavily telegraphed — the roar clip, a flare of the aura — so it reads as the boss powering up
+        /// rather than as a hit that failed to register. It stops the player from simply bursting through
+        /// the escalation the moment it begins. 1.3 s rather than 0.6: long enough for the roar to be
+        /// seen as a roar, which at 0.6 s was a twitch. The boss throws nothing else while it lasts.
         /// </remarks>
-        private const float PhaseTransitionInvulnSeconds = 0.6f;
+        private const float PhaseTransitionInvulnSeconds = 1.3f;
 
         /// <summary>The phase in which the brute throws its sword away and fights bare-handed.</summary>
         /// <remarks>
@@ -773,6 +774,13 @@ namespace AdaptiveBossArena.AI
         /// </remarks>
         private bool WantsToAttackNow(BossContext context)
         {
+            // Not while transforming: the roar is the beat, and a swing out of it would be thrown by a body
+            // that is visibly still roaring. Checked before selection, so no random draw is spent on it.
+            if (_phaseTransitionInvulnRemaining > 0f)
+            {
+                return false;
+            }
+
             // Selection happens here and only here. The approach transition, evaluated immediately
             // afterwards, reads the result rather than choosing again, so one decision draws from
             // the random stream once and a seeded fight stays reproducible.
@@ -955,7 +963,7 @@ namespace AdaptiveBossArena.AI
                 // The transformation beat: rear up, flare the aura, and shrug off hits briefly while
                 // it happens. The roar and the arena-clearing shockwave are raised by the phase
                 // channel's listeners; here we own only what belongs to the boss itself.
-                _animator?.Flourish();
+                _animator?.Flourish(PhaseTransitionInvulnSeconds);
                 _phaseAura?.Pulse();
                 _phaseTransitionInvulnRemaining = PhaseTransitionInvulnSeconds;
 

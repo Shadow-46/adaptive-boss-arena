@@ -154,12 +154,19 @@ namespace AdaptiveBossArena.Combat.Feel
         }
 
         /// <summary>Rears the body up for a phase transition or other flourish.</summary>
-        public void Flourish()
+        /// <param name="seconds">
+        /// How long a rig holds its roar; zero uses the configured flourish length. A primitive body always
+        /// uses the configured length, which is tuned to its squash and stretch.
+        /// </param>
+        public void Flourish(float seconds = 0f)
         {
             if (_config != null)
             {
                 _flourishRemaining = _config.FlourishDurationSeconds;
             }
+
+            // A rig has a real roar to play instead of a procedural rear-up.
+            _bridge?.Flourish(seconds > 0f ? seconds : _config != null ? _config.FlourishDurationSeconds : 0f);
         }
 
         /// <summary>Snaps the pose back to rest and clears any impulses, for a retry.</summary>
@@ -190,6 +197,16 @@ namespace AdaptiveBossArena.Combat.Feel
 
             AdvanceImpulses(_time != null ? _time.DeltaTime : Time.deltaTime);
 
+            // A rigged body is left exactly where its root is. Pushing the whole visual along a blow, leaning
+            // it and swaying it on top of a motion-captured clip made the body slide over the floor, drift
+            // off the hitbox the fight is decided on, and ease on real time while the clip froze in a
+            // hit-stop. The rig's own Hits layer carries the impact instead.
+            if (SkeletonDrivesPose)
+            {
+                HoldAtRest();
+                return;
+            }
+
             ComposeTarget(out Vector3 targetPosition, out Quaternion targetRotation, out Vector3 targetScale);
 
             if (_snapToImpact)
@@ -207,6 +224,25 @@ namespace AdaptiveBossArena.Combat.Feel
                 transform.localScale, targetScale, _config.ScaleHalfLife, deltaTime);
             transform.localRotation = Quaternion.Slerp(
                 transform.localRotation, targetRotation, DampFactor(_config.RotationHalfLife, deltaTime));
+        }
+
+        /// <summary>Keeps the visual root exactly on the character root, so the rig is the only thing that moves.</summary>
+        private void HoldAtRest()
+        {
+            if (transform.localPosition != _restPosition)
+            {
+                transform.localPosition = _restPosition;
+            }
+
+            if (transform.localRotation != _restRotation)
+            {
+                transform.localRotation = _restRotation;
+            }
+
+            if (transform.localScale != _restScale)
+            {
+                transform.localScale = _restScale;
+            }
         }
 
         /// <summary>Decays the transient recoil and flourish envelopes on combat time.</summary>

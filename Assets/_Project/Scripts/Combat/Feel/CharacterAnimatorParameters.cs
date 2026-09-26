@@ -46,6 +46,9 @@ namespace AdaptiveBossArena.Combat.Feel
         /// <summary>The parry stance: a bash thrown forward to turn a blow aside.</summary>
         public const string ParryState = "Parry";
 
+        /// <summary>The roar a phase transition plays, scrubbed across the transformation.</summary>
+        public const string RoarState = "Roar";
+
         /// <summary>Thrown through the air.</summary>
         public const string AirborneState = "Airborne";
 

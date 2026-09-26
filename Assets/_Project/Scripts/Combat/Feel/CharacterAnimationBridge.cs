@@ -68,6 +68,9 @@ namespace AdaptiveBossArena.Combat.Feel
         /// <summary>Seconds a flinch takes to reach full weight: quick, so the blow registers on its frame.</summary>
         private const float HitAttackSeconds = 0.05f;
 
+        /// <summary>How far into the flinch clip its recoil is at its deepest, where a blow enters it.</summary>
+        private const float HitPeakFraction = 0.2f;
+
         /// <summary>
         /// The share of the flinch spent easing back to the stance underneath, so the torso settles rather than
         /// snapping back.
@@ -198,6 +201,16 @@ namespace AdaptiveBossArena.Combat.Feel
             bool attacking = attack != null && attackPhase != AttackPhase.Inactive && IsAttackState(state);
             string target = attacking ? AttackStateFor(attack) : StateFor(state);
 
+            // Counted on game time, so a hit-stop holds the roar with everything else.
+            _flourishRemaining = Mathf.Max(0f, _flourishRemaining - Time.deltaTime);
+            bool roaring = !attacking && _flourishRemaining > 0f && CanRoarOver(state);
+
+            if (roaring)
+            {
+                target = CharacterAnimatorParameters.RoarState;
+                _animator.SetFloat(AttackTimeParam, 1f - _flourishRemaining / Mathf.Max(0.01f, _flourishLength));
+            }
+
             // A new link in a combo can play the same state as the last one, so a change of attack
             // restarts the state even when its name has not changed.
             bool newAttack = attacking && !ReferenceEquals(attack, _currentAttack);
@@ -217,6 +230,36 @@ namespace AdaptiveBossArena.Combat.Feel
             }
         }
 
+        /// <summary>
+        /// Plays the roar for a while, over standing and walking but never over an attack or a reaction.
+        /// </summary>
+        /// <remarks>
+        /// The roar is a scrubbed state like an attack, so it is driven from its own countdown here: it plays once
+        /// across the time given, however long the clip is. A fighter without one keeps whatever it was doing.
+        /// </remarks>
+        /// <param name="seconds">How long to roar.</param>
+        public void Flourish(float seconds)
+        {
+            if (!HasSkeleton || seconds <= 0f ||
+                !_animator.HasState(0, Animator.StringToHash(CharacterAnimatorParameters.RoarState)))
+            {
+                return;
+            }
+
+            _flourishLength = seconds;
+            _flourishRemaining = seconds;
+        }
+
+        /// <summary>Seconds of roar left, or zero.</summary>
+        private float _flourishRemaining;
+
+        /// <summary>The whole roar's length, to scrub it once across.</summary>
+        private float _flourishLength;
+
+        /// <summary>Whether the roar may play over the state the fighter is otherwise in.</summary>
+        private static bool CanRoarOver(ObservableActionState state) =>
+            state == ObservableActionState.Idle || state == ObservableActionState.Moving;
+
         /// <summary>Plays the fighter's flinch on the upper body, over whatever it is doing.</summary>
         /// <remarks>
         /// Not over a fall, a death or a stagger: those are full-body reactions with their own clips, and a flinch
@@ -233,11 +276,15 @@ namespace AdaptiveBossArena.Combat.Feel
                 return;
             }
 
-            _animator.Play(CharacterAnimatorParameters.HitState, _hitLayer, 0f);
+            // Entered at the recoil's peak and at full weight, so the contact frame shows the whole blow at once.
+            // Ramping in on game time meant a hit-stop froze the body before the flinch had begun: the freeze
+            // and the impact played one after the other, and neither read as a hit.
+            _animator.Play(CharacterAnimatorParameters.HitState, _hitLayer, HitPeakFraction);
+            _animator.SetLayerWeight(_hitLayer, 1f);
 
             // The clip's length is known once the Animator has entered the state, on its next update.
             _hitLength = 0f;
-            _hitElapsed = 0f;
+            _hitElapsed = HitAttackSeconds;
         }
 
         /// <summary>The upper-body flinch's current weight, from zero at rest to one at full strength.</summary>
@@ -270,6 +317,7 @@ namespace AdaptiveBossArena.Combat.Feel
             _currentState = null;
             _currentAttack = null;
             _hitElapsed = -1f;
+            _flourishRemaining = 0f;
 
             if (HasSkeleton && _hitLayer >= 0)
             {
