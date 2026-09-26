@@ -195,6 +195,19 @@ namespace AdaptiveBossArena.Combat
         /// <summary>Name shown in debug tooling.</summary>
         public string DisplayName => _displayName;
 
+        [SerializeField]
+        [Tooltip("The parts of the body this attack strikes with. None decides it by the authored volume instead.")]
+        private StrikerParts _strikers;
+
+        /// <summary>
+        /// The parts of the body this attack strikes with, or none to decide it by its authored volume.
+        /// </summary>
+        /// <remarks>
+        /// Structural, not tuning: the generator writes it on every run. The volume stays authored either way,
+        /// because the boss plans its reach from it and telegraphs are drawn from it.
+        /// </remarks>
+        public StrikerParts Strikers => _strikers;
+
         /// <summary>Optional effect spawned at the attacker when the attack begins, or null.</summary>
         public GameObject CastVfxPrefab => _castVfxPrefab;
 

@@ -263,6 +263,10 @@ namespace AdaptiveBossArena.AI
                 transform, CombatantTeam.Boss, Layers.BossAttackMask, _time, _events, _screenShake,
                 GetComponentInChildren<Combat.Feel.AttackVisualizer>(), hazardField);
 
+            // The blade, fists, foot and body its blows land with. Inactive ones included: the cleaver is
+            // hidden in the frenzy and returns on a retry.
+            attacks.SetStrikers(GetComponentsInChildren<StrikeVolume>(includeInactive: true));
+
             var tuning = new BossTuning(
                 _config.BaselinePreferredRange, _config.BaselineAggression, _config.BaselineParryChance);
 

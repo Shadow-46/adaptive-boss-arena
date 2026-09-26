@@ -147,12 +147,19 @@ namespace AdaptiveBossArena.Editor
             if (cleaver != null)
             {
                 WeaponTrailBuilder.Attach(cleaver, Vector3.zero, baseDistance: 0.45f, tipDistance: 1.6f, warmSteel);
+
+                // The great sword the brute's cuts land with, over the same span the trail smears.
+                StrikeVolumeBuilder.Attach(cleaver, Combat.StrikerParts.Weapon, 0.45f, 1.6f, 0.14f);
             }
             else
             {
                 WeaponTrailBuilder.Attach(
                     visualRoot.transform, new Vector3(BodyRadius * 0.8f, BodyHeight * 0.6f, 0f), 0.3f, 1.4f, warmSteel);
             }
+
+            // Fists, a foot and the body, for the kick, the grab, the leap and the frenzy's bare hands. A fist is
+            // wide on this body; the body sphere is its torso, for landing on the knight. A no-op without a rig.
+            StrikeVolumeBuilder.AttachLimbs(rig, fistRadius: 0.2f, footRadius: 0.2f, bodyRadius: 0.8f);
         }
 
         private static void BuildHurtboxes(Transform parent)

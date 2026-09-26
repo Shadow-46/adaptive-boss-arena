@@ -236,6 +236,7 @@ namespace AdaptiveBossArena.Editor
                 "DefaultBossAnimation", "animation.boss", isBoss: true);
 
             AssignRigs();
+            AssignStrikers();
         }
 
         /// <summary>Which attack state each of the player's attacks plays.</summary>
@@ -272,6 +273,63 @@ namespace AdaptiveBossArena.Editor
             ("BossDelayedOverhead", "Heavy"), ("BossSpinCleave", "Spin"), ("BossKick", "Kick"),
             ("BossGrab", "Grab"), ("BossLeapSmash", "Leap")
         };
+
+        /// <summary>Which parts of the body each attack strikes with.</summary>
+        /// <remarks>
+        /// <para>
+        /// Every cut is decided by the blade, the kick by the foot, the grab by both hands, the leap by the body
+        /// landing. What is left out stays on its authored volume on purpose: the slam and the shockwaves are
+        /// area attacks whose area is drawn on the floor, and the specials are whirlwinds around the knight.
+        /// </para>
+        /// <para>
+        /// The charge drives the blade and the body in together, so the knight is caught by either. In the
+        /// frenzy the brute has no blade, and every weapon attack lands with its fists instead.
+        /// </para>
+        /// </remarks>
+        private static readonly (string Attack, StrikerParts Parts)[] StrikerBindings =
+        {
+            ("PlayerLight1", StrikerParts.Weapon), ("PlayerLight2", StrikerParts.Weapon),
+            ("PlayerLight3", StrikerParts.Weapon), ("PlayerHeavy", StrikerParts.Weapon),
+            ("PlayerExecution", StrikerParts.Weapon),
+            ("GreatswordLight1", StrikerParts.Weapon), ("GreatswordLight2", StrikerParts.Weapon),
+            ("GreatswordHeavy", StrikerParts.Weapon),
+            ("EnergyLight1", StrikerParts.Weapon), ("EnergyLight2", StrikerParts.Weapon),
+            ("EnergyLight3", StrikerParts.Weapon), ("EnergyLight4", StrikerParts.Weapon),
+            ("EnergyHeavy", StrikerParts.Weapon),
+
+            ("BossSweep", StrikerParts.Weapon), ("BossJab", StrikerParts.Weapon),
+            ("BossPerilousOverhead", StrikerParts.Weapon), ("BossDelayedOverhead", StrikerParts.Weapon),
+            ("BossSpinCleave", StrikerParts.Weapon),
+            ("BossCharge", StrikerParts.Weapon | StrikerParts.Body),
+            ("BossKick", StrikerParts.RightFoot),
+            ("BossGrab", StrikerParts.RightHand | StrikerParts.LeftHand),
+            ("BossLeapSmash", StrikerParts.Body)
+        };
+
+        /// <summary>
+        /// Writes which parts each attack strikes with.
+        /// </summary>
+        /// <remarks>
+        /// Structural, so written on every run like the clip bindings, not only when an asset is created: an
+        /// attack left on its volume after this table named a part would silently go on hurting at a distance.
+        /// </remarks>
+        private static void AssignStrikers()
+        {
+            foreach ((string attackName, StrikerParts parts) in StrikerBindings)
+            {
+                var attack = AssetDatabase.LoadAssetAtPath<AttackDefinition>($"{AttackFolder}/{attackName}.asset");
+
+                if (attack == null)
+                {
+                    continue;
+                }
+
+                using (AssetAuthoring.AssetWriter writer = AssetAuthoring.Edit(attack))
+                {
+                    writer.Int("_strikers", (int)parts);
+                }
+            }
+        }
 
         /// <summary>
         /// Points both characters at the imported rig, its controller, a scale and their clip bindings.

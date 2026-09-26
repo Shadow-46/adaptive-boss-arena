@@ -306,6 +306,9 @@ namespace AdaptiveBossArena.Player
                 transform, CombatantTeam.Player, Layers.PlayerAttackMask, _time, _events, screenShake,
                 GetComponentInChildren<AttackVisualizer>());
 
+            // The sword, so a cut lands where the blade actually went.
+            attacks.SetStrikers(GetComponentsInChildren<StrikeVolume>(includeInactive: true));
+
             _context = new PlayerContext(
                 _config, motor, _health, _stamina, _input, new InputBuffer(), _time, attacks, _events);
 

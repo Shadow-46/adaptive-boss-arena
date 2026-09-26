@@ -135,6 +135,13 @@ namespace AdaptiveBossArena.Editor
             // A cold steel grey: the swing should read as metal moving, not as a coloured ribbon.
             WeaponTrailBuilder.Attach(socket, Vector3.zero, baseDistance: 0.25f, tipDistance: 0.95f,
                 new Color(0.42f, 0.44f, 0.48f, 1f));
+
+            // The blade the cut is decided on: the same span the trail smears, so what the player sees swing is
+            // what strikes. Only with a rig, whose hand actually carries the socket through the swing.
+            if (rig != null)
+            {
+                StrikeVolumeBuilder.Attach(socket, Combat.StrikerParts.Weapon, 0.25f, 0.95f, 0.08f);
+            }
         }
 
         /// <summary>Adds the empty mount a weapon model attaches to, at a placeholder hand position.</summary>

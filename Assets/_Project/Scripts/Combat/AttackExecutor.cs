@@ -84,6 +84,43 @@ namespace AdaptiveBossArena.Combat
             _hazardField = hazardField;
         }
 
+        /// <summary>Most samples a striking part is tested at in one frame.</summary>
+        private const int MaxSweepSamples = 6;
+
+        /// <summary>The parts of this body that can strike, or empty for one with no rig.</summary>
+        private System.Collections.Generic.IReadOnlyList<StrikeVolume> _strikers = System.Array.Empty<StrikeVolume>();
+
+        /// <summary>Where each striking part's base and tip were at the last tick, by index into the strikers.</summary>
+        private Vector3[] _previousStart = System.Array.Empty<Vector3>();
+
+        private Vector3[] _previousEnd = System.Array.Empty<Vector3>();
+
+        /// <summary>False until a tick of this attack has recorded where its parts were.</summary>
+        private bool _hasPreviousPose;
+
+        /// <summary>The strikers this attack uses this tick, by index.</summary>
+        private readonly System.Collections.Generic.List<int> _activeStrikers = new System.Collections.Generic.List<int>(6);
+
+        private readonly Collider[] _sweepBuffer = new Collider[AttackHitDetector.MaxOverlaps];
+        private readonly Hurtbox[] _sweepHits = new Hurtbox[AttackHitDetector.MaxOverlaps];
+        private readonly Vector3[] _sweepContacts = new Vector3[AttackHitDetector.MaxOverlaps];
+
+        /// <summary>
+        /// Gives the executor the parts of the body it strikes with.
+        /// </summary>
+        /// <remarks>
+        /// Include the inactive ones: the brute's cleaver is hidden in the frenzy and shown again on a retry, and
+        /// the executor asks each part whether it is available at the moment it swings.
+        /// </remarks>
+        /// <param name="strikers">Every striking part on the body.</param>
+        public void SetStrikers(System.Collections.Generic.IReadOnlyList<StrikeVolume> strikers)
+        {
+            _strikers = strikers ?? System.Array.Empty<StrikeVolume>();
+            _previousStart = new Vector3[_strikers.Count];
+            _previousEnd = new Vector3[_strikers.Count];
+            _hasPreviousPose = false;
+        }
+
         /// <summary>The attack currently running, or null.</summary>
         public AttackDefinition CurrentAttack => _timeline.CurrentAttack;
 
@@ -144,6 +181,7 @@ namespace AdaptiveBossArena.Combat
 
             _alreadyStruck.Clear();
             _landedThisAttack = false;
+            _hasPreviousPose = false;
 
             EnsureSubscribed();
             _timeline.Begin(attack);
@@ -179,6 +217,141 @@ namespace AdaptiveBossArena.Combat
             {
                 ResolveHits(_timeline.CurrentAttack);
             }
+
+            // Recorded through the wind-up too, so the first live frame sweeps from where the blade was on the
+            // last frame of the wind-up rather than starting from wherever it happens to be.
+            RecordStrikerPoses();
+        }
+
+        /// <summary>Remembers where every striking part is, for the next tick's sweep.</summary>
+        private void RecordStrikerPoses()
+        {
+            for (int i = 0; i < _strikers.Count; i++)
+            {
+                if (_strikers[i] != null)
+                {
+                    _strikers[i].Segment(out _previousStart[i], out _previousEnd[i]);
+                }
+            }
+
+            _hasPreviousPose = true;
+        }
+
+        /// <summary>
+        /// Picks the parts an attack strikes with that are there to strike with.
+        /// </summary>
+        /// <remarks>
+        /// A weapon attack thrown with no weapon in hand - the frenzy, after the sword is gone - lands with the
+        /// fists instead, so every move in the armed set still has something to hit with.
+        /// </remarks>
+        /// <returns>True when at least one part was found.</returns>
+        private bool CollectStrikers(StrikerParts parts)
+        {
+            _activeStrikers.Clear();
+            AddAvailable(parts);
+
+            if (_activeStrikers.Count == 0 && (parts & StrikerParts.Weapon) != 0)
+            {
+                AddAvailable(StrikerParts.RightHand | StrikerParts.LeftHand);
+            }
+
+            return _activeStrikers.Count > 0;
+        }
+
+        private void AddAvailable(StrikerParts parts)
+        {
+            for (int i = 0; i < _strikers.Count; i++)
+            {
+                StrikeVolume striker = _strikers[i];
+
+                if (striker != null && striker.IsAvailable && (parts & striker.Part) != 0)
+                {
+                    _activeStrikers.Add(i);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Tests the path each striking part swept since the last tick, and applies the blow to what it touched.
+        /// </summary>
+        private void SweepHits(AttackDefinition attack)
+        {
+            int found = 0;
+
+            foreach (int index in _activeStrikers)
+            {
+                StrikeVolume striker = _strikers[index];
+                striker.Segment(out Vector3 start, out Vector3 end);
+
+                Vector3 fromStart = _hasPreviousPose ? _previousStart[index] : start;
+                Vector3 fromEnd = _hasPreviousPose ? _previousEnd[index] : end;
+
+                int samples = StrikeSweep.SampleCount(fromStart, fromEnd, start, end, striker.Radius, MaxSweepSamples);
+
+                // From the first step past last tick's pose, which was already tested then, to this tick's.
+                for (int step = 1; step <= samples; step++)
+                {
+                    StrikeSweep.Between(
+                        fromStart, fromEnd, start, end, step / (float)samples, out Vector3 a, out Vector3 b);
+
+                    int count = Physics.OverlapCapsuleNonAlloc(
+                        a, b, striker.Radius, _sweepBuffer, _targetLayerMask, QueryTriggerInteraction.Collide);
+
+                    for (int i = 0; i < count; i++)
+                    {
+                        var hurtbox = _sweepBuffer[i].GetComponent<Hurtbox>();
+
+                        if (hurtbox != null && hurtbox.IsValid)
+                        {
+                            found = KeepBestPerTarget(hurtbox, _sweepBuffer[i].ClosestPoint((a + b) * 0.5f), found);
+                        }
+                    }
+                }
+            }
+
+            for (int i = 0; i < found; i++)
+            {
+                if (_alreadyStruck.Add(_sweepHits[i].Owner.GetHashCode()))
+                {
+                    ApplyTo(attack, _sweepHits[i], _sweepContacts[i]);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Records a touched hurtbox, keeping the most valuable one per combatant, as the volume query does.
+        /// </summary>
+        /// <remarks>
+        /// The brute's core sits inside its body, and a blade that crosses the core crosses the body too. Taking
+        /// whichever physics listed first would make striking the core a coin flip rather than a decision.
+        /// </remarks>
+        private int KeepBestPerTarget(Hurtbox hurtbox, Vector3 contact, int found)
+        {
+            for (int i = 0; i < found; i++)
+            {
+                if (!ReferenceEquals(_sweepHits[i].Owner, hurtbox.Owner))
+                {
+                    continue;
+                }
+
+                if (hurtbox.DamageMultiplier > _sweepHits[i].DamageMultiplier)
+                {
+                    _sweepHits[i] = hurtbox;
+                    _sweepContacts[i] = contact;
+                }
+
+                return found;
+            }
+
+            if (found >= _sweepHits.Length)
+            {
+                return found;
+            }
+
+            _sweepHits[found] = hurtbox;
+            _sweepContacts[found] = contact;
+
+            return found + 1;
         }
 
         /// <summary>Aborts the attack, typically because the attacker was staggered.</summary>
@@ -205,6 +378,14 @@ namespace AdaptiveBossArena.Combat
         /// <summary>Tests every hurtbox in the volume and applies damage to those not yet struck.</summary>
         private void ResolveHits(AttackDefinition attack)
         {
+            // What the body struck with, when it has the parts to strike with. The authored volume decides
+            // only area attacks and bodies with no rig.
+            if (attack.Strikers != StrikerParts.None && CollectStrikers(attack.Strikers))
+            {
+                SweepHits(attack);
+                return;
+            }
+
             int count = _detector.Query(attack, _origin, _targetLayerMask);
 
             for (int i = 0; i < count; i++)
@@ -224,9 +405,11 @@ namespace AdaptiveBossArena.Combat
         }
 
         /// <summary>Offers the attack to one hurtbox and reacts to what the target decided.</summary>
-        private void ApplyTo(AttackDefinition attack, Hurtbox hurtbox)
+        private void ApplyTo(AttackDefinition attack, Hurtbox hurtbox, Vector3? contact = null)
         {
-            Vector3 contactPoint = hurtbox.transform.position;
+            // Where the part actually touched, when it is known, so sparks and blood come off the blade rather
+            // than out of the middle of the body.
+            Vector3 contactPoint = contact ?? hurtbox.transform.position;
             Vector3 direction = contactPoint - _origin.position;
             direction.y = 0f;
             direction = direction.sqrMagnitude > Mathf.Epsilon ? direction.normalized : _origin.forward;
