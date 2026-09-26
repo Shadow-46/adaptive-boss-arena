@@ -26,7 +26,8 @@ namespace AdaptiveBossArena.Editor
 
         private const float LabelX = -150f;
         private const float ControlX = 150f;
-        private const float RowSpacing = 58f;
+        /// <summary>Was 58; tightened when the camera rows arrived, so the panel still ends above the screen's edge.</summary>
+        private const float RowSpacing = 50f;
 
         /// <summary>Builds the panel under a canvas and returns the wired menu.</summary>
         /// <param name="root">Canvas transform to build under.</param>
@@ -40,7 +41,7 @@ namespace AdaptiveBossArena.Editor
             title.rectTransform.anchoredPosition = new Vector2(0f, 460f);
             title.fontStyle = FontStyle.Bold;
 
-            float y = 320f;
+            float y = 350f;
 
             Slider master = LabelledSlider(panel.transform, "Master Volume", ref y);
             Slider music = LabelledSlider(panel.transform, "Music Volume", ref y);
@@ -49,10 +50,17 @@ namespace AdaptiveBossArena.Editor
             Toggle reducedFlashing = LabelledToggle(panel.transform, "Reduced Flashing", ref y);
             Toggle extendedTell = LabelledToggle(panel.transform, "Longer Boss Tells", ref y);
 
+            // How fast the camera turns, a quarter to two and a half times the default.
+            Slider sensitivity = LabelledSlider(panel.transform, "Camera Sensitivity", ref y);
+            sensitivity.minValue = Core.Services.LookSettings.MinimumSensitivity;
+            sensitivity.maxValue = Core.Services.LookSettings.MaximumSensitivity;
+            sensitivity.value = Core.Services.LookSettings.DefaultSensitivity;
+            Toggle invertLook = LabelledToggle(panel.transform, "Invert Look", ref y);
+
             // The menu must exist before the rebind rows, because each row holds a reference to it and
             // the sliders' change callbacks are wired to it here.
             var menu = root.gameObject.AddComponent<SettingsMenu>();
-            menu.Bind(panel, master, music, effects, shake, reducedFlashing, extendedTell, actions);
+            menu.Bind(panel, master, music, effects, shake, reducedFlashing, extendedTell, actions, sensitivity, invertLook);
 
             WireSlider(master, menu.SetMasterVolume);
             WireSlider(music, menu.SetMusicVolume);
@@ -60,6 +68,8 @@ namespace AdaptiveBossArena.Editor
             WireSlider(shake, menu.SetShakeIntensity);
             WireToggle(reducedFlashing, menu.SetReducedFlashing);
             WireToggle(extendedTell, menu.SetExtendedTell);
+            WireSlider(sensitivity, menu.SetLookSensitivity);
+            WireToggle(invertLook, menu.SetInvertLook);
 
             BuildRebindSection(panel.transform, menu, ref y);
 
@@ -117,11 +127,11 @@ namespace AdaptiveBossArena.Editor
             // shown for reference so the panel is a complete controls list, not only a rebind menu.
             Text fixedControls = UiBuilder.CreateText(
                 parent, "FixedControls",
-                "Move  WASD        Light  Left Mouse        Heavy  Right Mouse        " +
-                "Camera  C        Lock On  Tab        Pause  Esc",
+                "Move  WASD     Light  Left Mouse     Heavy  Shift + Left Mouse     Guard  Right Mouse     " +
+                "Parry  Q     Lock On  Tab / Middle Mouse     Camera  C     Pause  Esc",
                 19, TextAnchor.MiddleCenter);
             fixedControls.rectTransform.anchoredPosition = new Vector2(0f, y - 4f);
-            fixedControls.rectTransform.sizeDelta = new Vector2(1040f, 28f);
+            fixedControls.rectTransform.sizeDelta = new Vector2(1400f, 28f);
             fixedControls.color = MutedText;
             y -= 44f;
 

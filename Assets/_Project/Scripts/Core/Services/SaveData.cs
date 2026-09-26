@@ -69,6 +69,12 @@ namespace AdaptiveBossArena.Core.Services
         /// <summary>When true, the boss's adaptation tells stay on screen longer.</summary>
         public bool ExtendedTellDuration;
 
+        /// <summary>Multiplier on how fast the camera turns with the mouse or stick; one is the default.</summary>
+        public float MouseSensitivity = LookSettings.DefaultSensitivity;
+
+        /// <summary>When true, moving the mouse up looks down.</summary>
+        public bool InvertLook;
+
         /// <summary>Serialised input rebindings, in the Input System's own JSON format.</summary>
         public string InputRebinds = string.Empty;
     }

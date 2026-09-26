@@ -65,6 +65,9 @@ namespace AdaptiveBossArena.UI
         private ISaveService _saveService;
         private SettingsData _settings;
 
+        private Slider _sensitivitySlider;
+        private Toggle _invertLookToggle;
+
         private InputActionMap _gameplayMap;
         private RebindButton[] _rebindRows;
         private InputActionRebindingExtensions.RebindingOperation _activeRebind;
@@ -183,6 +186,26 @@ namespace AdaptiveBossArena.UI
             if (_isSyncing) return;
             _settings.ScreenShakeIntensity = value;
             ApplyShake();
+            Save();
+        }
+
+        /// <summary>Sets how fast the camera turns, from its slider.</summary>
+        /// <param name="value">Sensitivity multiplier.</param>
+        public void SetLookSensitivity(float value)
+        {
+            if (_isSyncing) return;
+            _settings.MouseSensitivity = value;
+            ApplyLook();
+            Save();
+        }
+
+        /// <summary>Toggles inverted vertical look.</summary>
+        /// <param name="on">Whether moving the mouse up looks down.</param>
+        public void SetInvertLook(bool on)
+        {
+            if (_isSyncing) return;
+            _settings.InvertLook = on;
+            ApplyLook();
             Save();
         }
 
@@ -325,6 +348,8 @@ namespace AdaptiveBossArena.UI
         /// <param name="reducedFlashing">Reduced-flashing toggle.</param>
         /// <param name="extendedTell">Extended-tell toggle.</param>
         /// <param name="actions">Shared input actions asset.</param>
+        /// <param name="sensitivity">Camera sensitivity slider.</param>
+        /// <param name="invertLook">Inverted vertical look toggle.</param>
         public void Bind(
             GameObject panel,
             Slider master,
@@ -333,8 +358,12 @@ namespace AdaptiveBossArena.UI
             Slider shake,
             Toggle reducedFlashing,
             Toggle extendedTell,
-            InputActionAsset actions)
+            InputActionAsset actions,
+            Slider sensitivity = null,
+            Toggle invertLook = null)
         {
+            _sensitivitySlider = sensitivity;
+            _invertLookToggle = invertLook;
             _panel = panel;
             _masterSlider = master;
             _musicSlider = music;
@@ -359,6 +388,16 @@ namespace AdaptiveBossArena.UI
             ApplyShake();
             ApplyFlashing();
             ApplyTell();
+            ApplyLook();
+        }
+
+        private void ApplyLook()
+        {
+            // A save written before these settings existed loads them as zero; zero sensitivity would freeze the view.
+            LookSettings.Sensitivity = _settings.MouseSensitivity > 0f
+                ? Mathf.Clamp(_settings.MouseSensitivity, LookSettings.MinimumSensitivity, LookSettings.MaximumSensitivity)
+                : LookSettings.DefaultSensitivity;
+            LookSettings.InvertY = _settings.InvertLook;
         }
 
         private void ApplyVolumes()
@@ -404,6 +443,8 @@ namespace AdaptiveBossArena.UI
             if (_shakeSlider != null) _shakeSlider.value = _settings.ScreenShakeIntensity;
             if (_reducedFlashingToggle != null) _reducedFlashingToggle.isOn = _settings.ReducedFlashing;
             if (_extendedTellToggle != null) _extendedTellToggle.isOn = _settings.ExtendedTellDuration;
+            if (_sensitivitySlider != null) _sensitivitySlider.value = LookSettings.Sensitivity;
+            if (_invertLookToggle != null) _invertLookToggle.isOn = _settings.InvertLook;
 
             _isSyncing = false;
         }
