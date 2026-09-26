@@ -413,6 +413,9 @@ namespace AdaptiveBossArena.Editor
 
             // F3 panel, and the unattended capture every stage of the overhaul is measured with.
             managersRoot.AddComponent<PerfProbe>();
+
+            // Draws the striking parts and hurtboxes when asked for with -debugHits or ?debughits; otherwise off.
+            managersRoot.AddComponent<HitboxDebugView>().SetMaterial(MaterialLibrary.GetOrCreateAttackOverlay());
             managersRoot.AddComponent<EncounterDirector>();
             managersRoot.AddComponent<AudioService>();
             managersRoot.AddComponent<CombatAudioDirector>();

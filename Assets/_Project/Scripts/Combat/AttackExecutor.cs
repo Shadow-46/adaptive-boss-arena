@@ -282,6 +282,7 @@ namespace AdaptiveBossArena.Combat
             {
                 StrikeVolume striker = _strikers[index];
                 striker.Segment(out Vector3 start, out Vector3 end);
+                striker.MarkLive(Time.time);
 
                 Vector3 fromStart = _hasPreviousPose ? _previousStart[index] : start;
                 Vector3 fromEnd = _hasPreviousPose ? _previousEnd[index] : end;

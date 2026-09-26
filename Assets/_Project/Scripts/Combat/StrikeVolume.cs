@@ -42,6 +42,16 @@ namespace AdaptiveBossArena.Combat
         public float Radius => _radius;
 
         /// <summary>
+        /// When the part last struck with a live blow, in game seconds; negative if it never has.
+        /// </summary>
+        /// <remarks>Read only by the hitbox view, to show which parts are live at this moment.</remarks>
+        public float LastLiveTime { get; private set; } = -1f;
+
+        /// <summary>Records that the part is striking with a live blow now.</summary>
+        /// <param name="time">The current game time.</param>
+        internal void MarkLive(float time) => LastLiveTime = time;
+
+        /// <summary>
         /// Whether the part is there to strike with.
         /// </summary>
         /// <remarks>
