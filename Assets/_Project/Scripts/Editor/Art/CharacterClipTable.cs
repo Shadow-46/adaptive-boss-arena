@@ -182,6 +182,57 @@ namespace AdaptiveBossArena.Editor.Art
                 "great sword strafe", "great sword strafe (2)", "great sword strafe (3)", "great sword strafe (4)"
             });
 
+        /// <summary>
+        /// The brute once it drops the sword: the same body, fighting bare-handed.
+        /// </summary>
+        /// <remarks>
+        /// A second controller over the same rig, not a second character. The state names are identical to
+        /// <see cref="Brute"/>'s, so every attack keeps the clip binding it already had and the frenzy needs no
+        /// moves of its own - swinging the same "Heavy" plays a thrown punch here and a raised blade there.
+        /// </remarks>
+        public static CharacterClipTable BruteFrenzy => new CharacterClipTable(
+            "BruteFrenzyController",
+            LicensedArtPostprocessor.BossCharacter,
+            1.05f,
+            new[] { Mixamo + "Animations/Boss", Mixamo + "Animations/Shared", QuaterniusLibrary1 },
+            new[]
+            {
+                // It never truly stands still in the frenzy: the slowest it gets is the hunched flex.
+                (0f, "Mutant Flexing Muscles"),
+                (0.3f, "Mutant Walking"),
+                (1f, "Mutant Run")
+            },
+            new Dictionary<string, string>
+            {
+                [CharacterAnimatorParameters.RollState] = "Roll",
+                // Nothing left to guard with, so a raised guard is the chest thrown open instead.
+                [CharacterAnimatorParameters.GuardState] = "Standing Taunt Chest Thump",
+                [CharacterAnimatorParameters.StaggerState] = "great sword impact (3)",
+                [CharacterAnimatorParameters.DeathState] = "Mutant Dying",
+                [CharacterAnimatorParameters.HitState] = "great sword impact",
+                [CharacterAnimatorParameters.AirborneState] = "great sword impact (2)",
+                [CharacterAnimatorParameters.KnockedDownState] = "Kneeling Idle",
+
+                // Every swing is now a bare-handed one: the swipe for the strings, the punch for anything
+                // heavy, the leap for anything that travels, the roar for the set-pieces.
+                ["Light1"] = "Mutant Swiping",
+                ["Light2"] = "Mutant Swiping",
+                ["Light3"] = "Mutant Punch",
+                ["Heavy"] = "Mutant Punch",
+                ["Special"] = "Mutant Roaring",
+                ["Overhead"] = "Mutant Jump Attack",
+                ["Hook"] = "Mutant Swiping",
+                ["Dash"] = "Mutant Jump Attack",
+                ["Cast"] = "Mutant Roaring",
+                ["Kick"] = "Mutant Punch",
+                ["Spin"] = "Mutant Swiping",
+                ["Grab"] = "Zombie Attack",
+                ["Leap"] = "Mutant Jump Attack",
+                ["Claw"] = "Mutant Swiping",
+                ["Rip"] = "Mutant Punch",
+                ["Roar"] = "Mutant Roaring"
+            });
+
         /// <summary>Name of the generated controller.</summary>
         public string Name { get; }
 

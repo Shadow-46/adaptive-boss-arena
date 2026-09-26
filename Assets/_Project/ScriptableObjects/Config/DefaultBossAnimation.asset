@@ -16,6 +16,7 @@ MonoBehaviour:
   _designerNotes: 
   _rigPrefab: {fileID: 919132149155446097, guid: 46461fd01cbef3744a5fbd3b631da83e, type: 3}
   _animatorController: {fileID: 9100000, guid: 523d0de9a22d587439de7f046f0f6141, type: 2}
+  _frenzyController: {fileID: 9100000, guid: 1102e94b403ef51428b83cf6dcae42b9, type: 2}
   _rigScale: 1.05
   _attackClips:
   - _attack: {fileID: 11400000, guid: c36e1a4c0c2652e44a0844711735c22a, type: 2}

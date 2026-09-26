@@ -292,16 +292,25 @@ namespace AdaptiveBossArena.Editor
             Art.CharacterClipTable brute = licensed ? Art.CharacterClipTable.Brute : Art.CharacterClipTable.Fallback("BruteController", 1.55f);
 
             AssignRig("DefaultPlayerAnimation", knight, PlayerClipBindings);
-            AssignRig("DefaultBossAnimation", brute, BossClipBindings);
+
+            // The brute alone has a second form: the same rig, fighting bare-handed in its last phase.
+            AssignRig(
+                "DefaultBossAnimation", brute, BossClipBindings,
+                licensed ? Art.CharacterClipTable.BruteFrenzy : null);
         }
 
         private static void AssignRig(
             string configName,
             Art.CharacterClipTable table,
-            (string Attack, string State)[] bindings)
+            (string Attack, string State)[] bindings,
+            Art.CharacterClipTable frenzyTable = null)
         {
             GameObject rig = Art.AnimatorControllerBuilder.LoadRigModel(table);
             RuntimeAnimatorController controller = rig != null ? Art.AnimatorControllerBuilder.Build(table) : null;
+
+            RuntimeAnimatorController frenzy = rig != null && frenzyTable != null
+                ? Art.AnimatorControllerBuilder.Build(frenzyTable)
+                : null;
             float scale = table.RigScale;
 
             var config = AssetDatabase.LoadAssetAtPath<CharacterAnimationConfig>($"{ConfigFolder}/{configName}.asset");
@@ -314,6 +323,7 @@ namespace AdaptiveBossArena.Editor
             var serialized = new SerializedObject(config);
             serialized.FindProperty("_rigPrefab").objectReferenceValue = controller != null ? rig : null;
             serialized.FindProperty("_animatorController").objectReferenceValue = controller;
+            serialized.FindProperty("_frenzyController").objectReferenceValue = frenzy;
             serialized.FindProperty("_rigScale").floatValue = scale;
 
             SerializedProperty list = serialized.FindProperty("_attackClips");
@@ -1199,9 +1209,12 @@ namespace AdaptiveBossArena.Editor
                 // others — roar, shockwave, invulnerable rear-up — but arrives with the fullest
                 // moveset, the shortest recovery and the fastest adaptation the boss can reach, so the
                 // final stretch of the fight is its most dangerous and its most legible at once.
+                // Frenzied: it throws the sword away and fights with its hands, faster and with no recovery
+                // worth the name. At a quarter of its health rather than a seventh, so the last form is a
+                // stretch of the fight rather than a flourish at the end of it.
                 WritePhase(
-                    phases.GetArrayElementAtIndex(3), ShouldWriteTuning(created), "Last Stand", threshold: 0.15f,
-                    moveMultiplier: 1.4f, cooldown: 0.45f, adaptationRate: 2.5f,
+                    phases.GetArrayElementAtIndex(3), ShouldWriteTuning(created), "Frenzied", threshold: 0.25f,
+                    moveMultiplier: 1.55f, cooldown: 0.4f, adaptationRate: 2.5f,
                     signature: attacks.Shockwave,
                     attacks.Sweep, attacks.Slam, attacks.Charge, attacks.Shockwave, attacks.Jab, attacks.Perilous,
                     attacks.DelayedOverhead, attacks.Spin, attacks.Kick, attacks.Grab, attacks.Leap);

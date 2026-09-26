@@ -37,6 +37,10 @@ namespace AdaptiveBossArena.Combat.Feel
         private RuntimeAnimatorController _animatorController;
 
         [SerializeField]
+        [Tooltip("Controller for the final, weaponless phase, or none for a fighter that has no second form.")]
+        private RuntimeAnimatorController _frenzyController;
+
+        [SerializeField]
         [Tooltip("Uniform scale applied to the rig, so one mannequin can be a knight or a brute.")]
         [Min(0.1f)]
         private float _rigScale = 1f;
@@ -197,6 +201,10 @@ namespace AdaptiveBossArena.Combat.Feel
 
         /// <summary>Controller the rig plays through.</summary>
         public RuntimeAnimatorController AnimatorController => _animatorController;
+
+        /// <summary>Controller for the final phase, in which the fighter has thrown its weapon away.</summary>
+        /// <remarks>Null for anything that fights the same way throughout, which is every fighter but the brute.</remarks>
+        public RuntimeAnimatorController FrenzyController => _frenzyController;
 
         /// <summary>Uniform scale applied to the rig.</summary>
         public float RigScale => _rigScale;

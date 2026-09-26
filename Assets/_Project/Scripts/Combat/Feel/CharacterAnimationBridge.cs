@@ -95,6 +95,52 @@ namespace AdaptiveBossArena.Combat.Feel
                 : -1;
         }
 
+        /// <summary>
+        /// Switches the body between the armed form and the frenzy, which fights bare-handed.
+        /// </summary>
+        /// <remarks>
+        /// Both controllers carry the same state names over the same rig, so nothing that drives this bridge
+        /// needs to know which one is playing: the next state request lands on the new controller and the
+        /// fight continues. The weapon is hidden with it, because the frenzy's clips have empty hands.
+        /// </remarks>
+        /// <param name="frenzied">True to fight bare-handed, false to return to the armed form.</param>
+        public void SetFrenzy(bool frenzied)
+        {
+            RuntimeAnimatorController wanted = frenzied && _config != null && _config.FrenzyController != null
+                ? _config.FrenzyController
+                : _config?.AnimatorController;
+
+            if (_animator == null || wanted == null || _animator.runtimeAnimatorController == wanted)
+            {
+                return;
+            }
+
+            _animator.runtimeAnimatorController = wanted;
+
+            // The layer index belongs to the controller, so it has to be found again.
+            _hitLayer = _animator.GetLayerIndex(CharacterAnimatorParameters.HitLayer);
+            _currentState = null;
+
+            SetWeaponVisible(!frenzied);
+        }
+
+        /// <summary>Shows or hides the mounted weapon, which the frenzy has thrown away.</summary>
+        private void SetWeaponVisible(bool visible)
+        {
+            if (_animator == null || !_animator.isHuman)
+            {
+                return;
+            }
+
+            Transform hand = _animator.GetBoneTransform(HumanBodyBones.RightHand);
+            Transform weapon = hand != null ? hand.Find("Cleaver") : null;
+
+            if (weapon != null)
+            {
+                weapon.gameObject.SetActive(visible);
+            }
+        }
+
         private void Update()
         {
             if (_hitElapsed < 0f || !HasSkeleton || _hitLayer < 0)

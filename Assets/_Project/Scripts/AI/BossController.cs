@@ -104,6 +104,9 @@ namespace AdaptiveBossArena.AI
         private HitFlash _hitFlash;
         private CharacterAnimator _animator;
 
+        /// <summary>Drives the rigged skeleton, and swaps it to the frenzy's bare-handed form.</summary>
+        private CharacterAnimationBridge _bridge;
+
         /// <summary>The rig's physical body, woken on death. Null for a primitive body.</summary>
         private RagdollActivator _ragdoll;
         private PhaseAura _phaseAura;
@@ -117,6 +120,16 @@ namespace AdaptiveBossArena.AI
         /// simply bursting through the escalation the moment it begins.
         /// </remarks>
         private const float PhaseTransitionInvulnSeconds = 0.6f;
+
+        /// <summary>The phase in which the brute throws its sword away and fights bare-handed.</summary>
+        /// <remarks>
+        /// The last phase of the configured list, whichever that is, so a config with three phases frenzies
+        /// in its third rather than never frenzying at all.
+        /// </remarks>
+        private int FrenzyPhaseIndex =>
+            _config != null && _config.Phases != null && _config.Phases.Length > 0
+                ? _config.Phases.Length - 1
+                : int.MaxValue;
 
         /// <summary>How long the death clip plays before physics takes the body.</summary>
         /// <remarks>
@@ -213,6 +226,7 @@ namespace AdaptiveBossArena.AI
             _characterController = GetComponent<CharacterController>();
             _hitFlash = GetComponentInChildren<HitFlash>();
             _animator = GetComponentInChildren<CharacterAnimator>();
+            _bridge = GetComponentInChildren<CharacterAnimationBridge>();
             _ragdoll = GetComponentInChildren<RagdollActivator>();
             _phaseAura = GetComponentInChildren<PhaseAura>();
         }
@@ -932,6 +946,9 @@ namespace AdaptiveBossArena.AI
                 _context.CurrentPhase.AdaptationRateMultiplier * _adaptationRateScale);
 
             _phaseAura?.SetPhase(phaseIndex);
+
+            // The last phase is fought bare-handed: a different body, not only faster numbers.
+            _bridge?.SetFrenzy(phaseIndex >= FrenzyPhaseIndex);
 
             if (isEscalation)
             {
