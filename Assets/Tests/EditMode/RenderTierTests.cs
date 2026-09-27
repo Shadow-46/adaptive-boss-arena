@@ -78,11 +78,6 @@ namespace AdaptiveBossArena.Tests.EditMode
             SerializedProperty levels = quality.FindProperty("m_QualitySettings");
             Assert.IsNotNull(levels);
 
-            var web = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(
-                RenderPipelineConfigurator.PipelineAssetPath);
-            var desktop = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(
-                RenderPipelineConfigurator.DesktopPipelineAssetPath);
-
             int firstDesktop = RenderPipelineConfigurator.FirstDesktopLevel(levels.arraySize);
 
             for (int i = 0; i < levels.arraySize; i++)
@@ -91,10 +86,12 @@ namespace AdaptiveBossArena.Tests.EditMode
                 bool isDesktop = i >= firstDesktop;
                 string name = level.FindPropertyRelative("name").stringValue;
 
-                Assert.AreSame(
-                    isDesktop ? desktop : web,
-                    level.FindPropertyRelative("customRenderPipeline").objectReferenceValue,
-                    $"Quality level '{name}' uses the wrong tier's pipeline.");
+                string[] tier = isDesktop
+                    ? RenderPipelineConfigurator.DesktopPipelinePaths
+                    : RenderPipelineConfigurator.WebPipelinePaths;
+                string path = AssetDatabase.GetAssetPath(level.FindPropertyRelative("customRenderPipeline").objectReferenceValue);
+
+                Assert.Contains(path, tier, $"Quality level '{name}' uses the wrong tier's pipeline.");
 
                 string excluded = isDesktop
                     ? RenderPipelineConfigurator.WebGLPlatform
@@ -103,6 +100,52 @@ namespace AdaptiveBossArena.Tests.EditMode
                 Assert.IsTrue(
                     Excludes(level, excluded),
                     $"Quality level '{name}' is not excluded from {excluded}.");
+            }
+        }
+
+        [Test]
+        public void EachPlatformOffersALowMediumAndHigh()
+        {
+            // The game's quality setting picks among the levels its build keeps, by name. Three distinct pipelines
+            // per platform, stepping up in shadow resolution or cascades, or the setting changes nothing.
+            foreach (string[] tier in new[] { RenderPipelineConfigurator.WebPipelinePaths, RenderPipelineConfigurator.DesktopPipelinePaths })
+            {
+                var low = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(tier[0]);
+                var medium = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(tier[1]);
+                var high = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(tier[2]);
+
+                Assert.IsNotNull(low, tier[0] + " is missing.");
+                Assert.IsNotNull(medium, tier[1] + " is missing.");
+                Assert.IsNotNull(high, tier[2] + " is missing.");
+
+                Assert.That(
+                    low.mainLightShadowmapResolution * low.shadowCascadeCount,
+                    Is.LessThanOrEqualTo(medium.mainLightShadowmapResolution * medium.shadowCascadeCount),
+                    tier[1] + " renders less shadow than " + tier[0]);
+                Assert.That(
+                    medium.mainLightShadowmapResolution * medium.shadowCascadeCount,
+                    Is.LessThan(high.mainLightShadowmapResolution * high.shadowCascadeCount),
+                    tier[2] + " renders no more shadow than " + tier[1]);
+            }
+        }
+
+        [Test]
+        public void NoBrowserLevelEverRendersWithAmbientOcclusion()
+        {
+            // Ambient occlusion on the web renderer once killed the browser build with "too much recursion".
+            foreach (string path in RenderPipelineConfigurator.WebPipelinePaths)
+            {
+                var pipeline = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(path);
+                Assert.IsNotNull(pipeline, path + " is missing.");
+
+                var serialized = new SerializedObject(pipeline);
+                SerializedProperty renderers = serialized.FindProperty("m_RendererDataList");
+
+                for (int i = 0; i < renderers.arraySize; i++)
+                {
+                    string renderer = AssetDatabase.GetAssetPath(renderers.GetArrayElementAtIndex(i).objectReferenceValue);
+                    Assert.IsFalse(HasAmbientOcclusion(renderer), path + " renders with ambient occlusion.");
+                }
             }
         }
 

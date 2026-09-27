@@ -43,13 +43,50 @@ namespace AdaptiveBossArena.Editor
         /// <summary>The desktop tier's renderer, which carries ambient occlusion.</summary>
         public const string DesktopRendererAssetPath = SettingsFolder + "/UniversalRenderer_Desktop.asset";
 
+        /// <summary>The browser's Medium quality: soft shadows over twice the resolution of Low.</summary>
+        public const string WebMediumPipelineAssetPath = SettingsFolder + "/UniversalRenderPipeline_WebMedium.asset";
+
+        /// <summary>The browser's High quality: four cascades, and braziers and candles that cast shadows.</summary>
+        public const string WebHighPipelineAssetPath = SettingsFolder + "/UniversalRenderPipeline_WebHigh.asset";
+
+        /// <summary>Desktop Low: for integrated graphics running the Windows build. No ambient occlusion.</summary>
+        public const string DesktopLowPipelineAssetPath = SettingsFolder + "/UniversalRenderPipeline_DesktopLow.asset";
+
+        /// <summary>Desktop Medium: the desktop renderer, ambient occlusion included, with a smaller shadow map.</summary>
+        public const string DesktopMediumPipelineAssetPath = SettingsFolder + "/UniversalRenderPipeline_DesktopMedium.asset";
+
+        /// <summary>
+        /// The browser's pipelines from Low to High. Low keeps the web tier's original path.
+        /// </summary>
+        /// <remarks>
+        /// Every one of them renders with the web renderer, which never carries ambient occlusion: adding it once
+        /// broke the browser build outright, so no browser quality level may reach it, High included.
+        /// </remarks>
+        public static readonly string[] WebPipelinePaths =
+        {
+            PipelineAssetPath, WebMediumPipelineAssetPath, WebHighPipelineAssetPath
+        };
+
+        /// <summary>The Windows build's pipelines from Low to High. High keeps the desktop tier's original path.</summary>
+        public static readonly string[] DesktopPipelinePaths =
+        {
+            DesktopLowPipelineAssetPath, DesktopMediumPipelineAssetPath, DesktopPipelineAssetPath
+        };
+
+        /// <summary>The names the six quality levels carry, which the game matches its quality setting against.</summary>
+        public static readonly string[] LevelNames =
+        {
+            "Browser Low", "Browser Medium", "Browser High", "Desktop Low", "Desktop Medium", "Desktop High"
+        };
+
         /// <summary>How many quality levels, counted from the top, belong to the desktop tier.</summary>
         /// <remarks>
-        /// Unity's default six levels are kept rather than replaced with two new ones, because the
-        /// quality settings asset has no public API for adding or removing levels. The top two become
-        /// the desktop tier and the rest the web tier.
+        /// Unity's default six levels are kept rather than replaced, because the quality settings asset has no
+        /// public API for adding or removing levels. The bottom three are the browser's Low, Medium and High,
+        /// the top three the Windows build's. A build keeps only its own three, so the player sees one Low,
+        /// Medium and High whichever it is running.
         /// </remarks>
-        public const int DesktopTierLevelCount = 2;
+        public const int DesktopTierLevelCount = 3;
 
         /// <summary>Build-target group name used in quality-level exclusions and defaults.</summary>
         public const string StandalonePlatform = "Standalone";
@@ -93,6 +130,72 @@ namespace AdaptiveBossArena.Editor
             AdditionalLightShadows = false,
             LightsPerObject = 4,
             DepthTexture = false
+        };
+
+        /// <summary>Browser Medium: soft shadows at twice Low's resolution, and a little multisampling.</summary>
+        private static readonly TierSettings WebMediumTier = new TierSettings
+        {
+            ShadowDistance = 30f,
+            ShadowCascades = 2,
+            MainShadowResolution = 2048,
+            AdditionalShadowResolution = 512,
+            SoftShadowQuality = 1,
+            Msaa = 2,
+            SoftShadows = true,
+            AdditionalLightShadows = false,
+            LightsPerObject = 6,
+            DepthTexture = false
+        };
+
+        /// <summary>
+        /// Browser High: four cascades, and the braziers and candles cast shadows.
+        /// </summary>
+        /// <remarks>
+        /// Still without a depth texture: nothing in the browser reads one, and ambient occlusion - the one effect
+        /// that would - stays off the web renderer for good.
+        /// </remarks>
+        private static readonly TierSettings WebHighTier = new TierSettings
+        {
+            ShadowDistance = 40f,
+            ShadowCascades = 4,
+            MainShadowResolution = 2048,
+            AdditionalShadowResolution = 1024,
+            SoftShadowQuality = 2,
+            Msaa = 4,
+            SoftShadows = true,
+            AdditionalLightShadows = true,
+            LightsPerObject = 8,
+            DepthTexture = false
+        };
+
+        /// <summary>Desktop Low: integrated graphics running the Windows build.</summary>
+        private static readonly TierSettings DesktopLowTier = new TierSettings
+        {
+            ShadowDistance = 30f,
+            ShadowCascades = 2,
+            MainShadowResolution = 2048,
+            AdditionalShadowResolution = 1024,
+            SoftShadowQuality = 1,
+            Msaa = 2,
+            SoftShadows = true,
+            AdditionalLightShadows = false,
+            LightsPerObject = 6,
+            DepthTexture = false
+        };
+
+        /// <summary>Desktop Medium: ambient occlusion and casting lights, on a smaller shadow map than High.</summary>
+        private static readonly TierSettings DesktopMediumTier = new TierSettings
+        {
+            ShadowDistance = 40f,
+            ShadowCascades = 4,
+            MainShadowResolution = 2048,
+            AdditionalShadowResolution = 1024,
+            SoftShadowQuality = 2,
+            Msaa = 4,
+            SoftShadows = true,
+            AdditionalLightShadows = true,
+            LightsPerObject = 8,
+            DepthTexture = true
         };
 
         /// <summary>The desktop tier: sharper shadows further out, and multisampled edges.</summary>
@@ -144,7 +247,16 @@ namespace AdaptiveBossArena.Editor
             UniversalRenderPipelineAsset desktop =
                 LoadOrCreatePipelineAsset(DesktopPipelineAssetPath, DesktopRendererAssetPath);
 
-            if (web == null || desktop == null)
+            // The in-between tiers. The browser's and Desktop Low share the web renderer, which has no ambient
+            // occlusion; Desktop Medium shares the desktop renderer, which does.
+            UniversalRenderPipelineAsset webMedium = LoadOrCreatePipelineAsset(WebMediumPipelineAssetPath, RendererAssetPath);
+            UniversalRenderPipelineAsset webHigh = LoadOrCreatePipelineAsset(WebHighPipelineAssetPath, RendererAssetPath);
+            UniversalRenderPipelineAsset desktopLow = LoadOrCreatePipelineAsset(DesktopLowPipelineAssetPath, RendererAssetPath);
+            UniversalRenderPipelineAsset desktopMedium =
+                LoadOrCreatePipelineAsset(DesktopMediumPipelineAssetPath, DesktopRendererAssetPath);
+
+            if (web == null || desktop == null || webMedium == null || webHigh == null ||
+                desktopLow == null || desktopMedium == null)
             {
                 Debug.LogError(
                     "[Adaptive Boss Arena] Could not create the Universal Render Pipeline assets. " +
@@ -157,9 +269,15 @@ namespace AdaptiveBossArena.Editor
             // default is the web tier, the conservative one: anything that falls back to it runs
             // everywhere.
             GraphicsSettings.defaultRenderPipeline = web;
-            AssignQualityTiers(web, desktop);
+            AssignQualityTiers(
+                new[] { web, webMedium, webHigh },
+                new[] { desktopLow, desktopMedium, desktop });
 
             TunePipeline(web, WebTier);
+            TunePipeline(webMedium, WebMediumTier);
+            TunePipeline(webHigh, WebHighTier);
+            TunePipeline(desktopLow, DesktopLowTier);
+            TunePipeline(desktopMedium, DesktopMediumTier);
             TunePipeline(desktop, DesktopTier);
             EnsureAmbientOcclusion(RendererAssetPath, EnableAmbientOcclusion);
             EnsureAmbientOcclusion(DesktopRendererAssetPath, true);
@@ -540,7 +658,7 @@ namespace AdaptiveBossArena.Editor
         /// </para>
         /// </remarks>
         private static void AssignQualityTiers(
-            UniversalRenderPipelineAsset web, UniversalRenderPipelineAsset desktop)
+            UniversalRenderPipelineAsset[] web, UniversalRenderPipelineAsset[] desktop)
         {
             SerializedObject quality = LoadQualitySettings();
             SerializedProperty levels = quality?.FindProperty("m_QualitySettings");
@@ -560,11 +678,23 @@ namespace AdaptiveBossArena.Editor
                 SerializedProperty level = levels.GetArrayElementAtIndex(i);
                 bool isDesktop = i >= firstDesktopLevel;
 
+                // Low, Medium and High within each platform's own levels, counted from its first. A project with
+                // more than six levels gives the extras the platform's High.
+                UniversalRenderPipelineAsset[] tiers = isDesktop ? desktop : web;
+                int step = Mathf.Min(isDesktop ? i - firstDesktopLevel : i, tiers.Length - 1);
+
                 SerializedProperty pipeline = level.FindPropertyRelative("customRenderPipeline");
 
                 if (pipeline != null)
                 {
-                    pipeline.objectReferenceValue = isDesktop ? desktop : web;
+                    pipeline.objectReferenceValue = tiers[step];
+                }
+
+                SerializedProperty levelName = level.FindPropertyRelative("name");
+
+                if (levelName != null && i < LevelNames.Length)
+                {
+                    levelName.stringValue = LevelNames[i];
                 }
 
                 SetExcludedPlatforms(
@@ -572,7 +702,9 @@ namespace AdaptiveBossArena.Editor
                     isDesktop ? WebGLPlatform : StandalonePlatform);
             }
 
-            SetPlatformDefault(quality, WebGLPlatform, firstDesktopLevel - 1);
+            // Medium in the browser until the game has measured what the machine can hold; High on Windows, which
+            // steps itself down on integrated graphics.
+            SetPlatformDefault(quality, WebGLPlatform, Mathf.Min(1, firstDesktopLevel - 1));
             SetPlatformDefault(quality, StandalonePlatform, levels.arraySize - 1);
 
             quality.ApplyModifiedPropertiesWithoutUndo();

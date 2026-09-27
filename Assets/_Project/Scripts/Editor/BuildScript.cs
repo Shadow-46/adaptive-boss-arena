@@ -89,9 +89,9 @@ namespace AdaptiveBossArena.Editor
                 ? RenderPipelineConfigurator.WebGLPlatform
                 : RenderPipelineConfigurator.StandalonePlatform;
 
-            string expectedPipeline = isWeb
-                ? RenderPipelineConfigurator.PipelineAssetPath
-                : RenderPipelineConfigurator.DesktopPipelineAssetPath;
+            string[] expectedPipelines = isWeb
+                ? RenderPipelineConfigurator.WebPipelinePaths
+                : RenderPipelineConfigurator.DesktopPipelinePaths;
 
             SerializedObject quality = RenderPipelineConfigurator.LoadQualitySettings();
             SerializedProperty levels = quality?.FindProperty("m_QualitySettings");
@@ -123,15 +123,15 @@ namespace AdaptiveBossArena.Editor
             Object pipeline = level.FindPropertyRelative("customRenderPipeline").objectReferenceValue;
             string pipelinePath = pipeline != null ? AssetDatabase.GetAssetPath(pipeline) : "(none)";
 
-            if (pipelinePath != expectedPipeline)
+            if (System.Array.IndexOf(expectedPipelines, pipelinePath) < 0)
             {
                 string levelName = level.FindPropertyRelative("name").stringValue;
 
-                return $"{platform} starts on quality level {levelName}, which renders with {pipelinePath} " +
-                       $"instead of {expectedPipeline}";
+                return $"{platform} starts on quality level {levelName}, which renders with {pipelinePath}, " +
+                       "a pipeline from the other platform's tier";
             }
 
-            return ShippedPipelineProblem(platform, expectedPipeline);
+            return ShippedPipelineProblem(platform, expectedPipelines);
         }
 
         /// <summary>
@@ -143,7 +143,7 @@ namespace AdaptiveBossArena.Editor
         /// engine the question it answers when it builds, so a wrong-tier asset about to ship is caught
         /// before the build rather than discovered in a browser.
         /// </remarks>
-        private static string ShippedPipelineProblem(string platform, string expectedPipeline)
+        private static string ShippedPipelineProblem(string platform, string[] expectedPipelines)
         {
             var shipped = new System.Collections.Generic.List<UnityEngine.Rendering.RenderPipelineAsset>();
             QualitySettings.GetAllRenderPipelineAssetsForPlatform(platform, ref shipped);
@@ -152,7 +152,7 @@ namespace AdaptiveBossArena.Editor
             {
                 string path = asset != null ? AssetDatabase.GetAssetPath(asset) : "(none)";
 
-                if (path != expectedPipeline)
+                if (System.Array.IndexOf(expectedPipelines, path) < 0)
                 {
                     return $"a {platform} build would ship {path}, which belongs to the other render tier";
                 }
