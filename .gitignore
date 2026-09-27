@@ -81,3 +81,9 @@ desktop.ini
 # fall back to the CC0 Quaternius characters.
 Assets/_Project/Art/Licensed/
 Assets/_Project/Art/Licensed.meta
+
+# Downloaded sound packs: the recordings and their licences are committed, the archives and web shortcuts are not.
+Assets/_Project/Audio/ThirdParty/**/*.zip
+Assets/_Project/Audio/ThirdParty/**/*.zip.meta
+Assets/_Project/Audio/ThirdParty/**/*.url
+Assets/_Project/Audio/ThirdParty/**/*.url.meta

@@ -89,7 +89,17 @@ namespace AdaptiveBossArena.Core.Combat
         /// one exists purely to tell the parry apart - a harder, riskier act that deserves its own ring and,
         /// later, its own place in the boss's statistics. Appended, never inserted.
         /// </remarks>
-        PlayerParried = 17
+        PlayerParried = 17,
+
+        /// <summary>
+        /// A blow's live window opened: the weapon is moving through the space it can strike.
+        /// </summary>
+        /// <remarks>
+        /// Published so a swing can be heard when the blade moves rather than when the wind-up begins - the
+        /// player reported the sounds as not matching what they saw, and the whoosh arriving a second before the
+        /// cut was a large part of it. Presentation only: nothing learns from it. Appended, never inserted.
+        /// </remarks>
+        AttackActive = 18
     }
 
     /// <summary>

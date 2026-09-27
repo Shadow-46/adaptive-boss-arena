@@ -420,7 +420,8 @@ namespace AdaptiveBossArena.Editor
             // Draws the striking parts and hurtboxes when asked for with -debugHits or ?debughits; otherwise off.
             managersRoot.AddComponent<HitboxDebugView>().SetMaterial(MaterialLibrary.GetOrCreateAttackOverlay());
             managersRoot.AddComponent<EncounterDirector>();
-            managersRoot.AddComponent<AudioService>();
+            // Recorded sounds replace the synthesised ones cue by cue, wherever a download is in place.
+            AudioAssetBuilder.Assign(managersRoot.AddComponent<AudioService>());
             managersRoot.AddComponent<CombatAudioDirector>();
             managersRoot.AddComponent<CombatEffectsDirector>();
             managersRoot.AddComponent<ArenaAtmosphere>();

@@ -376,6 +376,26 @@ namespace AdaptiveBossArena.Combat
             UnityEngine.Object.Destroy(effect, CastVfxLifetimeSeconds);
         }
 
+        /// <summary>Announces that a blow's live window has opened, for whoever voices the swing.</summary>
+        private void PublishActive(AttackDefinition attack)
+        {
+            if (attack == null)
+            {
+                return;
+            }
+
+            _events.Publish(new CombatEvent
+            {
+                Kind = CombatEventKind.AttackActive,
+                Actor = _team,
+                Timestamp = _time.CombatTime,
+                DamageType = attack.DamageType,
+                Unblockable = attack.Unblockable,
+                Position = _origin.position,
+                Direction = _origin.forward
+            });
+        }
+
         /// <summary>Tests every hurtbox in the volume and applies damage to those not yet struck.</summary>
         private void ResolveHits(AttackDefinition attack)
         {
@@ -583,6 +603,7 @@ namespace AdaptiveBossArena.Combat
 
             if (phase == AttackPhase.Active)
             {
+                PublishActive(_timeline.CurrentAttack);
                 TrySpawnHazard(_timeline.CurrentAttack);
 
                 // Resolved here as well as per frame, so entering the window always tests it at

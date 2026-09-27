@@ -168,11 +168,18 @@ namespace AdaptiveBossArena.Game
             switch (combatEvent.Kind)
             {
                 case CombatEventKind.AttackStarted:
-                    // Played on the wind-up rather than the strike, so it functions as an audible
-                    // telegraph as well as a flourish. A perilous, unblockable wind-up gets an
-                    // unmistakable warning sting instead — the audible half of "do not block this".
-                    // The player's swing uses whichever weapon they are holding; the boss keeps the
-                    // generic one, since it has no weapons to tell apart.
+                    // The wind-up itself is silent unless it is perilous: an unblockable attack sounds its
+                    // warning sting the moment it begins, the audible half of "do not block this".
+                    if (combatEvent.Unblockable)
+                    {
+                        _audio.PlayCue(AudioService.Cues.Peril, combatEvent.Position);
+                    }
+
+                    break;
+
+                case CombatEventKind.AttackActive:
+                    // The swing is heard as the blade moves, not a second early at the wind-up: the player
+                    // reported the sounds as not matching what they saw.
                     _audio.PlayCue(SwingCueFor(combatEvent), combatEvent.Position);
                     break;
 
@@ -257,11 +264,6 @@ namespace AdaptiveBossArena.Game
         /// </remarks>
         private string SwingCueFor(in CombatEvent combatEvent)
         {
-            if (combatEvent.Unblockable)
-            {
-                return AudioService.Cues.Peril;
-            }
-
             // The brute swings a great sword, and should sound like it: a heavy cleave, not a generic whoosh.
             return combatEvent.Actor == CombatantTeam.Player
                 ? _playerSwingCue

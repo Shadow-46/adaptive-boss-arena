@@ -34,3 +34,12 @@ shipped in this public repository and its public demo.
 
 CC0 requires no attribution. It is given anyway, because the work is excellent and credit costs
 nothing.
+
+## Kenney - Impact Sounds and RPG Audio
+
+- Files: `Assets/_Project/Audio/ThirdParty/Kenney/ImpactSounds/`, `Assets/_Project/Audio/ThirdParty/Kenney/RPGAudio/`
+- Source: https://kenney.nl/assets/impact-sounds, https://kenney.nl/assets/rpg-audio
+- Author: Kenney (www.kenney.nl)
+- Licence: CC0 1.0 Universal (public domain dedication) - see `License.txt` beside the files
+- Used for: shield blocks, blade deflects and parries, body hits, stone footsteps, the brute's footfalls,
+  blade draws, armour movement and the execution

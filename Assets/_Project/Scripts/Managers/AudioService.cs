@@ -248,7 +248,25 @@ namespace AdaptiveBossArena.Game
 
             [Tooltip("Clip to play instead of the synthesised one.")]
             public AudioClip Clip;
+
+            [Tooltip("Several takes of the same sound, played in turn so no hit sounds identical to the last.")]
+            public AudioClip[] Clips;
+
+            [Tooltip("Base pitch for this cue, one for as recorded. A heavier body can reuse a lighter sound lower.")]
+            public float Pitch;
         }
+
+        /// <summary>Every recorded take per cue, when a cue has more than one.</summary>
+        private readonly Dictionary<string, AudioClip[]> _takes = new Dictionary<string, AudioClip[]>();
+
+        /// <summary>The take each cue played last, so the next is never the same one.</summary>
+        private readonly Dictionary<string, int> _lastTake = new Dictionary<string, int>();
+
+        /// <summary>A cue's base pitch, for recorded takes reused lower or higher than recorded.</summary>
+        private readonly Dictionary<string, float> _basePitch = new Dictionary<string, float>();
+
+        /// <summary>The injected random stream for take choice and pitch variation. Null plays takes in turn, unvaried.</summary>
+        private IRandomProvider _random;
 
         [SerializeField]
         [Tooltip("Recorded clips that replace individual synthesised cues. Leave empty to use the " +
@@ -387,6 +405,8 @@ namespace AdaptiveBossArena.Game
                 return;
             }
 
+            clip = TakeFor(cueId, clip);
+
             float now = Time.unscaledTime;
 
             if (_lastPlayedAt.TryGetValue(cueId, out float lastPlayed) &&
@@ -406,7 +426,9 @@ namespace AdaptiveBossArena.Game
             voice.spatialBlend = spatial ? 1f : 0f;
             voice.clip = clip;
             voice.volume = EffectiveVolume(AudioBus.Effects) * GainFor(cueId);
-            voice.pitch = 1f + Random.Range(-PitchJitter, PitchJitter);
+            float basePitch = _basePitch.TryGetValue(cueId, out float pitch) ? pitch : 1f;
+            float jitter = _random != null ? _random.NextFloat(-PitchJitter, PitchJitter) : 0f;
+            voice.pitch = basePitch * (1f + jitter);
 
             voice.Play();
 
@@ -475,7 +497,14 @@ namespace AdaptiveBossArena.Game
 
             foreach (CueOverride replacement in _cueOverrides)
             {
-                if (replacement.Clip == null || string.IsNullOrWhiteSpace(replacement.CueId))
+                AudioClip first = replacement.Clip;
+
+                if (first == null && replacement.Clips != null)
+                {
+                    first = System.Array.Find(replacement.Clips, clip => clip != null);
+                }
+
+                if (first == null || string.IsNullOrWhiteSpace(replacement.CueId))
                 {
                     continue;
                 }
@@ -490,8 +519,43 @@ namespace AdaptiveBossArena.Game
                     continue;
                 }
 
-                _clips[replacement.CueId] = replacement.Clip;
+                _clips[replacement.CueId] = first;
+
+                if (replacement.Clips != null && replacement.Clips.Length > 1)
+                {
+                    _takes[replacement.CueId] = System.Array.FindAll(replacement.Clips, clip => clip != null);
+                }
+
+                if (replacement.Pitch > 0f)
+                {
+                    _basePitch[replacement.CueId] = replacement.Pitch;
+                }
             }
+        }
+
+        /// <summary>
+        /// The take to play for a cue: a different one from last time when there are several.
+        /// </summary>
+        /// <remarks>
+        /// The same recorded hit twice in a row is what makes a recording sound like a sample rather than a blow.
+        /// Picked from the injected random stream, like everything else probabilistic here, and never repeating.
+        /// </remarks>
+        private AudioClip TakeFor(string cueId, AudioClip fallback)
+        {
+            if (!_takes.TryGetValue(cueId, out AudioClip[] takes) || takes.Length < 2)
+            {
+                return fallback;
+            }
+
+            _lastTake.TryGetValue(cueId, out int last);
+            _random ??= ServiceRegistry.Current != null && ServiceRegistry.Current.TryGet(out IRandomProvider random) ? random : null;
+
+            int next = _random != null
+                ? (last + 1 + Mathf.Min(takes.Length - 2, (int)(_random.NextFloat01() * (takes.Length - 1)))) % takes.Length
+                : (last + 1) % takes.Length;
+
+            _lastTake[cueId] = next;
+            return takes[next];
         }
 
         /// <summary>Relative loudness for a cue, defaulting to unity when none is listed.</summary>
