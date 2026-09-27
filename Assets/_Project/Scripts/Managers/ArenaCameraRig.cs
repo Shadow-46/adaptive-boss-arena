@@ -153,6 +153,23 @@ namespace AdaptiveBossArena.Game
         /// <summary>Whether moving the mouse up looks down.</summary>
         private bool _invertLook;
 
+        /// <summary>The knight, read for whether it is on the floor. Resolved from the primary target.</summary>
+        private Player.PlayerController _player;
+
+        /// <summary>From zero standing to one on the floor, eased so the framing never jumps.</summary>
+        private float _downBlend;
+
+        /// <summary>Pivot height while the knight is on the floor: the body, not where the shoulders were.</summary>
+        private const float DownPivotHeight = 0.7f;
+
+        /// <summary>Boom length while the knight is on the floor, pulled back so the whole body is seen.</summary>
+        private const float DownDistance = 3.8f;
+
+        private const float DownBlendHalfLife = 0.2f;
+
+        /// <summary>The boom length the framing wants, before any column or wall shortens it.</summary>
+        private float CurrentDistance => Mathf.Lerp(_distance, DownDistance, _downBlend);
+
         /// <summary>How much of the boom the arena wall took away this frame, in metres.</summary>
         private float _boomLoss;
 
@@ -504,6 +521,34 @@ namespace AdaptiveBossArena.Game
         private void UpdateAnchor(float deltaTime)
         {
             _anchor = MathUtil.Damp(_anchor, _primaryTarget.position, _positionHalfLife, deltaTime);
+            _downBlend = MathUtil.Damp(_downBlend, IsPlayerDown() ? 1f : 0f, DownBlendHalfLife, deltaTime);
+        }
+
+        /// <summary>
+        /// Whether the knight is on the floor or in the air: knocked down, thrown, or dead.
+        /// </summary>
+        /// <remarks>
+        /// The pivot sits at standing shoulder height, and a body lying on the floor - often thrown back toward
+        /// the camera - put the lens inside the knight's helmet. While down, the pivot drops to the body and the
+        /// boom pulls back. Read from what an onlooker would see, the same snapshot the brute perceives.
+        /// </remarks>
+        private bool IsPlayerDown()
+        {
+            if (_player == null && _primaryTarget != null)
+            {
+                _player = _primaryTarget.GetComponent<Player.PlayerController>();
+            }
+
+            if (_player == null)
+            {
+                return false;
+            }
+
+            Core.Perception.ObservableActionState state = _player.CaptureObservation(Time.time).ActionState;
+
+            return state == Core.Perception.ObservableActionState.KnockedDown ||
+                   state == Core.Perception.ObservableActionState.Airborne ||
+                   state == Core.Perception.ObservableActionState.Dead;
         }
 
         /// <summary>Where the camera wants to be for the current vantage point.</summary>
@@ -519,7 +564,7 @@ namespace AdaptiveBossArena.Game
                            + new Vector3(0f, _config.CameraHeight, -_config.CameraDistance);
 
                 default:
-                    Vector3 pivot = _anchor + Vector3.up * _pivotHeight;
+                    Vector3 pivot = _anchor + Vector3.up * Mathf.Lerp(_pivotHeight, DownPivotHeight, _downBlend);
                     Quaternion view = OrbitRotation(OrbitForward(), _orbitPitchDegrees);
                     Vector3 desired = ShoulderPosition(pivot, view, BoomLength(pivot, view), _shoulderOffset);
 
@@ -575,16 +620,17 @@ namespace AdaptiveBossArena.Game
         /// </remarks>
         private float BoomLength(Vector3 pivot, Quaternion view)
         {
-            Vector3 full = ShoulderPosition(pivot, view, _distance, _shoulderOffset);
+            float distance = CurrentDistance;
+            Vector3 full = ShoulderPosition(pivot, view, distance, _shoulderOffset);
             Vector3 along = full - pivot;
             float reach = along.magnitude;
-            float allowed = _distance;
+            float allowed = distance;
 
             if (reach > Mathf.Epsilon &&
                 Physics.SphereCast(pivot, BoomProbeRadius, along / reach, out RaycastHit hit, reach,
                     1 << Core.Constants.Layers.Arena, QueryTriggerInteraction.Ignore))
             {
-                allowed = Mathf.Max(0.4f, _distance * (hit.distance / reach));
+                allowed = Mathf.Max(0.4f, distance * (hit.distance / reach));
             }
 
             _boom = allowed < _boom || _boom <= 0f
