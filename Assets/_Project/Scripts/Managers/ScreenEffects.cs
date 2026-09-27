@@ -117,6 +117,24 @@ namespace AdaptiveBossArena.Game
                 return;
             }
 
+            RebindProfile();
+            ServiceRegistry.Current.TryGet(out _audio);
+        }
+
+        /// <summary>
+        /// Reads the effects out of the volume's profile again, after a quality change swapped it.
+        /// </summary>
+        /// <remarks>
+        /// The pulses and vignettes are written into the volume's own copy of the profile. A swap replaces that
+        /// copy, and without re-reading it every hit would go on writing into one that is no longer drawn.
+        /// </remarks>
+        public void RebindProfile()
+        {
+            if (_volume == null)
+            {
+                return;
+            }
+
             // The per-instance profile, cloned on first access, so runtime edits never touch the asset.
             VolumeProfile profile = _volume.profile;
 
@@ -130,8 +148,6 @@ namespace AdaptiveBossArena.Game
             _baseSaturation = _color != null ? _color.saturation.value : 0f;
             _baseAberration = _aberration != null ? _aberration.intensity.value : 0f;
             _baseBloom = _bloom != null ? _bloom.intensity.value : 0f;
-
-            ServiceRegistry.Current.TryGet(out _audio);
         }
 
         private void Update()

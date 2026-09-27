@@ -414,6 +414,9 @@ namespace AdaptiveBossArena.Editor
             // F3 panel, and the unattended capture every stage of the overhaul is measured with.
             managersRoot.AddComponent<PerfProbe>();
 
+            // Steps the browser's graphics quality up or down once it has measured the fight, unless the player chose.
+            managersRoot.AddComponent<QualityDirector>();
+
             // Draws the striking parts and hurtboxes when asked for with -debugHits or ?debughits; otherwise off.
             managersRoot.AddComponent<HitboxDebugView>().SetMaterial(MaterialLibrary.GetOrCreateAttackOverlay());
             managersRoot.AddComponent<EncounterDirector>();

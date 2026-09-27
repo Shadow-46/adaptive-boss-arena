@@ -67,6 +67,8 @@ namespace AdaptiveBossArena.UI
 
         private Slider _sensitivitySlider;
         private Toggle _invertLookToggle;
+        private Slider _qualitySlider;
+        private Text _qualityLabel;
 
         private InputActionMap _gameplayMap;
         private RebindButton[] _rebindRows;
@@ -196,6 +198,16 @@ namespace AdaptiveBossArena.UI
             if (_isSyncing) return;
             _settings.MouseSensitivity = value;
             ApplyLook();
+            Save();
+        }
+
+        /// <summary>Sets the graphics quality from its slider: zero Low, one Medium, two High.</summary>
+        /// <param name="value">The slider's value.</param>
+        public void SetGraphicsQuality(float value)
+        {
+            if (_isSyncing) return;
+            _settings.GraphicsQuality = Mathf.Clamp(Mathf.RoundToInt(value), 0, 2);
+            ApplyGraphics();
             Save();
         }
 
@@ -360,10 +372,14 @@ namespace AdaptiveBossArena.UI
             Toggle extendedTell,
             InputActionAsset actions,
             Slider sensitivity = null,
-            Toggle invertLook = null)
+            Toggle invertLook = null,
+            Slider quality = null,
+            Text qualityLabel = null)
         {
             _sensitivitySlider = sensitivity;
             _invertLookToggle = invertLook;
+            _qualitySlider = quality;
+            _qualityLabel = qualityLabel;
             _panel = panel;
             _masterSlider = master;
             _musicSlider = music;
@@ -389,6 +405,23 @@ namespace AdaptiveBossArena.UI
             ApplyFlashing();
             ApplyTell();
             ApplyLook();
+            ApplyGraphics();
+        }
+
+        /// <summary>
+        /// Applies a graphics quality the player chose; with none chosen, leaves the game's own choice in place.
+        /// </summary>
+        private void ApplyGraphics()
+        {
+            if (_settings.GraphicsQuality >= 0)
+            {
+                GraphicsTier.SetChosen((GraphicsQuality)Mathf.Clamp(_settings.GraphicsQuality, 0, 2));
+            }
+
+            if (_qualityLabel != null)
+            {
+                _qualityLabel.text = GraphicsTier.Current + (GraphicsTier.IsAutomatic ? " (auto)" : string.Empty);
+            }
         }
 
         private void ApplyLook()
@@ -445,6 +478,7 @@ namespace AdaptiveBossArena.UI
             if (_extendedTellToggle != null) _extendedTellToggle.isOn = _settings.ExtendedTellDuration;
             if (_sensitivitySlider != null) _sensitivitySlider.value = LookSettings.Sensitivity;
             if (_invertLookToggle != null) _invertLookToggle.isOn = _settings.InvertLook;
+            if (_qualitySlider != null) _qualitySlider.value = (int)GraphicsTier.Current;
 
             _isSyncing = false;
         }

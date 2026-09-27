@@ -77,6 +77,25 @@ namespace AdaptiveBossArena.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator SteppingQualityBackUpRestoresTheFullScene()
+        {
+            // Quality can change mid-fight now, in both directions. Low used to be a one-way cut at load.
+            _lighting.Apply(Core.Services.GraphicsQuality.Low);
+            yield return null;
+            _lighting.Apply(Core.Services.GraphicsQuality.High);
+            yield return null;
+
+            Assert.IsFalse(_lighting.RendersWebProfile, "Stepping back up left the browser's cheaper profile in place.");
+
+            Transform shafts = GameObject.Find("LightShafts").transform;
+            Assert.IsTrue(shafts.GetComponentsInChildren<Renderer>().All(r => r.enabled), "A sun shaft stayed off.");
+
+            Assert.IsTrue(Object.FindObjectsByType<Light>(FindObjectsSortMode.None)
+                    .Where(l => l.name.StartsWith("CandleLight")).All(l => l.enabled),
+                "A candle stayed dark.");
+        }
+
+        [UnityTest]
         public IEnumerator TheWebRendersACheaperFrame()
         {
             _lighting.Apply(web: true);

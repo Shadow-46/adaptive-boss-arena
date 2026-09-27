@@ -65,7 +65,7 @@ namespace AdaptiveBossArena.Combat.Feel
                 material = CreateParticleMaterial();
             }
 
-            int capacity = EffectBudget.IsWebPlayer ? Mathf.Min(_capacity, EffectBudget.WebImpactBursts) : _capacity;
+            int capacity = EffectBudget.IsReduced ? Mathf.Min(_capacity, EffectBudget.WebImpactBursts) : _capacity;
             _bursts = new ImpactBurst[capacity];
 
             // Its own seeded generator: scatter is cosmetic, so it must not draw from the one the boss's

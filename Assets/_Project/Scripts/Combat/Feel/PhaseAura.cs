@@ -161,7 +161,7 @@ namespace AdaptiveBossArena.Combat.Feel
             {
                 float rate = EmbersPerSecondByPhase[Mathf.Clamp(phaseIndex, 0, EmbersPerSecondByPhase.Length - 1)];
                 ParticleSystem.EmissionModule emission = _embers.emission;
-                emission.rateOverTime = EffectBudget.IsWebPlayer ? rate * 0.5f : rate;
+                emission.rateOverTime = EffectBudget.IsReduced ? rate * 0.5f : rate;
             }
 
             switch (phaseIndex)

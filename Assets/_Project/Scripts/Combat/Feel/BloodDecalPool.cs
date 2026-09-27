@@ -81,7 +81,7 @@ namespace AdaptiveBossArena.Combat.Feel
         {
             _random = random;
             _block = new MaterialPropertyBlock();
-            int capacity = EffectBudget.IsWebPlayer ? WebCapacity : Capacity;
+            int capacity = EffectBudget.IsReduced ? WebCapacity : Capacity;
             _renderers = new MeshRenderer[capacity];
             _placedAt = new float[capacity];
 

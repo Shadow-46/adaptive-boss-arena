@@ -15,6 +15,15 @@ namespace AdaptiveBossArena.Combat.Feel
         /// <summary>Whether the game is running as the WebGL player.</summary>
         public static bool IsWebPlayer => Application.platform == RuntimePlatform.WebGLPlayer;
 
+        /// <summary>
+        /// Whether effects are cut to the Low budget.
+        /// </summary>
+        /// <remarks>
+        /// Follows the player's graphics quality rather than the platform: the browser on a dedicated graphics card
+        /// can hold every effect, and was cut back only because the first machine it was tuned for could not.
+        /// </remarks>
+        public static bool IsReduced => Core.Services.GraphicsTier.Current == Core.Services.GraphicsQuality.Low;
+
         /// <summary>Impact bursts alive at once in a browser: enough for a combo and a clash, not a firework.</summary>
         public const int WebImpactBursts = 6;
     }

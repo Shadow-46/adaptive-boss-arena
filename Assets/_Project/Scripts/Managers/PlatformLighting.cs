@@ -1,3 +1,4 @@
+using AdaptiveBossArena.Core.Services;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
@@ -116,13 +117,70 @@ namespace AdaptiveBossArena.Game
         /// <summary>Whether the volume renders with the browser's cheaper profile. Exposed for tests.</summary>
         public bool RendersWebProfile => _volume != null && _webProfile != null && _volume.sharedProfile == _webProfile;
 
-        // Before any Start, so ScreenEffects clones the profile the platform actually renders with.
-        private void Awake() => Apply(UsesWebLighting(Application.platform));
-
-        /// <summary>Applies one platform's lighting. Public so both variants can be tested in one editor.</summary>
-        /// <param name="web">True for the web build's lighting.</param>
-        public void Apply(bool web)
+        // Before any Start, so ScreenEffects clones the profile the quality actually renders with.
+        private void Awake()
         {
+            RememberFullScene();
+            Apply(GraphicsTier.Current);
+            GraphicsTier.Changed += OnQualityChanged;
+        }
+
+        private void OnDestroy() => GraphicsTier.Changed -= OnQualityChanged;
+
+        private void OnQualityChanged(GraphicsQuality quality)
+        {
+            Apply(quality);
+
+            // The screen effects write into the volume's own copy of the profile; the swap just replaced it.
+            FindAnyObjectByType<ScreenEffects>()?.RebindProfile();
+        }
+
+        /// <summary>The scene as built, so a step down in quality can be stepped back up.</summary>
+        private Material[] _fullShaftMaterials;
+        private UnityEngine.Rendering.VolumeProfile _fullProfile;
+        private AntialiasingMode _fullAntialiasing;
+        private int _fullDustParticles;
+        private ParticleSystem.MinMaxCurve _fullDustRate;
+        private bool _remembered;
+
+        private void RememberFullScene()
+        {
+            if (_remembered)
+            {
+                return;
+            }
+
+            _remembered = true;
+            _fullShaftMaterials = new Material[_shafts.Length];
+
+            for (int i = 0; i < _shafts.Length; i++)
+            {
+                _fullShaftMaterials[i] = _shafts[i] != null ? _shafts[i].sharedMaterial : null;
+            }
+
+            _fullProfile = _volume != null ? _volume.sharedProfile : null;
+            _fullAntialiasing = _camera != null ? _camera.antialiasing : AntialiasingMode.None;
+
+            if (_dust != null)
+            {
+                _fullDustParticles = _dust.main.maxParticles;
+                _fullDustRate = _dust.emission.rateOverTime;
+            }
+        }
+
+        /// <summary>Applies one platform's lighting. Kept for the tests that compare the two.</summary>
+        /// <param name="web">True for the browser's cheapest lighting, false for the full scene.</param>
+        public void Apply(bool web) => Apply(web ? GraphicsQuality.Low : GraphicsQuality.High);
+
+        /// <summary>
+        /// Applies a graphics quality's lighting: the Low budget, or the full scene restored.
+        /// </summary>
+        /// <param name="quality">The quality to light the arena for.</param>
+        public void Apply(GraphicsQuality quality)
+        {
+            RememberFullScene();
+            bool web = quality == GraphicsQuality.Low;
+
             if (_sun != null)
             {
                 _sun.cookie = web ? null : _sunCookie;
@@ -136,6 +194,7 @@ namespace AdaptiveBossArena.Game
 
             if (!web)
             {
+                RestoreFullScene();
                 return;
             }
 
@@ -168,10 +227,7 @@ namespace AdaptiveBossArena.Game
         /// </remarks>
         private void ApplyWebBudget()
         {
-            if (_volume != null && _webProfile != null)
-            {
-                _volume.sharedProfile = _webProfile;
-            }
+            SwapProfile(_webProfile);
 
             if (_camera != null)
             {
@@ -194,6 +250,68 @@ namespace AdaptiveBossArena.Game
                     candle.enabled = false;
                 }
             }
+        }
+
+        /// <summary>Puts back everything the Low budget took away.</summary>
+        private void RestoreFullScene()
+        {
+            for (int i = 0; i < _shafts.Length; i++)
+            {
+                if (_shafts[i] == null)
+                {
+                    continue;
+                }
+
+                if (_fullShaftMaterials != null && i < _fullShaftMaterials.Length && _fullShaftMaterials[i] != null)
+                {
+                    _shafts[i].sharedMaterial = _fullShaftMaterials[i];
+                }
+
+                _shafts[i].enabled = true;
+            }
+
+            SwapProfile(_fullProfile);
+
+            if (_camera != null)
+            {
+                _camera.antialiasing = _fullAntialiasing;
+            }
+
+            if (_dust != null && _fullDustParticles > 0)
+            {
+                ParticleSystem.MainModule main = _dust.main;
+                main.maxParticles = _fullDustParticles;
+
+                ParticleSystem.EmissionModule emission = _dust.emission;
+                emission.rateOverTime = _fullDustRate;
+            }
+
+            foreach (Light candle in _candles)
+            {
+                if (candle != null)
+                {
+                    candle.enabled = true;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Renders the volume with another profile.
+        /// </summary>
+        /// <remarks>
+        /// Once anything has read the volume's profile, the volume renders from its own private copy and the shared
+        /// profile is ignored - so a swap made after the fight began used to change nothing on screen. Clearing the
+        /// copy makes the next read clone the new profile.
+        /// </remarks>
+        private void SwapProfile(UnityEngine.Rendering.VolumeProfile profile)
+        {
+            if (_volume == null || profile == null || _volume.sharedProfile == profile)
+            {
+                return;
+            }
+
+            _volume.sharedProfile = profile;
+            _volume.profile = null;
         }
     }
 }

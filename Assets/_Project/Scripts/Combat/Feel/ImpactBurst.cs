@@ -126,7 +126,7 @@ namespace AdaptiveBossArena.Combat.Feel
 
             // No flash light in a browser: a per-pixel light on every hit is exactly the cost integrated graphics
             // cannot carry, and the bloom on the sparks still reads as a flash.
-            if (!EffectBudget.IsWebPlayer)
+            if (!EffectBudget.IsReduced)
             {
                 _flash = gameObject.AddComponent<Light>();
                 _flash.type = LightType.Point;

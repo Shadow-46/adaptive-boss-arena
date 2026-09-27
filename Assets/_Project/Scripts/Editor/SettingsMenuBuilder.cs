@@ -27,7 +27,7 @@ namespace AdaptiveBossArena.Editor
         private const float LabelX = -150f;
         private const float ControlX = 150f;
         /// <summary>Was 58; tightened when the camera rows arrived, so the panel still ends above the screen's edge.</summary>
-        private const float RowSpacing = 50f;
+        private const float RowSpacing = 46f;
 
         /// <summary>Builds the panel under a canvas and returns the wired menu.</summary>
         /// <param name="root">Canvas transform to build under.</param>
@@ -57,10 +57,23 @@ namespace AdaptiveBossArena.Editor
             sensitivity.value = Core.Services.LookSettings.DefaultSensitivity;
             Toggle invertLook = LabelledToggle(panel.transform, "Invert Look", ref y);
 
+            // Low, Medium and High, in whole steps, with the one in effect named beside it.
+            float qualityRow = y;
+            Slider quality = LabelledSlider(panel.transform, "Graphics Quality", ref y);
+            quality.minValue = 0f;
+            quality.maxValue = 2f;
+            quality.wholeNumbers = true;
+            Text qualityLabel = UiBuilder.CreateText(panel.transform, "GraphicsQualityValue", "Medium", 20, TextAnchor.MiddleLeft);
+            qualityLabel.rectTransform.anchoredPosition = new Vector2(ControlX + 250f, qualityRow);
+            qualityLabel.rectTransform.sizeDelta = new Vector2(180f, 30f);
+            qualityLabel.color = MutedText;
+
             // The menu must exist before the rebind rows, because each row holds a reference to it and
             // the sliders' change callbacks are wired to it here.
             var menu = root.gameObject.AddComponent<SettingsMenu>();
-            menu.Bind(panel, master, music, effects, shake, reducedFlashing, extendedTell, actions, sensitivity, invertLook);
+            menu.Bind(
+                panel, master, music, effects, shake, reducedFlashing, extendedTell, actions,
+                sensitivity, invertLook, quality, qualityLabel);
 
             WireSlider(master, menu.SetMasterVolume);
             WireSlider(music, menu.SetMusicVolume);
@@ -70,6 +83,7 @@ namespace AdaptiveBossArena.Editor
             WireToggle(extendedTell, menu.SetExtendedTell);
             WireSlider(sensitivity, menu.SetLookSensitivity);
             WireToggle(invertLook, menu.SetInvertLook);
+            WireSlider(quality, menu.SetGraphicsQuality);
 
             BuildRebindSection(panel.transform, menu, ref y);
 

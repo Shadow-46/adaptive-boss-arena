@@ -75,6 +75,9 @@ namespace AdaptiveBossArena.Core.Services
         /// <summary>When true, moving the mouse up looks down.</summary>
         public bool InvertLook;
 
+        /// <summary>The graphics quality the player chose, zero to two, or minus one to let the game choose.</summary>
+        public int GraphicsQuality = -1;
+
         /// <summary>Serialised input rebindings, in the Input System's own JSON format.</summary>
         public string InputRebinds = string.Empty;
     }
