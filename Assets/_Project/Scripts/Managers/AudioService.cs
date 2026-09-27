@@ -466,8 +466,13 @@ namespace AdaptiveBossArena.Game
             for (int i = 0; i < _voices.Length; i++)
             {
                 AudioSource candidate = _voices[i];
-                float length = candidate.clip != null ? candidate.clip.length : 0f;
-                float remaining = length - candidate.time;
+
+                // In the browser a recorded clip decodes after it is handed over, and reading its length before
+                // then only logs a warning and returns nothing useful. A voice still decoding has barely started,
+                // so it is the last one worth cutting off.
+                float remaining = candidate.clip != null && candidate.clip.loadState == AudioDataLoadState.Loaded
+                    ? candidate.clip.length - candidate.time
+                    : float.MaxValue;
 
                 if (remaining < leastRemaining)
                 {
