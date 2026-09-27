@@ -265,6 +265,12 @@ namespace AdaptiveBossArena.Game
         /// <summary>Every recorded take per cue, when a cue has more than one.</summary>
         private readonly Dictionary<string, AudioClip[]> _takes = new Dictionary<string, AudioClip[]>();
 
+        /// <summary>
+        /// The synthesised sound each recorded cue replaced, played in its place while the recording is still
+        /// decoding - so a blow is never silent.
+        /// </summary>
+        private readonly Dictionary<string, AudioClip> _synthesised = new Dictionary<string, AudioClip>();
+
         /// <summary>The take each cue played last, so the next is never the same one.</summary>
         private readonly Dictionary<string, int> _lastTake = new Dictionary<string, int>();
 
@@ -407,6 +413,13 @@ namespace AdaptiveBossArena.Game
             if (_ambience != null)
             {
                 _ambience.volume = EffectiveVolume(AudioBus.Music) * AmbienceGain;
+
+                // Started before its recording had decoded, it would stay silent; start it once it is ready.
+                if (!_ambience.isPlaying && _ambience.clip != null &&
+                    _ambience.clip.loadState == AudioDataLoadState.Loaded)
+                {
+                    _ambience.Play();
+                }
             }
 
             if (_musicLayers == null)
@@ -452,6 +465,20 @@ namespace AdaptiveBossArena.Game
             }
 
             clip = TakeFor(cueId, clip);
+
+            // Still decoding: play the synthesised sound this once rather than nothing, and let it finish.
+            if (clip.loadState != AudioDataLoadState.Loaded)
+            {
+                if (clip.loadState == AudioDataLoadState.Unloaded)
+                {
+                    clip.LoadAudioData();
+                }
+
+                if (!_synthesised.TryGetValue(cueId, out clip) || clip == null)
+                {
+                    return;
+                }
+            }
 
             float now = Time.unscaledTime;
 
@@ -570,7 +597,28 @@ namespace AdaptiveBossArena.Game
                     continue;
                 }
 
+                if (_clips.TryGetValue(replacement.CueId, out AudioClip generated) && generated != null)
+                {
+                    _synthesised[replacement.CueId] = generated;
+                }
+
                 _clips[replacement.CueId] = first;
+
+                // The browser decodes a recording only after it is asked for, and a clip played before it has
+                // decoded is silent. Asking for every take now, as the arena loads, gives them the entrance to
+                // decode in rather than the first blow.
+                first.LoadAudioData();
+
+                if (replacement.Clips != null)
+                {
+                    foreach (AudioClip take in replacement.Clips)
+                    {
+                        if (take != null)
+                        {
+                            take.LoadAudioData();
+                        }
+                    }
+                }
 
                 if (replacement.Clips != null && replacement.Clips.Length > 1)
                 {
