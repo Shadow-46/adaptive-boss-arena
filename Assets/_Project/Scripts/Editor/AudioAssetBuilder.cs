@@ -54,12 +54,16 @@ namespace AdaptiveBossArena.Editor
             (AudioService.Cues.GuardRaise, @"^cloth\d+$", 1f),
             (AudioService.Cues.PlayerDeath, @"^impactSoft_heavy_\d+$", 0.85f),
 
-            // Freesound, matched by id: picked up as soon as they are downloaded.
+            // Freesound, matched by id. The roars are single sounds and play whole. The swings and grunts came as
+            // compilations - fifty swipes in one file, a long run of groans - and play from the takes cut out of
+            // them at their quiet gaps, one sound each; played whole, one swing fired a burst of whooshes.
             (AudioService.Cues.BossRoar, @"^(489901|132874)__", 1f),
             (AudioService.Cues.BossDeath, @"^497056__", 0.9f),
-            (AudioService.Cues.SwingGreatsword, @"^507470__", 1f),
-            (AudioService.Cues.SwingBlade, @"^(317849|471097)__", 1f),
-            (AudioService.Cues.Whoosh, @"^(317849|471097)__", 1.1f)
+            (AudioService.Cues.SwingGreatsword, @"^507470_take\d+$", 1f),
+            (AudioService.Cues.SwingBlade, @"^(317849|471097)_take\d+$", 1f),
+            (AudioService.Cues.Whoosh, @"^(317849|471097)_take\d+$", 1.1f),
+            (AudioService.Cues.BossGrunt, @"^(125405|869056)_take\d+$", 0.9f),
+            (AudioService.Cues.Ambience, @"^174279_loop$", 1f)
         };
 
         /// <summary>Every sound file in the downloads folder, by file name without extension.</summary>

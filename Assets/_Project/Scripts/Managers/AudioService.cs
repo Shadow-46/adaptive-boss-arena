@@ -191,6 +191,12 @@ namespace AdaptiveBossArena.Game
             /// <summary>A hiss where scorched ground burns the knight, on every tick.</summary>
             public const string HazardBurn = "hazard.burn";
 
+            /// <summary>The brute's grunt as it heaves into a swing: the audible half of its wind-up.</summary>
+            public const string BossGrunt = "boss.grunt";
+
+            /// <summary>The cathedral's own sound: a slow, stony air under the fight.</summary>
+            public const string Ambience = "ambience.nave";
+
             /// <summary>A guard being raised.</summary>
             public const string GuardRaise = "guard.raise";
 
@@ -360,9 +366,49 @@ namespace AdaptiveBossArena.Game
         public void SetBusVolume(AudioBus bus, float linearVolume) =>
             _busVolumes[bus] = Mathf.Clamp01(linearVolume);
 
+        /// <summary>The looping room sound, when one is playing.</summary>
+        private AudioSource _ambience;
+
+        /// <summary>How loud the room sits against the music bus: present, never over the fight.</summary>
+        private const float AmbienceGain = 0.55f;
+
+        /// <inheritdoc />
+        public void PlayAmbience(string cueId)
+        {
+            if (!_clips.TryGetValue(cueId, out AudioClip clip) || clip == null)
+            {
+                return;
+            }
+
+            if (_ambience == null)
+            {
+                var ambienceObject = new GameObject("Ambience");
+                ambienceObject.transform.SetParent(transform, false);
+                _ambience = ambienceObject.AddComponent<AudioSource>();
+                _ambience.loop = true;
+                _ambience.spatialBlend = 0f;
+                _ambience.playOnAwake = false;
+            }
+
+            if (_ambience.clip == clip && _ambience.isPlaying)
+            {
+                return;
+            }
+
+            _ambience.clip = clip;
+            _ambience.volume = EffectiveVolume(AudioBus.Music) * AmbienceGain;
+            _ambience.Play();
+        }
+
         /// <summary>Eases each music layer toward its target, so intensity and volume changes glide.</summary>
         private void Update()
         {
+            // The room follows the music volume setting, and the master, like the score does.
+            if (_ambience != null)
+            {
+                _ambience.volume = EffectiveVolume(AudioBus.Music) * AmbienceGain;
+            }
+
             if (_musicLayers == null)
             {
                 return;
@@ -514,7 +560,7 @@ namespace AdaptiveBossArena.Game
                     continue;
                 }
 
-                if (!_clips.ContainsKey(replacement.CueId))
+                if (!_clips.ContainsKey(replacement.CueId) && replacement.CueId != Cues.Ambience)
                 {
                     Debug.LogWarning(
                         $"[Adaptive Boss Arena] Audio override names '{replacement.CueId}', which is " +
@@ -705,6 +751,10 @@ namespace AdaptiveBossArena.Game
             // for a blow, and short, because it repeats every tick the knight stays in the fire.
             _clips[Cues.HazardBurn] =
                 ToneGenerator.CreateImpact("hazard.burn", 0.2f, 3200f, seed: 53, peak: 0.3f);
+
+            // A low, short heave for the brute's wind-up, until a recording replaces it.
+            _clips[Cues.BossGrunt] =
+                ToneGenerator.CreateWeightedImpact("boss.grunt", 70f, 260f, 0.28f, 0.5f, 0.35f, seed: 59);
 
             // A short, soft shift for raising a guard.
             _clips[Cues.GuardRaise] =

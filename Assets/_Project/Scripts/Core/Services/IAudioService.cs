@@ -45,6 +45,16 @@ namespace AdaptiveBossArena.Core.Services
         /// <param name="cueId">Identifier of the cue to play.</param>
         void PlayCue2D(string cueId);
 
+        /// <summary>
+        /// Starts a looping bed of room sound under everything else: the space the fight is in.
+        /// </summary>
+        /// <remarks>
+        /// Separate from the music, which thickens and thins with the fight; the room does neither. A cue with no
+        /// recording leaves the room silent, as it was.
+        /// </remarks>
+        /// <param name="cueId">Identifier of the looping cue.</param>
+        void PlayAmbience(string cueId);
+
         /// <summary>Crossfades to a music track.</summary>
         /// <param name="trackId">Identifier of the track, or null to fade to silence.</param>
         /// <param name="fadeSeconds">Crossfade duration.</param>

@@ -43,3 +43,20 @@ nothing.
 - Licence: CC0 1.0 Universal (public domain dedication) - see `License.txt` beside the files
 - Used for: shield blocks, blade deflects and parries, body hits, stone footsteps, the brute's footfalls,
   blade draws, armour movement and the execution
+
+## Freesound - individual sounds
+
+- Files: `Assets/_Project/Audio/ThirdParty/Freesound/` (roars as downloaded; `Takes/` holds single sounds cut from
+  compilations at their quiet gaps, and a 60-second seamless loop of the ambience)
+- Licence: every one CC0 1.0 Universal (public domain dedication), as listed on its Freesound page
+- Sounds (id, title, author):
+  - 489901 Scary Monster Roar #2 - NicknameLarry (the brute's roar)
+  - 132874 Monster Short Roar - ecfike (the brute's roar)
+  - 497056 Low Monster Roar - Robson220pl (the brute's death)
+  - 125405 Monster Groans, Grunts, Slobbers - jasonLON (the brute's wind-up grunts)
+  - 869056 Monster_Growls_Grunts_10 - SignatureSoundsOrg (the brute's wind-up grunts)
+  - 507470 Several low fast swooshes - Danjocross (the great sword's swings)
+  - 317849 Whoosh Swipe Fight Sounds Sword Air - benniknop (the knight's sword swings)
+  - 471097 Knife/sword swing - spycrah (the knight's sword swings)
+  - 174279 Cathedral Ambience 1 (XY Stereo) - Quistard (the arena's room sound)
+- Source: https://freesound.org/people/<author>/sounds/<id>/

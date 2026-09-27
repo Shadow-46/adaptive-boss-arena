@@ -87,3 +87,13 @@ Assets/_Project/Audio/ThirdParty/**/*.zip
 Assets/_Project/Audio/ThirdParty/**/*.zip.meta
 Assets/_Project/Audio/ThirdParty/**/*.url
 Assets/_Project/Audio/ThirdParty/**/*.url.meta
+
+# Freesound compilations are cut into Takes/ and the ambience into a loop; the raw downloads stay local (all CC0,
+# re-downloadable from the ids in THIRD_PARTY_NOTICES.md). The three roars play whole and are kept.
+Assets/_Project/Audio/ThirdParty/Freesound/*.wav
+Assets/_Project/Audio/ThirdParty/Freesound/*.wav.meta
+Assets/_Project/Audio/ThirdParty/Freesound/*.aiff
+Assets/_Project/Audio/ThirdParty/Freesound/*.aiff.meta
+!Assets/_Project/Audio/ThirdParty/Freesound/489901__*
+!Assets/_Project/Audio/ThirdParty/Freesound/132874__*
+!Assets/_Project/Audio/ThirdParty/Freesound/497056__*

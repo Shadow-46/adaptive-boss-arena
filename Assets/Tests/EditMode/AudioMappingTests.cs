@@ -29,6 +29,24 @@ namespace AdaptiveBossArena.Tests.EditMode
             Assert.GreaterOrEqual(clips.Length, 3, pattern + " found too few takes to vary.");
         }
 
+        [TestCase(@"^507470_take\d+$", 5)]
+        [TestCase(@"^(317849|471097)_take\d+$", 10)]
+        [TestCase(@"^(125405|869056)_take\d+$", 10)]
+        public void EachCompilationWasCutIntoSingleSounds(string pattern, int atLeast)
+        {
+            // A compilation played whole fires a burst of swings for one blow. Each take is one sound, and short.
+            Assume.That(Directory.Exists(AudioAssetBuilder.SoundFolder + "/Freesound/Takes"), "The Freesound takes are not here.");
+
+            AudioClip[] takes = AudioAssetBuilder.ClipsMatching(pattern);
+
+            Assert.GreaterOrEqual(takes.Length, atLeast, pattern + " has too few takes.");
+
+            foreach (AudioClip take in takes)
+            {
+                Assert.Less(take.length, 2.5f, take.name + " is long enough to hold more than one sound.");
+            }
+        }
+
         [Test]
         public void TheBlockAndTheParryNeverShareASound()
         {

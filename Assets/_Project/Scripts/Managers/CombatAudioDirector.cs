@@ -101,6 +101,9 @@ namespace AdaptiveBossArena.Game
             }
 
             _audio?.PlayMusic("music.bed");
+
+            // The nave's own air under everything, so silence between blows is a stone hall rather than nothing.
+            _audio?.PlayAmbience(AudioService.Cues.Ambience);
         }
 
         private void OnDestroy()
@@ -168,11 +171,16 @@ namespace AdaptiveBossArena.Game
             switch (combatEvent.Kind)
             {
                 case CombatEventKind.AttackStarted:
-                    // The wind-up itself is silent unless it is perilous: an unblockable attack sounds its
-                    // warning sting the moment it begins, the audible half of "do not block this".
+                    // A perilous, unblockable wind-up sounds its warning sting the moment it begins, the audible
+                    // half of "do not block this". Any other wind-up from the brute is a grunt as it heaves into the
+                    // swing - a tell the ear catches even when the eye is elsewhere. The knight winds up quietly.
                     if (combatEvent.Unblockable)
                     {
                         _audio.PlayCue(AudioService.Cues.Peril, combatEvent.Position);
+                    }
+                    else if (combatEvent.Actor == CombatantTeam.Boss)
+                    {
+                        _audio.PlayCue(AudioService.Cues.BossGrunt, combatEvent.Position);
                     }
 
                     break;
