@@ -1,4 +1,5 @@
 using AdaptiveBossArena.Core.Events;
+using AdaptiveBossArena.Core.Services;
 using UnityEngine;
 
 namespace AdaptiveBossArena.Game
@@ -88,6 +89,15 @@ namespace AdaptiveBossArena.Game
 
         /// <summary>The opening ambient from below.</summary>
         public static readonly Color OpeningGround = new Color(0.035f, 0.035f, 0.05f);
+
+        /// <summary>How much the Low quality lifts the ambient, in every phase.</summary>
+        /// <remarks>
+        /// Low turns the braziers' and candles' lights off to save their cost, and those fires are what the darker
+        /// ambient was lowered against. Without them a fighter standing in the wall's moon shadow rendered as a black
+        /// shape on black. This lift puts the ambient back to about where it stood before the fires were added, so
+        /// Low loses the fires' colour but never the fighters. It costs nothing: the same three colours, brighter.
+        /// </remarks>
+        public const float LowAmbientLift = 1.6f;
 
         // Every later phase holds roughly the opening's brightness, so escalation reads as the light turning, not
         // as the room being switched brighter or darker. The warmer keys run at higher intensities because red
@@ -227,6 +237,12 @@ namespace AdaptiveBossArena.Game
             _grade = profile.Grade;
         }
 
+        /// <summary>How much a quality lifts the ambient: <see cref="LowAmbientLift"/> on Low, none otherwise.</summary>
+        /// <param name="quality">The quality in effect.</param>
+        /// <returns>The factor every ambient colour is multiplied by.</returns>
+        public static float AmbientLift(GraphicsQuality quality) =>
+            quality == GraphicsQuality.Low ? LowAmbientLift : 1f;
+
         private void Apply()
         {
             if (_directionalLight != null)
@@ -235,17 +251,22 @@ namespace AdaptiveBossArena.Game
                 _directionalLight.intensity = _lightIntensity;
             }
 
-            RenderSettings.ambientSkyColor = _sky;
-            RenderSettings.ambientEquatorColor = _equator;
-            RenderSettings.ambientGroundColor = _ground;
-            RenderSettings.fogColor = HazeColor.Derive(_equator, _lightColor, _lightIntensity);
+            // Read every frame rather than on the quality's change event, so a step down mid-fight lifts the room
+            // on the next frame without another subscription to keep in step.
+            float lift = AmbientLift(GraphicsTier.Current);
+            Color equator = _equator * lift;
+
+            RenderSettings.ambientSkyColor = _sky * lift;
+            RenderSettings.ambientEquatorColor = equator;
+            RenderSettings.ambientGroundColor = _ground * lift;
+            RenderSettings.fogColor = HazeColor.Derive(equator, _lightColor, _lightIntensity);
 
             if (_phaseGrade != null)
             {
                 _phaseGrade.weight = _grade;
             }
 
-            TintBakedLight();
+            TintBakedLight(equator);
         }
 
         /// <summary>Carries the current ambience into the probes baked under the opening one.</summary>
@@ -253,14 +274,15 @@ namespace AdaptiveBossArena.Game
         /// Skipped while the gain has not moved, so the probes are only rewritten during a phase transition
         /// rather than every frame of a fight.
         /// </remarks>
-        private void TintBakedLight()
+        /// <param name="equator">The side ambient in effect, lift included, so the fighters' probes follow the room.</param>
+        private void TintBakedLight(Color equator)
         {
             if (_bakedProbes == null || LightmapSettings.lightProbes == null)
             {
                 return;
             }
 
-            Color gain = ProbeTint.Gain(_equator, Profiles[0].Equator);
+            Color gain = ProbeTint.Gain(equator, Profiles[0].Equator);
 
             if (Mathf.Abs(gain.r - _probeGain.r) + Mathf.Abs(gain.g - _probeGain.g) + Mathf.Abs(gain.b - _probeGain.b) < 0.002f)
             {
