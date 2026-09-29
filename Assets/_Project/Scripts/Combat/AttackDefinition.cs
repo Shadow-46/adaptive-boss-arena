@@ -1,4 +1,5 @@
 using AdaptiveBossArena.Core.Combat;
+using AdaptiveBossArena.Core.Constants;
 using AdaptiveBossArena.Core.ScriptableObjects;
 using UnityEngine;
 
@@ -154,6 +155,12 @@ namespace AdaptiveBossArena.Combat
         [Tooltip("How long the hazard stays dangerous, in seconds.")]
         private float _hazardDurationSeconds = 3f;
 
+        [SerializeField]
+        [Min(0f)]
+        [Tooltip("How far ahead of the attacker the hazard is centred: where the blow broke the floor. Keep it " +
+                 "far enough out, and the radius small enough, that the attacker's flanks and back stay clear.")]
+        private float _hazardForwardOffset = 2f;
+
         [Header("Tracking")]
         [SerializeField]
         [Tooltip("Fraction of the wind-up during which the attacker may still turn to follow its target. " +
@@ -222,6 +229,29 @@ namespace AdaptiveBossArena.Combat
 
         /// <summary>How long the hazard stays dangerous, in seconds.</summary>
         public float HazardDurationSeconds => _hazardDurationSeconds;
+
+        /// <summary>How far ahead of the attacker the hazard is centred.</summary>
+        public float HazardForwardOffset => _hazardForwardOffset;
+
+        /// <summary>Where this attack's hazard is centred, at floor height, for an attacker standing and facing as given.</summary>
+        /// <remarks>
+        /// Ahead of the attacker, where the blow met the floor. Scars were centred on the attacker itself, and at
+        /// three to four metres wide they covered every place a knight could strike the brute from: closing in to
+        /// attack after any slam cost health by itself, and a dodge could not help, since a hazard ignores
+        /// invulnerability. A scar ahead burns only the ground the blow already struck, and leaves the flanks -
+        /// the fight's answer to a big swing - open.
+        /// </remarks>
+        /// <param name="position">The attacker's position.</param>
+        /// <param name="forward">The way the attacker faces. Flattened, so a tilted body does not shorten the throw.</param>
+        public Vector3 HazardCentre(Vector3 position, Vector3 forward)
+        {
+            forward.y = 0f;
+            forward = forward.sqrMagnitude > Mathf.Epsilon ? forward.normalized : Vector3.forward;
+
+            Vector3 centre = position + forward * _hazardForwardOffset;
+            centre.y = GameplayConstants.GroundPlaneHeight;
+            return centre;
+        }
 
         /// <summary>Health removed on a clean hit.</summary>
         public float Damage => _damage;

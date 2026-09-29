@@ -34,10 +34,11 @@ MonoBehaviour:
   _lungeSpeed: 0
   _hitStopSeconds: 0.07
   _cameraTrauma: 0.35
-  _leavesHazard: 1
+  _leavesHazard: 0
   _hazardRadius: 3.5
   _hazardDamagePerTick: 3
   _hazardDurationSeconds: 4
+  _hazardForwardOffset: 2
   _trackingWindowFraction: 0.6
   _unblockable: 0
   _unparryable: 0

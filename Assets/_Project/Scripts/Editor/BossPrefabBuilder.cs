@@ -23,7 +23,8 @@ namespace AdaptiveBossArena.Editor
 
         private const float BodyHeight = 2.8f;
         private const float BodyRadius = 0.9f;
-        private const float HurtboxRadius = 0.85f;
+        /// <summary>Radius of the brute's hurtbox: how close a knight can stand, and how far past a blade's tip it can be struck.</summary>
+        public const float HurtboxRadius = 0.85f;
 
         // The weak point sits over the glowing core the brute silhouette already carries, and is
         // deliberately wider than the art it covers: a 0.3 m sphere would be a pixel-hunt at combat

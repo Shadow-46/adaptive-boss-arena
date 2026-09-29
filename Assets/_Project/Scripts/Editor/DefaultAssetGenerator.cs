@@ -522,8 +522,8 @@ namespace AdaptiveBossArena.Editor
                 damage: 18f, startup: 0.62f, active: 0.14f, recovery: 0.70f,
                 range: 3.6f, arc: 360f, poise: 40f, knockback: 8f, hitStop: 0.10f, trauma: 0.45f,
                 shape: AttackShape.Sphere, stagger: StaggerStrength.Interrupt, telegraph: true,
-                leavesHazard: true, hazardRadius: 3f, hazardDamagePerTick: 3f, hazardDuration: 3.5f,
-                reaction: ImpactReaction.Knockdown);
+                leavesHazard: true, hazardRadius: 1.4f, hazardOffset: 2.2f, hazardDamagePerTick: 3f,
+                hazardDuration: 3.5f, reaction: ImpactReaction.Knockdown);
 
             // The gap-closer. Adopted in force against players the boss has learned keep their
             // distance, which is the design's stated answer to a kiting player.
@@ -534,12 +534,12 @@ namespace AdaptiveBossArena.Editor
                 lungeSpeed: 16f, stagger: StaggerStrength.Interrupt, telegraph: false,
                 reaction: ImpactReaction.Knockdown);
 
+            // Like the Cataclysmic Wave, a blast from the body, so it leaves no scar.
             AttackDefinition shockwave = CreateAttack(
                 "BossShockwave", "Shockwave", DamageType.BossProjectile,
                 damage: 14f, startup: 0.70f, active: 0.45f, recovery: 0.60f,
                 range: 7f, arc: 360f, poise: 25f, knockback: 6f, hitStop: 0.07f, trauma: 0.35f,
                 shape: AttackShape.Sphere, telegraph: true,
-                leavesHazard: true, hazardRadius: 3.5f, hazardDamagePerTick: 3f, hazardDuration: 4f,
                 reaction: ImpactReaction.Knockback);
 
             // Fast and cheap, with a short wind-up. On its own it is barely a threat; its purpose is
@@ -562,14 +562,13 @@ namespace AdaptiveBossArena.Editor
                 reaction: ImpactReaction.Knockdown);
 
             // The set-piece: an arena-wide, unblockable shockwave with a long, honest wind-up, thrown
-            // on a phase transition and as the Resolve gambit. It scars the ground it lands on, so the
-            // fight's biggest beats compose the mix-up read and the spatial pressure into one moment.
+            // on a phase transition and as the Resolve gambit. It leaves no scar: a blast thrown out from the body
+            // strikes no floor, and a scar centred on the brute burned every place it could be fought from.
             AttackDefinition phaseShockwave = CreateAttack(
                 "BossPhaseShockwave", "Cataclysmic Wave", DamageType.BossProjectile,
                 damage: 22f, startup: 0.95f, active: 0.40f, recovery: 0.70f,
                 range: 8.5f, arc: 360f, poise: 30f, knockback: 9f, hitStop: 0.12f, trauma: 0.6f,
                 shape: AttackShape.Sphere, telegraph: true, unblockable: true,
-                leavesHazard: true, hazardRadius: 4f, hazardDamagePerTick: 3f, hazardDuration: 4.5f,
                 reaction: ImpactReaction.Launch);
 
             // The answer to dodging on reflex. The wind-up is the perilous overhead's, held nearly half a
@@ -616,8 +615,8 @@ namespace AdaptiveBossArena.Editor
                 damage: 20f, startup: 0.78f, active: 0.16f, recovery: 0.82f,
                 range: 3.2f, arc: 360f, poise: 42f, knockback: 9f, hitStop: 0.12f, trauma: 0.55f,
                 lungeSpeed: 12f, shape: AttackShape.Sphere, stagger: StaggerStrength.Interrupt,
-                telegraph: true, leavesHazard: true, hazardRadius: 3f, hazardDamagePerTick: 3f,
-                hazardDuration: 3.5f, reaction: ImpactReaction.Knockdown);
+                telegraph: true, leavesHazard: true, hazardRadius: 1.4f, hazardOffset: 1.9f,
+                hazardDamagePerTick: 3f, hazardDuration: 3.5f, reaction: ImpactReaction.Knockdown);
 
             return new BossAttacks(
                 sweep, slam, charge, shockwave, jab, perilous, phaseShockwave,
@@ -648,6 +647,7 @@ namespace AdaptiveBossArena.Editor
             bool unparryable = false,
             bool leavesHazard = false,
             float hazardRadius = 2.5f,
+            float hazardOffset = 2f,
             float hazardDamagePerTick = 4f,
             float hazardDuration = 3f,
             Vector3? offset = null,
@@ -687,6 +687,7 @@ namespace AdaptiveBossArena.Editor
                     .Bool("_unparryable", unparryable)
                     .Bool("_leavesHazard", leavesHazard)
                     .Float("_hazardRadius", hazardRadius)
+                    .Float("_hazardForwardOffset", hazardOffset)
                     .Float("_hazardDamagePerTick", hazardDamagePerTick)
                     .Float("_hazardDurationSeconds", hazardDuration);
 

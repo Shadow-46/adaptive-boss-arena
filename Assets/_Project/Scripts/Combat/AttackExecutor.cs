@@ -628,11 +628,11 @@ namespace AdaptiveBossArena.Combat
             PhaseChanged?.Invoke(phase);
         }
 
-        /// <summary>Scars the ground beneath the attacker when a hazard-leaving attack goes live.</summary>
+        /// <summary>Scars the ground where the blow landed when a hazard-leaving attack goes live.</summary>
         /// <remarks>
-        /// Spawned at the attacker's own position, at floor height: the boss's slams and shockwaves
-        /// erupt from under it, so the scar sits where it struck. Null field (the player) or a
-        /// non-hazard attack does nothing.
+        /// Placed by <see cref="AttackDefinition.HazardCentre"/>, ahead of the attacker rather than under it, so the
+        /// ground beside and behind the boss stays fightable. Null field (the player) or a non-hazard attack does
+        /// nothing.
         /// </remarks>
         private void TrySpawnHazard(AttackDefinition attack)
         {
@@ -641,8 +641,7 @@ namespace AdaptiveBossArena.Combat
                 return;
             }
 
-            Vector3 center = _origin.position;
-            center.y = GameplayConstants.GroundPlaneHeight;
+            Vector3 center = attack.HazardCentre(_origin.position, _origin.forward);
 
             _hazardField.Spawn(
                 center, attack.HazardRadius, attack.HazardDamagePerTick, attack.HazardDurationSeconds);
