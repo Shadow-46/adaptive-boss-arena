@@ -45,9 +45,16 @@ namespace AdaptiveBossArena.Editor
         /// <summary>Kept low, so the sky frames the fight rather than competing with it.</summary>
         /// <remarks>
         /// Lower than it was once post-processing actually rendered: the grade's exposure lift turned the sky
-        /// through every window into a pale glare.
+        /// through every window into a pale glare. Lower again for the moonlit nave, where even a dim dusk sky
+        /// glowed green-yellow behind every window; now the windows open onto night.
         /// </remarks>
-        private const float SkyExposure = 0.2f;
+        private const float SkyExposure = 0.03f;
+
+        /// <summary>The main post-processing volume, which the screen effects and the browser budget work on.</summary>
+        private const string MainVolumeName = "Global Volume";
+
+        /// <summary>The escalation grade's volume, whose weight the atmosphere drives.</summary>
+        private const string PhaseGradeVolumeName = "Phase Grade Volume";
 
         /// <summary>Creates the arena scene, replacing any previously generated one.</summary>
         [MenuItem(EditorMenus.Setup + "3. Build Arena Scene", priority = EditorMenus.SetupPriorityBuildScene)]
@@ -93,16 +100,20 @@ namespace AdaptiveBossArena.Editor
             BuildCamera(config, player, boss);
             BuildInterface(config, actions, channels);
 
-            Object.FindAnyObjectByType<ArenaAtmosphere>()?.Bind(directionalLight, channels.BossPhase);
+            ArenaAtmosphere atmosphere = Object.FindAnyObjectByType<ArenaAtmosphere>();
+            atmosphere?.Bind(directionalLight, channels.BossPhase);
+            atmosphere?.BindGrade(FindVolume(PhaseGradeVolumeName));
 
-            Object.FindAnyObjectByType<ScreenEffects>()?.Bind(
-                Object.FindAnyObjectByType<UnityEngine.Rendering.Volume>(),
-                channels.PlayerHealth, channels.Deflect);
+            // Found by name: there are two global volumes now, and the screen effects and the browser budget must
+            // both work on the main one, never the escalation grade.
+            UnityEngine.Rendering.Volume mainVolume = FindVolume(MainVolumeName);
+
+            Object.FindAnyObjectByType<ScreenEffects>()?.Bind(mainVolume, channels.PlayerHealth, channels.Deflect);
 
             // The browser swaps in a cheaper profile and anti-aliasing when the scene starts.
             Camera mainCamera = Camera.main != null ? Camera.main : Object.FindAnyObjectByType<Camera>();
             Object.FindAnyObjectByType<PlatformLighting>()?.BindWebBudget(
-                Object.FindAnyObjectByType<UnityEngine.Rendering.Volume>(),
+                mainVolume,
                 PostProcessingConfigurator.LoadWebProfile(),
                 mainCamera != null ? mainCamera.GetComponent<UniversalAdditionalCameraData>() : null);
 
@@ -298,8 +309,8 @@ namespace AdaptiveBossArena.Editor
             Light light = lightObject.AddComponent<Light>();
 
             light.type = LightType.Directional;
-            light.color = new Color(1f, 0.96f, 0.9f);
-            light.intensity = 1.15f;
+            light.color = ArenaAtmosphere.OpeningLight;
+            light.intensity = ArenaAtmosphere.OpeningLightIntensity;
             light.shadows = LightShadows.Soft;
 
             // Down through the cathedral's open crossing, along the same line its light shafts are drawn.
@@ -314,9 +325,9 @@ namespace AdaptiveBossArena.Editor
                 "ArenaSky", SkyTint, SkyGroundColor, SkyExposure);
 
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.22f, 0.24f, 0.30f);
-            RenderSettings.ambientEquatorColor = new Color(0.14f, 0.14f, 0.17f);
-            RenderSettings.ambientGroundColor = new Color(0.06f, 0.06f, 0.08f);
+            RenderSettings.ambientSkyColor = ArenaAtmosphere.OpeningSky;
+            RenderSettings.ambientEquatorColor = ArenaAtmosphere.OpeningEquator;
+            RenderSettings.ambientGroundColor = ArenaAtmosphere.OpeningGround;
 
             // Set in the scene, not only at runtime: URP strips the fog shader variants from a build
             // whose scenes never use fog, and the haze would then silently not exist in the player.
@@ -395,12 +406,36 @@ namespace AdaptiveBossArena.Editor
                 return;
             }
 
-            var volumeObject = new GameObject("Global Volume");
+            var volumeObject = new GameObject(MainVolumeName);
             var volume = volumeObject.AddComponent<UnityEngine.Rendering.Volume>();
 
             volume.isGlobal = true;
             volume.priority = 0f;
             volume.sharedProfile = profile;
+
+            UnityEngine.Rendering.VolumeProfile grade = PostProcessingConfigurator.LoadPhaseGrade();
+
+            if (grade == null)
+            {
+                return;
+            }
+
+            // Above the main volume so its few overrides win as its weight rises; weightless until the boss
+            // escalates, and the atmosphere eases it up from there.
+            var gradeObject = new GameObject(PhaseGradeVolumeName);
+            var gradeVolume = gradeObject.AddComponent<UnityEngine.Rendering.Volume>();
+
+            gradeVolume.isGlobal = true;
+            gradeVolume.priority = 1f;
+            gradeVolume.weight = 0f;
+            gradeVolume.sharedProfile = grade;
+        }
+
+        /// <summary>The global volume with the given name, or null.</summary>
+        private static UnityEngine.Rendering.Volume FindVolume(string name)
+        {
+            GameObject found = GameObject.Find(name);
+            return found != null ? found.GetComponent<UnityEngine.Rendering.Volume>() : null;
         }
 
         /// <summary>Adds the object that creates services, drives the clock and hosts debug tooling.</summary>

@@ -33,13 +33,14 @@ namespace AdaptiveBossArena.Game
         {
             public Profile(
                 Color light, float lightIntensity,
-                Color sky, Color equator, Color ground)
+                Color sky, Color equator, Color ground, float grade)
             {
                 Light = light;
                 LightIntensity = lightIntensity;
                 Sky = sky;
                 Equator = equator;
                 Ground = ground;
+                Grade = grade;
             }
 
             public Color Light { get; }
@@ -47,6 +48,9 @@ namespace AdaptiveBossArena.Game
             public Color Sky { get; }
             public Color Equator { get; }
             public Color Ground { get; }
+
+            /// <summary>How far toward the Last Stand's grade the whole frame is turned, from nothing to all of it.</summary>
+            public float Grade { get; }
         }
 
         /// <summary>Half-life of the mood transition, in seconds. Slow, so it reads as a mood, not a switch.</summary>
@@ -61,28 +65,54 @@ namespace AdaptiveBossArena.Game
         /// <summary>Distance at which the haze is complete, roughly the far outer wall.</summary>
         public const float FogEnd = 60f;
 
+        /// <summary>The opening key: cold moonlight through the open crossing.</summary>
+        /// <remarks>
+        /// It was a warm white, which with a bright ambient lit the nave like an overcast afternoon - an even grey
+        /// plaza. Moonlight blue against the braziers' orange is the look the genre's cathedrals are built on.
+        /// </remarks>
+        public static readonly Color OpeningLight = new Color(0.78f, 0.85f, 1f);
+
+        /// <summary>How strongly the opening key shines.</summary>
+        /// <remarks>
+        /// Well down from 1.15. Measured in rendered views, a brighter moon flooded the whole floor into one pale
+        /// sheet - the largest thing on screen and the flattest - and drowned the braziers' pools at its edge.
+        /// The fighters still read against it: the grade's exposure lifts the frame, not this light.
+        /// </remarks>
+        public const float OpeningLightIntensity = 0.7f;
+
+        /// <summary>The opening ambient from above. Darker and colder than before, so shadow reads as shadow.</summary>
+        public static readonly Color OpeningSky = new Color(0.13f, 0.15f, 0.22f);
+
+        /// <summary>The opening ambient from the sides.</summary>
+        public static readonly Color OpeningEquator = new Color(0.08f, 0.09f, 0.12f);
+
+        /// <summary>The opening ambient from below.</summary>
+        public static readonly Color OpeningGround = new Color(0.035f, 0.035f, 0.05f);
+
+        // Every later phase holds roughly the opening's brightness, so escalation reads as the light turning, not
+        // as the room being switched brighter or darker. The warmer keys run at higher intensities because red
+        // carries less luminance than moonlight: at the opening's intensity the Last Stand, under its grade,
+        // rendered the fighters as silhouettes on black. It is still the brightest phase.
         private static readonly Profile[] Profiles =
         {
-            // Phase 0 — measured: cool, even.
-            new Profile(
-                new Color(1f, 0.96f, 0.9f), 1.15f,
-                new Color(0.22f, 0.24f, 0.30f), new Color(0.14f, 0.14f, 0.17f), new Color(0.06f, 0.06f, 0.08f)),
+            // Phase 0 — measured: cold moonlight, deep shadow.
+            new Profile(OpeningLight, OpeningLightIntensity, OpeningSky, OpeningEquator, OpeningGround, 0f),
 
             // Phase 1 — pressing: warmer, the room closing in a little.
             new Profile(
-                new Color(1f, 0.82f, 0.62f), 1.25f,
-                new Color(0.34f, 0.24f, 0.22f), new Color(0.22f, 0.14f, 0.13f), new Color(0.11f, 0.07f, 0.07f)),
+                new Color(1f, 0.82f, 0.62f), 0.8f,
+                new Color(0.22f, 0.15f, 0.14f), new Color(0.14f, 0.09f, 0.085f), new Color(0.07f, 0.045f, 0.045f), 0.3f),
 
             // Phase 2 — relentless: hot and red.
             new Profile(
-                new Color(1f, 0.55f, 0.4f), 1.4f,
-                new Color(0.46f, 0.18f, 0.17f), new Color(0.30f, 0.11f, 0.11f), new Color(0.16f, 0.06f, 0.06f)),
+                new Color(1f, 0.55f, 0.4f), 1.05f,
+                new Color(0.30f, 0.12f, 0.11f), new Color(0.19f, 0.07f, 0.07f), new Color(0.10f, 0.04f, 0.04f), 0.65f),
 
             // Phase 3 — Last Stand: a violent, blown-out crimson shading toward violet, brighter than
             // the rest so the desperation phase reads as the fight's climax at a glance.
             new Profile(
-                new Color(1f, 0.4f, 0.5f), 1.6f,
-                new Color(0.52f, 0.14f, 0.26f), new Color(0.34f, 0.09f, 0.18f), new Color(0.18f, 0.05f, 0.10f))
+                new Color(1f, 0.4f, 0.5f), 1.35f,
+                new Color(0.34f, 0.09f, 0.17f), new Color(0.22f, 0.06f, 0.12f), new Color(0.12f, 0.03f, 0.065f), 1f)
         };
 
         [SerializeField]
@@ -92,6 +122,10 @@ namespace AdaptiveBossArena.Game
         [SerializeField]
         [Tooltip("Carries the boss phase index that drives the mood.")]
         private IntEventChannel _phaseChannel;
+
+        [SerializeField]
+        [Tooltip("The escalation grade's volume, whose weight rises with the phase. Optional.")]
+        private UnityEngine.Rendering.Volume _phaseGrade;
 
         /// <summary>The light probes as baked, under the opening ambience. Null when the scene has none.</summary>
         private UnityEngine.Rendering.SphericalHarmonicsL2[] _bakedProbes;
@@ -109,6 +143,7 @@ namespace AdaptiveBossArena.Game
         private Color _sky;
         private Color _equator;
         private Color _ground;
+        private float _grade;
 
         private void OnEnable()
         {
@@ -162,6 +197,7 @@ namespace AdaptiveBossArena.Game
             _sky = Color.Lerp(_sky, target.Sky, t);
             _equator = Color.Lerp(_equator, target.Equator, t);
             _ground = Color.Lerp(_ground, target.Ground, t);
+            _grade = Mathf.Lerp(_grade, target.Grade, t);
 
             Apply();
         }
@@ -175,6 +211,10 @@ namespace AdaptiveBossArena.Game
             _phaseChannel = phaseChannel;
         }
 
+        /// <summary>Assigns the escalation grade's volume. Used by the scene generator.</summary>
+        /// <param name="phaseGrade">The volume whose weight rises with the phase.</param>
+        public void BindGrade(UnityEngine.Rendering.Volume phaseGrade) => _phaseGrade = phaseGrade;
+
         private void OnPhaseChanged(int phaseIndex) => _targetPhase = phaseIndex;
 
         private void SnapTo(Profile profile)
@@ -184,6 +224,7 @@ namespace AdaptiveBossArena.Game
             _sky = profile.Sky;
             _equator = profile.Equator;
             _ground = profile.Ground;
+            _grade = profile.Grade;
         }
 
         private void Apply()
@@ -198,6 +239,11 @@ namespace AdaptiveBossArena.Game
             RenderSettings.ambientEquatorColor = _equator;
             RenderSettings.ambientGroundColor = _ground;
             RenderSettings.fogColor = HazeColor.Derive(_equator, _lightColor, _lightIntensity);
+
+            if (_phaseGrade != null)
+            {
+                _phaseGrade.weight = _grade;
+            }
 
             TintBakedLight();
         }

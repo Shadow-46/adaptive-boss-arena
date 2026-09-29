@@ -36,6 +36,18 @@ namespace AdaptiveBossArena.Editor
         /// </remarks>
         public const string WebProfilePath = "Assets/_Project/Settings/ArenaVolumeProfile_Web.asset";
 
+        /// <summary>
+        /// The grade the room turns toward as the boss escalates, blended in by the arena atmosphere.
+        /// </summary>
+        /// <remarks>
+        /// A second profile on its own volume rather than values written into the main one: the screen effects
+        /// already write the main profile's vignette, saturation, aberration and bloom every frame for the hit and
+        /// low-health feedback, and two writers of one parameter fight. This profile overrides only contrast, the
+        /// colour filter and the white balance, which nothing else touches, and it all folds into the grading
+        /// lookup table, so the browser pays nothing extra for it.
+        /// </remarks>
+        public const string PhaseGradePath = "Assets/_Project/Settings/ArenaPhaseGrade.asset";
+
         /// <summary>Creates both profiles if absent and fills in the effect overrides.</summary>
         [MenuItem(EditorMenus.Setup + "Configure Post Processing",
             priority = EditorMenus.SetupPriorityConfigureProject + 2)]
@@ -64,6 +76,10 @@ namespace AdaptiveBossArena.Editor
             MakeCheapForTheBrowser(web);
             EditorUtility.SetDirty(web);
 
+            VolumeProfile phaseGrade = LoadOrCreate(PhaseGradePath);
+            ConfigurePhaseGrade(phaseGrade);
+            EditorUtility.SetDirty(phaseGrade);
+
             AssetDatabase.SaveAssets();
 
             Debug.Log("[Adaptive Boss Arena] Post-processing profiles written: desktop and web.");
@@ -73,6 +89,11 @@ namespace AdaptiveBossArena.Editor
         /// <returns>The profile, or null when it has not been generated yet.</returns>
         public static VolumeProfile LoadProfile() =>
             GeneratedAssets.ForceImportAndLoad<VolumeProfile>(ProfilePath);
+
+        /// <summary>Loads the escalation grade, for the scene builder.</summary>
+        /// <returns>The profile, or null when it has not been generated yet.</returns>
+        public static VolumeProfile LoadPhaseGrade() =>
+            GeneratedAssets.ForceImportAndLoad<VolumeProfile>(PhaseGradePath);
 
         /// <summary>Loads the browser's profile, for the scene builder.</summary>
         /// <returns>The profile, or null when it has not been generated yet.</returns>
@@ -228,6 +249,41 @@ namespace AdaptiveBossArena.Editor
 
             balance.temperature.Override(-5f);
             balance.tint.Override(2f);
+        }
+
+        /// <summary>
+        /// The Last Stand's grade: harder contrast, the whole image filtered toward blood, and a warmer white.
+        /// </summary>
+        /// <remarks>
+        /// The arena atmosphere already turns the light and ambience with each phase, but those only reach lit
+        /// surfaces; the moonlit nave's shadows and sky stayed the same cold blue to the end. A grade reaches every
+        /// pixel, so the whole frame, not just the floor, says the fight has turned. Held gentle: a harder contrast
+        /// and deeper filter, stacked on the red key, crushed the fighters into the floor.
+        /// </remarks>
+        private static void ConfigurePhaseGrade(VolumeProfile profile)
+        {
+            // Only the parameters set below may override. An effect is added with every parameter overriding at its
+            // default, and on a volume above the main one those defaults win: the first grade silently reset the
+            // exposure lift to zero and blacked the Last Stand out.
+            ColorAdjustments color = OverridingNothing(GetOrAdd<ColorAdjustments>(profile));
+            color.contrast.Override(26f);
+            color.colorFilter.Override(new Color(1f, 0.88f, 0.84f));
+
+            WhiteBalance balance = OverridingNothing(GetOrAdd<WhiteBalance>(profile));
+            balance.temperature.Override(14f);
+            balance.tint.Override(6f);
+        }
+
+        /// <summary>Clears every parameter's override, so a layered profile changes only what it sets afterwards.</summary>
+        private static TComponent OverridingNothing<TComponent>(TComponent component)
+            where TComponent : VolumeComponent
+        {
+            foreach (VolumeParameter parameter in component.parameters)
+            {
+                parameter.overrideState = false;
+            }
+
+            return component;
         }
 
         /// <summary>Returns an override from the profile, adding it when absent.</summary>

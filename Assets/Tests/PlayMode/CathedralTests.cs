@@ -21,6 +21,9 @@ namespace AdaptiveBossArena.Tests.PlayMode
     {
         private const float Radius = 16f;
 
+        /// <summary>Height of the wall ring round the fighting floor.</summary>
+        private const float WallHeight = 3f;
+
         [UnitySetUp]
         public IEnumerator LoadTheArena()
         {
@@ -108,6 +111,34 @@ namespace AdaptiveBossArena.Tests.PlayMode
 
             Assert.IsNotNull(LightmapSettings.lightProbes, "The arena lost its baked light probes.");
             Assert.Greater(LightmapSettings.lightProbes.count, 0, "The arena lost its baked light probes.");
+        }
+
+        [UnityTest]
+        public IEnumerator BraziersLightTheFloorWarmFromBehindTheWall()
+        {
+            yield return null;
+
+            var braziers = new System.Collections.Generic.List<Light>();
+
+            foreach (Light light in Object.FindObjectsByType<Light>(FindObjectsSortMode.None))
+            {
+                if (light.name.StartsWith("BrazierLight"))
+                {
+                    braziers.Add(light);
+                }
+            }
+
+            Assert.AreEqual(4, braziers.Count, "The nave should have a brazier to each quarter.");
+
+            foreach (Light light in braziers)
+            {
+                Vector3 at = light.transform.position;
+
+                Assert.Greater(new Vector2(at.x, at.z).magnitude, Radius, $"{light.name} stands on the fighting floor.");
+                Assert.Greater(at.y, WallHeight, $"{light.name} is below the wall top, which would hide its pool.");
+                Assert.Greater(light.color.r, light.color.b * 2f, $"{light.name} is not a warm fire against the moon.");
+                Assert.AreNotEqual(LightShadows.None, light.shadows, $"{light.name} can never cast a shadow.");
+            }
         }
 
         [UnityTest]

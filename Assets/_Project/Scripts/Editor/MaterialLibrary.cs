@@ -99,9 +99,9 @@ namespace AdaptiveBossArena.Editor
             material.SetColor("_GroundColor", groundColor);
             material.SetFloat("_Exposure", exposure);
 
-            // Thicker than default, which reddens the horizon and suits a sky the arena is meant to
-            // feel oppressed by.
-            material.SetFloat("_AtmosphereThickness", 1.7f);
+            // Thin, so the horizon keeps no daylight glow. It was thicker than default for a reddened dusk, and
+            // through the windows of a moonlit nave that glow read as a lamp behind the glass.
+            material.SetFloat("_AtmosphereThickness", 0.4f);
 
             // No sun disc: the sun is behind cloud, and a hot disc showing through a window bloomed to white.
             material.SetFloat("_SunDisk", 0f);

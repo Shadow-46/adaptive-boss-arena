@@ -57,6 +57,30 @@ namespace AdaptiveBossArena.Tests.EditMode
             Assert.AreEqual(BloomDownscaleMode.Quarter, bloom.downscale.value, "The browser's bloom is not quarter resolution.");
         }
 
+        [Test]
+        public void ThePhaseGradeNeverFightsTheScreenEffects()
+        {
+            // The screen effects write the main profile's vignette, saturation, aberration and bloom every frame
+            // for hit and low-health feedback. A higher-priority grade overriding any of them would silently mask
+            // that feedback as the boss escalated - exactly when the player most needs it.
+            var grade = AssetDatabase.LoadAssetAtPath<VolumeProfile>(AdaptiveBossArena.Editor.PostProcessingConfigurator.PhaseGradePath);
+            Assume.That(grade != null, "Setup has not generated the phase grade.");
+
+            foreach (VolumeComponent component in grade.components)
+            {
+                Assert.IsNotNull(component, "The phase grade holds an effect that was never saved.");
+            }
+
+            Assert.IsFalse(grade.Has<Vignette>(), "The phase grade overrides the vignette the low-health pulse drives.");
+            Assert.IsFalse(grade.Has<ChromaticAberration>(), "The phase grade overrides the deflect's aberration.");
+            Assert.IsFalse(grade.Has<Bloom>(), "The phase grade overrides the deflect's bloom.");
+
+            Assert.IsTrue(grade.TryGet(out ColorAdjustments color), "The phase grade has no grade.");
+            Assert.IsFalse(color.saturation.overrideState, "The phase grade overrides the saturation low health drains.");
+            Assert.IsFalse(color.postExposure.overrideState, "The phase grade resets the exposure lift, which blacked the Last Stand out.");
+            Assert.IsTrue(color.colorFilter.overrideState, "The phase grade does not turn the colour.");
+        }
+
         [TestCase("Assets/_Project/Settings/UniversalRenderer.asset")]
         [TestCase("Assets/_Project/Settings/UniversalRenderer_Desktop.asset")]
         public void EveryRendererCarriesThePostProcessingResources(string path)

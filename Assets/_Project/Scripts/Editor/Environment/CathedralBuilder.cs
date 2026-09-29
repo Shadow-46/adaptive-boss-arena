@@ -86,16 +86,48 @@ namespace AdaptiveBossArena.Editor.Environment
 
         private const int DesktopDebrisCapacity = 150;
 
+        /// <summary>Metres of floor one repeat of the flagstone texture covers.</summary>
+        private const float FloorTextureRepeat = 2.5f;
+
+        /// <summary>Width of one floor tile: six texture repeats, small enough that each tile sees only its nearby lights.</summary>
+        private const float FloorTile = FloorTextureRepeat * 6f;
+
+        /// <summary>Braziers round the nave, one to each quarter, between the columns.</summary>
+        private const int BrazierCount = 4;
+
+        /// <summary>How far past the fighting floor's edge a brazier stands: just behind the wall ring.</summary>
+        private const float BrazierSetBack = 1.1f;
+
+        /// <summary>Height of a brazier's bowl. Above the three-metre wall, so the fire shows over it and lights the floor.</summary>
+        private const float BrazierBowlHeight = 3.5f;
+
+        /// <summary>
+        /// A brazier's light. Set by rendering the nave, not by arithmetic: from above the wall the floor meets the
+        /// light at a grazing angle as well as falling off with distance, so at 10 the pool was invisible against the
+        /// moon and even 30 reached barely a metre or two. At 50 it lays a warm band along the foot of the wall,
+        /// about six metres deep, and leaves the middle of the floor to the moon.
+        /// </summary>
+        private const float BrazierIntensity = 50f;
+
+        /// <summary>How far a brazier's light reaches: past its visible pool, so the pool fades rather than stops.</summary>
+        private const float BrazierRange = 18f;
+
+        private static readonly Color BrazierLight = new Color(1f, 0.56f, 0.26f);
+        // Kept deep: any brighter and the tonemapper and bloom whiten it, and the fire reads as a lamp.
+        private static readonly Color BrazierFlame = new Color(1.4f, 0.5f, 0.12f, 1f);
+        private static readonly Color BrazierCoals = new Color(2.4f, 0.65f, 0.14f);
+
         private static readonly Color StoneTint = new Color(0.78f, 0.76f, 0.74f);
         private static readonly Color BrickTint = new Color(0.72f, 0.70f, 0.70f);
         private static readonly Color BlockTint = new Color(0.82f, 0.80f, 0.78f);
         private static readonly Color CandleFlame = new Color(3.2f, 1.6f, 0.55f);
         private static readonly Color CandleLight = new Color(1f, 0.66f, 0.34f);
-        private static readonly Color ShaftColour = new Color(1f, 0.93f, 0.78f, 0.11f);
+        // Moonlight blue, matching the key; the shafts were a warm sunbeam.
+        private static readonly Color ShaftColour = new Color(0.78f, 0.86f, 1f, 0.11f);
 
         /// <summary>Under half the desktop shafts' strength: the browser renders the same additive planes much brighter.</summary>
-        private static readonly Color WebShaftColour = new Color(1f, 0.93f, 0.78f, 0.045f);
-        private static readonly Color DustColour = new Color(1f, 0.95f, 0.85f, 0.5f);
+        private static readonly Color WebShaftColour = new Color(0.78f, 0.86f, 1f, 0.045f);
+        private static readonly Color DustColour = new Color(0.86f, 0.9f, 1f, 0.5f);
 
         private static Material _floor;
         private static Material _brick;
@@ -129,6 +161,7 @@ namespace AdaptiveBossArena.Editor.Environment
             BuildDebris(root.transform, radius);
             BuildShafts(root.transform);
             BuildDust(root.transform, radius);
+            BuildBraziers(root.transform, radius);
 
             // The dust and the candles are what the web build thins; hand them to the platform lighting, which
             // BuildShafts has just added beside the cathedral.
@@ -145,7 +178,13 @@ namespace AdaptiveBossArena.Editor.Environment
             foreach (MeshRenderer renderer in root.GetComponentsInChildren<MeshRenderer>(true))
             {
                 // Static batching folds the whole ruin into a handful of draw calls in a build, which is
-                // what keeps a hundred-odd stones inside the WebGL draw-call budget.
+                // what keeps a hundred-odd stones inside the WebGL draw-call budget. A fire's flames move, and a
+                // batched mesh cannot.
+                if (renderer.GetComponentInParent<FireFlicker>() != null)
+                {
+                    continue;
+                }
+
                 GameObjectUtility.SetStaticEditorFlags(renderer.gameObject, StaticEditorFlags.BatchingStatic);
             }
         }
@@ -166,9 +205,29 @@ namespace AdaptiveBossArena.Editor.Environment
                 discRenderer.enabled = false;
             }
 
+            // Laid in tiles, not as one slab. A renderer takes only a handful of the nearest extra lights, and one
+            // slab sixty metres across had every candle and brazier in the building competing for the same few
+            // slots, measured from its middle where none of them reach: not one warm pool ever showed on the stone.
+            // Each tile is a whole number of texture repeats and sits on a multiple of one, so the stone runs on
+            // across the joins without a seam.
             float span = (radius + OuterWallApothemOffset + OuterWallThickness) * 2f + 4f;
-            Block(root, "NaveFloor", new Vector3(span, 0.3f, span), 2.5f, _floor,
-                new Vector3(0f, -0.15f, 0f), Quaternion.identity);
+            int tilesAcross = Mathf.CeilToInt(span / FloorTile);
+
+            if (tilesAcross % 2 == 0)
+            {
+                tilesAcross++;
+            }
+
+            int half = tilesAcross / 2;
+
+            for (int x = -half; x <= half; x++)
+            {
+                for (int z = -half; z <= half; z++)
+                {
+                    Block(root, $"NaveFloor_{x + half}_{z + half}", new Vector3(FloorTile, 0.3f, FloorTile), FloorTextureRepeat,
+                        _floor, new Vector3(x * FloorTile, -0.15f, z * FloorTile), Quaternion.identity);
+                }
+            }
         }
 
         /// <summary>
@@ -475,6 +534,81 @@ namespace AdaptiveBossArena.Editor.Environment
             light.intensity = 2.2f;
             light.range = 8f;
             light.shadows = LightShadows.None;
+        }
+
+        /// <summary>
+        /// Iron braziers just behind the wall ring, their fires above its top: the warm light the nave is lit against.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// A cold moon alone lit the arena as an even grey plaza. Warm pools at the floor's edge against blue
+        /// moonlight in the middle give it depth and the genre's palette, and tell the eye where the ring ends.
+        /// </para>
+        /// <para>
+        /// Behind the wall rather than on it: the wall's crown breaks when a body is driven into it, and a fire
+        /// left floating over the gap would be the first thing anyone noticed. Between the columns, so no column
+        /// throws its whole shadow across the floor. Their lights are point lights like the candles', so the
+        /// Low quality turns them off with the candles and keeps the flames glowing; the qualities whose pipeline
+        /// allows additional-light shadows let them cast.
+        /// </para>
+        /// </remarks>
+        private static void BuildBraziers(Transform root, float radius)
+        {
+            var braziers = new GameObject("Braziers").transform;
+            braziers.SetParent(root, false);
+
+            Material iron = MaterialLibrary.GetOrCreateSurface("BrazierIron", new Color(0.08f, 0.075f, 0.07f), 0.8f, 0.2f);
+            Material coals = MaterialLibrary.GetOrCreateSurface("BrazierCoals", Color.black, 0f, 0f, BrazierCoals);
+            Material flame = GetOrCreateAdditive("BrazierFlame", FlameTexture(), BrazierFlame);
+            Mesh planes = GetOrCreateCrossedPlanes();
+            float step = 360f / BrazierCount;
+
+            for (int i = 0; i < BrazierCount; i++)
+            {
+                // Columns sit at half-steps of an eighth; a quarter lands exactly between two of them.
+                float angle = step * i;
+                Vector3 foot = OnRing(angle, radius + BrazierSetBack);
+                Quaternion facing = Quaternion.Euler(0f, 45f - angle, 0f);
+
+                Block(braziers, $"BrazierFoot_{i}", new Vector3(0.8f, 0.12f, 0.8f), 1f, iron, foot + Vector3.up * 0.06f, facing);
+                Block(braziers, $"BrazierPole_{i}", new Vector3(0.16f, BrazierBowlHeight, 0.16f), 1f, iron,
+                    foot + Vector3.up * (BrazierBowlHeight * 0.5f), facing);
+                Block(braziers, $"BrazierBowl_{i}", new Vector3(1f, 0.32f, 1f), 1f, iron,
+                    foot + Vector3.up * (BrazierBowlHeight + 0.16f), facing);
+                // The coals fill the bowl. A rim of polished iron left showing a hand's breadth under the light caught
+                // its orange and the sky's blue together and drew a lilac line across every fire.
+                Block(braziers, $"BrazierCoals_{i}", new Vector3(0.96f, 0.1f, 0.96f), 1f, coals,
+                    foot + Vector3.up * (BrazierBowlHeight + 0.35f), facing);
+
+                var fire = new GameObject($"BrazierFire_{i}");
+                fire.transform.SetParent(braziers, false);
+                fire.transform.position = foot + Vector3.up * (BrazierBowlHeight + 0.4f);
+
+                var flameObject = new GameObject("Flame");
+                flameObject.transform.SetParent(fire.transform, false);
+                flameObject.transform.localPosition = Vector3.up * 0.6f;
+                flameObject.transform.localScale = new Vector3(1f, 1.3f, 1f);
+                flameObject.AddComponent<MeshFilter>().sharedMesh = planes;
+                MeshRenderer flameRenderer = flameObject.AddComponent<MeshRenderer>();
+                flameRenderer.sharedMaterial = flame;
+                flameRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                flameRenderer.receiveShadows = false;
+
+                var lightObject = new GameObject($"BrazierLight_{i}");
+                lightObject.transform.SetParent(fire.transform, false);
+
+                // Above the flame and nudged in toward the floor, so the wall's own top does not shadow the pool.
+                lightObject.transform.position = fire.transform.position + Vector3.up * 0.7f - foot.normalized * 0.6f;
+
+                Light light = lightObject.AddComponent<Light>();
+                light.type = LightType.Point;
+                light.color = BrazierLight;
+                light.intensity = BrazierIntensity;
+                light.range = BrazierRange;
+                light.shadows = LightShadows.Soft;
+
+                fire.AddComponent<FireFlicker>().Bind(light, i * 7.3f);
+            }
         }
 
         /// <summary>
@@ -1006,6 +1140,22 @@ namespace AdaptiveBossArena.Editor.Environment
             float across = Mathf.Sin(u * Mathf.PI);
             float along = Mathf.SmoothStep(0f, 1f, v / 0.35f) * Mathf.SmoothStep(0f, 1f, (1f - v) / 0.15f);
             return across * across * along;
+        });
+
+        /// <summary>A tongue of flame: wide and solid at its root, narrowing and thinning to a point.</summary>
+        private static Texture2D FlameTexture() => GetOrCreateTexture("BrazierFlameTongue", 64, 128, (u, v) =>
+        {
+            float width = 0.42f * Mathf.Pow(1f - v, 0.7f) * Edge(0f, 0.12f, v);
+
+            // Where the tongue has no width the ramp's two edges meet and it would read as fully inside.
+            if (width < 0.001f)
+            {
+                return 0f;
+            }
+
+            float across = 1f - Edge(width * 0.55f, width, Mathf.Abs(u - 0.5f));
+            float body = 1f - Edge(0.35f, 1f, v);
+            return across * body;
         });
 
         private static Texture2D DotTexture() => GetOrCreateTexture("DustMoteDot", 32, 32, (u, v) =>
