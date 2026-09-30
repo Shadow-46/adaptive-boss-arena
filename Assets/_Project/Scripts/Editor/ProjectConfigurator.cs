@@ -37,6 +37,7 @@ namespace AdaptiveBossArena.Editor
         {
             ConfigureLayers();
             ConfigureTags();
+            ConfigureRenderingLayers();
             ConfigureTimeSettings();
             ConfigureInputHandling();
             ConfigureColorSpace();
@@ -140,6 +141,31 @@ namespace AdaptiveBossArena.Editor
             }
 
             return false;
+        }
+
+        /// <summary>Names the character rendering layer, so the editor shows it for what it is.</summary>
+        /// <remarks>
+        /// Only the name: a rendering layer works by its bit whether or not it is named. The list is grown to reach
+        /// the layer's index and existing names are left alone.
+        /// </remarks>
+        private static void ConfigureRenderingLayers()
+        {
+            SerializedObject tagManager = LoadProjectSettingsAsset(TagManagerAssetPath);
+            SerializedProperty names = tagManager.FindProperty("m_RenderingLayers");
+
+            if (names == null)
+            {
+                return;
+            }
+
+            while (names.arraySize <= RenderingLayers.CharacterIndex)
+            {
+                names.InsertArrayElementAtIndex(names.arraySize);
+                names.GetArrayElementAtIndex(names.arraySize - 1).stringValue = string.Empty;
+            }
+
+            names.GetArrayElementAtIndex(RenderingLayers.CharacterIndex).stringValue = RenderingLayers.CharacterName;
+            tagManager.ApplyModifiedPropertiesWithoutUndo();
         }
 
         /// <summary>Ensures every tag named in <see cref="TagNames"/> exists.</summary>

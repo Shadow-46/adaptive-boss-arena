@@ -11,7 +11,8 @@
     "AdaptiveBossArena.Learning",
     "AdaptiveBossArena.AI",
     "AdaptiveBossArena.UI",
-    "AdaptiveBossArena.Game"
+    "AdaptiveBossArena.Game",
+    "Unity.RenderPipelines.Universal.Runtime"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

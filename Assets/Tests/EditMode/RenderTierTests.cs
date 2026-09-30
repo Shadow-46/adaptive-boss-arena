@@ -130,6 +130,24 @@ namespace AdaptiveBossArena.Tests.EditMode
         }
 
         [Test]
+        public void EveryLevelLetsALightReachOnlyTheFighters()
+        {
+            // Without rendering layers the character light either reaches nothing or floods the floor too.
+            foreach (string[] tier in new[] { RenderPipelineConfigurator.WebPipelinePaths, RenderPipelineConfigurator.DesktopPipelinePaths })
+            {
+                foreach (string path in tier)
+                {
+                    var pipeline = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(path);
+                    Assert.IsNotNull(pipeline, path + " is missing.");
+
+                    SerializedProperty layers = new SerializedObject(pipeline).FindProperty("m_SupportsLightLayers");
+                    Assert.IsNotNull(layers, path + " has no rendering-layer setting.");
+                    Assert.IsTrue(layers.boolValue, path + " does not use rendering layers.");
+                }
+            }
+        }
+
+        [Test]
         public void NoBrowserLevelEverRendersWithAmbientOcclusion()
         {
             // Ambient occlusion on the web renderer once killed the browser build with "too much recursion".

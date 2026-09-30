@@ -27,17 +27,23 @@ namespace AdaptiveBossArena.Editor.Art
 
         private const string MaterialFolder = LicensedArtPostprocessor.MixamoFolder + "Materials";
 
-        /// <summary>The knight's plate: fairly glossy steel with its own normal detail.</summary>
+        /// <summary>The knight's plate: polished steel with its own normal detail.</summary>
+        /// <remarks>
+        /// The Paladin's specular map averages a quarter reflectance, which is what a painted surface reflects, not
+        /// steel; over its dark bronze diffuse the plate rendered as dull brown cloth in the moonlit nave. Scaled up
+        /// and made glossier, the plate catches the moon, the fires and the character light as metal does. Not as far
+        /// as 2.5: under the character light that turned the helm and knees into white spots, and the plate glowed.
+        /// </remarks>
         /// <returns>The material, or null when the licensed art is absent.</returns>
         public static Material Knight() =>
-            Build("KnightBody", LicensedArtPostprocessor.KnightCharacter, "Paladin", smoothness: 0.55f);
+            Build("KnightBody", LicensedArtPostprocessor.KnightCharacter, "Paladin", smoothness: 0.6f, specularScale: 1.8f);
 
         /// <summary>The brute's hide: rough, with the specular map picking out horn and armour.</summary>
         /// <returns>The material, or null when the licensed art is absent.</returns>
         public static Material Brute() =>
             Build("BruteBody", LicensedArtPostprocessor.BossCharacter, "bear", smoothness: 0.35f);
 
-        private static Material Build(string name, string character, string texturePrefix, float smoothness)
+        private static Material Build(string name, string character, string texturePrefix, float smoothness, float specularScale = 1f)
         {
             if (!LicensedArtPostprocessor.Available)
             {
@@ -86,7 +92,7 @@ namespace AdaptiveBossArena.Editor.Art
             {
                 material.SetFloat("_WorkflowMode", 0f);
                 material.SetTexture("_SpecGlossMap", specular);
-                material.SetColor("_SpecColor", Color.white);
+                material.SetColor("_SpecColor", new Color(specularScale, specularScale, specularScale, 1f));
                 material.EnableKeyword("_SPECULAR_SETUP");
                 material.EnableKeyword("_METALLICSPECGLOSSMAP");
             }

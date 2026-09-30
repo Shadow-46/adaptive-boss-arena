@@ -51,6 +51,7 @@ namespace AdaptiveBossArena.Editor
         public static void GenerateBossPrefab()
         {
             GameObject root = BuildBossObject();
+            CharacterRendering.Mark(root);
 
             try
             {

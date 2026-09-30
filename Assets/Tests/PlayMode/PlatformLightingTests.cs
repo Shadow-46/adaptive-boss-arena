@@ -26,7 +26,8 @@ namespace AdaptiveBossArena.Tests.PlayMode
             yield return null;
 
             _lighting = Object.FindAnyObjectByType<PlatformLighting>();
-            _sun = Object.FindObjectsByType<Light>(FindObjectsSortMode.None).FirstOrDefault(l => l.type == LightType.Directional);
+            // The scene's named sun: the fighters' character light is a directional light too.
+            _sun = RenderSettings.sun;
 
             Assert.IsNotNull(_lighting, "The arena has no platform lighting.");
             Assert.IsNotNull(_sun, "The arena has no sun.");

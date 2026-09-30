@@ -345,6 +345,10 @@ namespace AdaptiveBossArena.Editor
             // copy every frame is a cost it pays for nothing.
             SetIfPresent(serialized, "m_RequireDepthTexture", tier.DepthTexture);
 
+            // Lets a light reach only some renderers. On every tier, because the character light that keeps the
+            // fighters readable depends on it, and Low - which loses the fires - needs that light most.
+            SetIfPresent(serialized, "m_SupportsLightLayers", true);
+
             // Grade in HDR so the ACES curve and the above-one emission behave as intended, rather
             // than being clipped to display range first.
             SetIfPresent(serialized, "m_ColorGradingMode", 1);

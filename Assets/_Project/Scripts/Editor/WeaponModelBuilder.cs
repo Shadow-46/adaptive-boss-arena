@@ -58,6 +58,7 @@ namespace AdaptiveBossArena.Editor
             try
             {
                 Build(root.transform, assetName, signature, length, width, glows);
+                CharacterRendering.Mark(root);
 
                 return PrefabUtility.SaveAsPrefabAsset(root, path);
             }

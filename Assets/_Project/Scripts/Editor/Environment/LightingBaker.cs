@@ -57,7 +57,11 @@ namespace AdaptiveBossArena.Editor.Environment
 
             foreach (Light light in Object.FindObjectsByType<Light>(FindObjectsSortMode.None))
             {
-                light.lightmapBakeType = LightmapBakeType.Mixed;
+                // The character light follows the camera and reaches only the fighters; baked, its bounce would
+                // light the whole room from wherever the camera happened to be when the bake ran.
+                light.lightmapBakeType = light.TryGetComponent(out CharacterLight _)
+                    ? LightmapBakeType.Realtime
+                    : LightmapBakeType.Mixed;
             }
 
             // Stone contributes bounce light to the bake, but is not lit by the probes afterwards. The floor lies

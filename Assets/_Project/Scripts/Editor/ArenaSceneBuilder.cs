@@ -50,6 +50,12 @@ namespace AdaptiveBossArena.Editor
         /// </remarks>
         private const float SkyExposure = 0.03f;
 
+        /// <summary>The character light's colour: the moon's, a little softer.</summary>
+        private static readonly Color CharacterLightColor = new Color(0.75f, 0.82f, 1f);
+
+        /// <summary>Enough to read a fighter's plate and hide from the front; well under the moon on the floor.</summary>
+        private const float CharacterLightIntensity = 0.7f;
+
         /// <summary>The main post-processing volume, which the screen effects and the browser budget work on.</summary>
         private const string MainVolumeName = "Global Volume";
 
@@ -83,6 +89,7 @@ namespace AdaptiveBossArena.Editor
 
             BuildArenaGeometry(config);
             Light directionalLight = BuildLighting(config);
+            BuildCharacterLight();
             Environment.CathedralBuilder.BindSun(directionalLight);
 
             // After every light and every stone exists: the probe grid, the Mixed lights and any earlier bake.
@@ -98,6 +105,7 @@ namespace AdaptiveBossArena.Editor
 
             FaceEachOther(player, boss);
             BuildCamera(config, player, boss);
+            Object.FindAnyObjectByType<CharacterLight>()?.Bind(Camera.main);
             BuildInterface(config, actions, channels);
 
             ArenaAtmosphere atmosphere = Object.FindAnyObjectByType<ArenaAtmosphere>();
@@ -300,6 +308,27 @@ namespace AdaptiveBossArena.Editor
             }
         }
 
+        /// <summary>Adds the fighters' own light, which follows the camera and reaches nothing else.</summary>
+        /// <remarks>
+        /// Cool, like the moon it stands in for, and soft: it is there so the side of a fighter the camera sees is
+        /// never black, not to out-shine the moon. Casts no shadow, so it costs one unshadowed light.
+        /// </remarks>
+        private static void BuildCharacterLight()
+        {
+            var lightObject = new GameObject("Character Light");
+            Light light = lightObject.AddComponent<Light>();
+
+            light.type = LightType.Directional;
+            light.color = CharacterLightColor;
+            light.intensity = CharacterLightIntensity;
+            light.shadows = LightShadows.None;
+            // Through URP's own light data: URP reads a light's layers from there, and the light's own mask is only
+            // the copy it keeps for shadows. Set on the light alone, the layer did nothing and the floor was lit too.
+            light.GetUniversalAdditionalLightData().renderingLayers = RenderingLayers.CharacterMask;
+
+            lightObject.AddComponent<CharacterLight>();
+        }
+
         /// <summary>Adds a single directional light angled to give the primitives readable form.</summary>
         /// <param name="config">Arena configuration, for sizing the reflection probe.</param>
         /// <returns>The directional light, so the atmosphere system can recolour it per phase.</returns>
@@ -315,6 +344,10 @@ namespace AdaptiveBossArena.Editor
 
             // Down through the cathedral's open crossing, along the same line its light shafts are drawn.
             lightObject.transform.rotation = Environment.CathedralBuilder.SunRotation;
+
+            // Named as the sun, so it is the main light. Left unset, URP takes the brightest directional light, and
+            // the character light shines as brightly: whichever it picked became the one light casting shadows.
+            RenderSettings.sun = light;
 
             BuildReflectionProbe(config);
 

@@ -63,7 +63,7 @@ MeshRenderer:
   m_SmallMeshCulling: 1
   m_ForceMeshLod: -1
   m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 1
+  m_RenderingLayerMask: 3
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: cf7c805f954ffd64e99a28f478c69cba, type: 2}
@@ -421,7 +421,7 @@ MeshRenderer:
   m_SmallMeshCulling: 1
   m_ForceMeshLod: -1
   m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 1
+  m_RenderingLayerMask: 3
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: cf7c805f954ffd64e99a28f478c69cba, type: 2}
@@ -511,7 +511,7 @@ MeshRenderer:
   m_SmallMeshCulling: 1
   m_ForceMeshLod: -1
   m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 1
+  m_RenderingLayerMask: 3
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: 6e274cbbe1866544d8debfe723a2a65e, type: 2}
@@ -797,7 +797,7 @@ MeshRenderer:
   m_SmallMeshCulling: 1
   m_ForceMeshLod: -1
   m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 1
+  m_RenderingLayerMask: 3
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: a7b733bb924769b43971846e656fcae1, type: 2}
@@ -1179,6 +1179,10 @@ PrefabInstance:
     - target: {fileID: 1082271958561512970, guid: 46461fd01cbef3744a5fbd3b631da83e, type: 3}
       propertyPath: m_Layer
       value: 16
+      objectReference: {fileID: 0}
+    - target: {fileID: 3103283877742750325, guid: 46461fd01cbef3744a5fbd3b631da83e, type: 3}
+      propertyPath: m_RenderingLayerMask
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 3103283877742750325, guid: 46461fd01cbef3744a5fbd3b631da83e, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
