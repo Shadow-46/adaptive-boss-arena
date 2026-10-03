@@ -1,3 +1,4 @@
+using AdaptiveBossArena.Core.Services;
 using UnityEngine;
 
 namespace AdaptiveBossArena.Combat.Feel
@@ -33,6 +34,15 @@ namespace AdaptiveBossArena.Combat.Feel
 
         /// <summary>Points inserted between two recorded positions, so a fast swing curves instead of kinking.</summary>
         private const int Subdivisions = 3;
+
+        /// <summary>
+        /// Points inserted on High. A fast swing covers a lot of arc between frames, and three points still showed
+        /// its corners as facets at the tip; six round them off for a mesh of a few hundred vertices.
+        /// </summary>
+        private const int HighSubdivisions = 6;
+
+        /// <summary>The subdivision the quality in effect affords.</summary>
+        private static int SubdivisionsNow => GraphicsTier.Current == GraphicsQuality.High ? HighSubdivisions : Subdivisions;
 
         [SerializeField]
         [Range(0.1f, 1.5f)]
@@ -107,7 +117,8 @@ namespace AdaptiveBossArena.Combat.Feel
 
         private void Awake()
         {
-            int points = (Capacity - 1) * Subdivisions + 1;
+            // Sized for the finest subdivision, so a change of quality mid-fight never outgrows the buffers.
+            int points = (Capacity - 1) * HighSubdivisions + 1;
             _vertices = new Vector3[points * 2];
             _colours = new Color[points * 2];
             _uvs = new Vector2[points * 2];
@@ -196,12 +207,13 @@ namespace AdaptiveBossArena.Combat.Feel
             _mesh.Clear();
             _meshEmpty = false;
 
-            int points = (_count - 1) * Subdivisions + 1;
+            int subdivisions = SubdivisionsNow;
+            int points = (_count - 1) * subdivisions + 1;
 
             for (int p = 0; p < points; p++)
             {
                 // Position along the recorded samples, newest first, as a sample index with a fraction.
-                float along = p / (float)Subdivisions;
+                float along = p / (float)subdivisions;
                 int i = Mathf.Min((int)along, _count - 2);
                 float t = along - i;
 

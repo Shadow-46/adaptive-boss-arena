@@ -105,6 +105,12 @@ namespace AdaptiveBossArena.Combat
         private readonly Hurtbox[] _sweepHits = new Hurtbox[AttackHitDetector.MaxOverlaps];
         private readonly Vector3[] _sweepContacts = new Vector3[AttackHitDetector.MaxOverlaps];
 
+        /// <summary>Movement below which a part is treated as still, in metres per pose: noise, not a swing.</summary>
+        private const float MinimumTravel = 0.005f;
+
+        /// <summary>How far each touching part moved since the last pose: the way the blade was travelling.</summary>
+        private readonly Vector3[] _sweepTravel = new Vector3[AttackHitDetector.MaxOverlaps];
+
         /// <summary>
         /// Gives the executor the parts of the body it strikes with.
         /// </summary>
@@ -289,6 +295,9 @@ namespace AdaptiveBossArena.Combat
 
                 int samples = StrikeSweep.SampleCount(fromStart, fromEnd, start, end, striker.Radius, MaxSweepSamples);
 
+                // How the part's middle moved since the last pose - the swing's own direction at the moment of contact.
+                Vector3 travel = ((start + end) - (fromStart + fromEnd)) * 0.5f;
+
                 // From the first step past last tick's pose, which was already tested then, to this tick's.
                 for (int step = 1; step <= samples; step++)
                 {
@@ -304,7 +313,7 @@ namespace AdaptiveBossArena.Combat
 
                         if (hurtbox != null && hurtbox.IsValid)
                         {
-                            found = KeepBestPerTarget(hurtbox, _sweepBuffer[i].ClosestPoint((a + b) * 0.5f), found);
+                            found = KeepBestPerTarget(hurtbox, _sweepBuffer[i].ClosestPoint((a + b) * 0.5f), travel, found);
                         }
                     }
                 }
@@ -314,7 +323,7 @@ namespace AdaptiveBossArena.Combat
             {
                 if (_alreadyStruck.Add(_sweepHits[i].Owner.GetHashCode()))
                 {
-                    ApplyTo(attack, _sweepHits[i], _sweepContacts[i]);
+                    ApplyTo(attack, _sweepHits[i], _sweepContacts[i], _sweepTravel[i]);
                 }
             }
         }
@@ -326,7 +335,7 @@ namespace AdaptiveBossArena.Combat
         /// The brute's core sits inside its body, and a blade that crosses the core crosses the body too. Taking
         /// whichever physics listed first would make striking the core a coin flip rather than a decision.
         /// </remarks>
-        private int KeepBestPerTarget(Hurtbox hurtbox, Vector3 contact, int found)
+        private int KeepBestPerTarget(Hurtbox hurtbox, Vector3 contact, Vector3 travel, int found)
         {
             for (int i = 0; i < found; i++)
             {
@@ -339,6 +348,7 @@ namespace AdaptiveBossArena.Combat
                 {
                     _sweepHits[i] = hurtbox;
                     _sweepContacts[i] = contact;
+                    _sweepTravel[i] = travel;
                 }
 
                 return found;
@@ -351,6 +361,7 @@ namespace AdaptiveBossArena.Combat
 
             _sweepHits[found] = hurtbox;
             _sweepContacts[found] = contact;
+            _sweepTravel[found] = travel;
 
             return found + 1;
         }
@@ -434,7 +445,7 @@ namespace AdaptiveBossArena.Combat
         }
 
         /// <summary>Offers the attack to one hurtbox and reacts to what the target decided.</summary>
-        private void ApplyTo(AttackDefinition attack, Hurtbox hurtbox, Vector3? contact = null)
+        private void ApplyTo(AttackDefinition attack, Hurtbox hurtbox, Vector3? contact = null, Vector3 travel = default)
         {
             // Where the part actually touched, when it is known, so sparks and blood come off the blade rather
             // than out of the middle of the body.
@@ -452,7 +463,7 @@ namespace AdaptiveBossArena.Combat
             switch (result.Outcome)
             {
                 case DamageOutcome.Applied:
-                    OnDamageDealt(attack, contactPoint, result);
+                    OnDamageDealt(attack, contactPoint, result, travel);
                     break;
 
                 case DamageOutcome.PerfectDodged:
@@ -496,7 +507,7 @@ namespace AdaptiveBossArena.Combat
         }
 
         /// <summary>Applies impact feedback and reports a landed hit.</summary>
-        private void OnDamageDealt(AttackDefinition attack, Vector3 contactPoint, DamageResult result)
+        private void OnDamageDealt(AttackDefinition attack, Vector3 contactPoint, DamageResult result, Vector3 travel)
         {
             _landedThisAttack = true;
 
@@ -514,12 +525,20 @@ namespace AdaptiveBossArena.Combat
                 Timestamp = _time.CombatTime,
                 DamageType = attack.DamageType,
                 Position = contactPoint,
-                Direction = _origin.forward,
+                Direction = StrikeDirection(travel),
                 Magnitude = result.AmountApplied
             });
 
             HitLanded?.Invoke(result);
         }
+
+        /// <summary>The way a landed blow was travelling: the blade's own motion, or the attacker's facing.</summary>
+        /// <remarks>
+        /// Sparks and blood follow this. They sprayed along the attacker's facing, which for a sideways cut is a right
+        /// angle to the blade - blood flew forward off a blade sweeping left. The blade's travel at contact is known
+        /// from the sweep; an area blow, or a blade on its first live frame, has none, and falls back to the facing.
+        /// </remarks>
+        private Vector3 StrikeDirection(Vector3 travel) => StrikeSweep.Direction(travel, _origin.forward, MinimumTravel);
 
         /// <summary>Reports an attack that reached its target but was avoided.</summary>
         private void PublishEvaded(AttackDefinition attack, Vector3 contactPoint) =>

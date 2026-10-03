@@ -13,6 +13,14 @@ namespace AdaptiveBossArena.Combat
     /// </remarks>
     public static class StrikeSweep
     {
+        /// <summary>The way a blow was travelling: the part's own motion when it moved, else a fallback.</summary>
+        /// <param name="travel">How far the striking part moved since its last pose.</param>
+        /// <param name="fallback">The direction to use when it did not move: the attacker's facing.</param>
+        /// <param name="minimumTravel">Movement below which the part counts as still.</param>
+        /// <returns>A unit direction.</returns>
+        public static Vector3 Direction(Vector3 travel, Vector3 fallback, float minimumTravel) =>
+            travel.sqrMagnitude > minimumTravel * minimumTravel ? travel.normalized : fallback.normalized;
+
         /// <summary>
         /// How many samples cover the path between two poses.
         /// </summary>

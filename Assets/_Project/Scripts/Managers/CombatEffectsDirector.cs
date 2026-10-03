@@ -25,14 +25,21 @@ namespace AdaptiveBossArena.Game
     public sealed class CombatEffectsDirector : MonoBehaviour
     {
         /// <summary>
-        /// How far above a reported event position a burst is placed.
+        /// How far above a reported event position a burst is placed, when the event was reported at a body's feet.
         /// </summary>
         /// <remarks>
-        /// Combat events are positioned at a character's transform origin, which sits on the floor.
-        /// Sparks emitted there are half swallowed by the ground and read as dust rather than as a
-        /// hit. Roughly chest height on both combatants puts them where the blow actually landed.
+        /// Some events are still positioned at a character's transform origin, which sits on the floor, and sparks
+        /// emitted there are half swallowed by the ground. A blow struck with a blade now reports where it touched,
+        /// already at the height it landed, so lifting every event put sparks and blood above the knight's head.
+        /// Only a position at floor level is lifted.
         /// </remarks>
         private const float ImpactHeight = 1.1f;
+
+        /// <summary>Below this height above the floor a reported position is a body's feet, not a contact.</summary>
+        private const float FeetHeight = 0.15f;
+
+        /// <summary>Field-of-view narrowing on a heavy blow landing, the view drawn in by its weight.</summary>
+        private const float HeavyHitFovNarrow = 2.5f;
 
         /// <summary>Height the phase-transition shockwave erupts from, roughly the boss's centre.</summary>
         private const float ShockwaveHeight = 1.2f;
@@ -107,6 +114,7 @@ namespace AdaptiveBossArena.Game
         private ImpactBurstPool _bursts;
         private ICombatEventBus _events;
         private IScreenShake _shake;
+        private ScreenEffects _screenEffects;
         private ITimeService _time;
         private WeaponTrail _playerTrail;
         private WeaponTrail _bossTrail;
@@ -151,6 +159,7 @@ namespace AdaptiveBossArena.Game
             }
 
             ResolveTrails();
+            _screenEffects = FindAnyObjectByType<ScreenEffects>();
         }
 
         private void OnDestroy()
@@ -202,9 +211,23 @@ namespace AdaptiveBossArena.Game
                     break;
 
                 case CombatEventKind.AttackLanded:
-                    Burst(combatEvent.Position, combatEvent.Direction, FlavourFor(combatEvent.DamageType));
+                    ImpactFlavour flavour = FlavourFor(combatEvent.DamageType);
+                    Burst(combatEvent.Position, combatEvent.Direction, flavour);
                     _blood?.Place(combatEvent.Position, combatEvent.Direction,
-                        FlavourFor(combatEvent.DamageType) == ImpactFlavour.Heavy ? HeavyBloodSize : LightBloodSize);
+                        flavour == ImpactFlavour.Heavy ? HeavyBloodSize : LightBloodSize);
+
+                    // A heavy blow draws the view in as well as shaking it - weight felt, not only seen - and on
+                    // High the colour fringes for an instant, the deflect's pulse at a lower pitch.
+                    if (flavour == ImpactFlavour.Heavy)
+                    {
+                        _shake?.PunchFov(-HeavyHitFovNarrow);
+
+                        if (GraphicsTier.Current == GraphicsQuality.High)
+                        {
+                            _screenEffects?.PulseHeavyImpact();
+                        }
+                    }
+
                     break;
 
                 case CombatEventKind.Deflected:
@@ -255,7 +278,13 @@ namespace AdaptiveBossArena.Game
 
         /// <summary>Plays a burst, raised off the floor to where the blow landed.</summary>
         private void Burst(Vector3 position, Vector3 direction, ImpactFlavour flavour) =>
-            _bursts.Play(position + Vector3.up * ImpactHeight, direction, flavour);
+            _bursts.Play(BurstPosition(position), direction, flavour);
+
+        /// <summary>Where a burst plays for an event reported at a position: there, or chest height above feet.</summary>
+        /// <param name="reported">The event's position.</param>
+        /// <returns>The burst's position.</returns>
+        public static Vector3 BurstPosition(Vector3 reported) =>
+            reported.y < FeetHeight ? reported + Vector3.up * ImpactHeight : reported;
 
         /// <summary>Heavier attacks throw a bigger, slower burst so weight is visible as well as audible.</summary>
         private static ImpactFlavour FlavourFor(DamageType damageType)

@@ -39,6 +39,9 @@ namespace AdaptiveBossArena.Game
         private const float DamagePulseVignette = 0.14f;
         private const float DeflectChromaticAdd = 0.55f;
         private const float DeflectBloomAdd = 0.7f;
+
+        /// <summary>Colour fringing at the peak of a heavy blow's pulse: well under a deflect's, which it must not rival.</summary>
+        private const float HeavyImpactChromaticAdd = 0.3f;
         private const float PulseDecayPerSecond = 3.5f;
 
         /// <summary>Health fraction below which the heartbeat begins.</summary>
@@ -81,6 +84,7 @@ namespace AdaptiveBossArena.Game
         private float _lowHealthEased;
         private float _damagePulse;
         private float _deflectPunch;
+        private float _impactPunch;
         private float _heartbeatTimer;
 
         private void OnEnable()
@@ -156,6 +160,7 @@ namespace AdaptiveBossArena.Game
 
             _damagePulse = Mathf.Max(0f, _damagePulse - PulseDecayPerSecond * deltaTime);
             _deflectPunch = Mathf.Max(0f, _deflectPunch - PulseDecayPerSecond * deltaTime);
+            _impactPunch = Mathf.Max(0f, _impactPunch - PulseDecayPerSecond * deltaTime);
 
             float lowHealthTarget = 1f - Mathf.InverseLerp(LowHealthFloor, LowHealthThreshold, _health);
             float ease = 1f - Mathf.Exp(-deltaTime / Mathf.Max(0.0001f, LowHealthEaseHalfLife));
@@ -217,6 +222,10 @@ namespace AdaptiveBossArena.Game
             _health = normalized;
         }
 
+        /// <summary>Fringes the colour for an instant as a heavy blow lands.</summary>
+        /// <remarks>Called only on High, where the aberration pass is affordable; it decays as the deflect's does.</remarks>
+        public void PulseHeavyImpact() => _impactPunch = 1f;
+
         private void OnDeflect()
         {
             if (!FeedbackSettings.ReducedFlashing)
@@ -256,7 +265,8 @@ namespace AdaptiveBossArena.Game
 
             if (_aberration != null)
             {
-                SetIfChanged(_aberration.intensity, Mathf.Clamp01(_baseAberration + _deflectPunch * DeflectChromaticAdd));
+                SetIfChanged(_aberration.intensity, Mathf.Clamp01(
+                    _baseAberration + _deflectPunch * DeflectChromaticAdd + _impactPunch * HeavyImpactChromaticAdd));
             }
 
             if (_bloom != null)
