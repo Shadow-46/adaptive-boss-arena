@@ -86,6 +86,9 @@ namespace AdaptiveBossArena.AI
         {
             direction.y = 0f;
 
+            // Round any standing pillar about to be walked into; a lunge sets its velocity directly and is not bent.
+            direction = PillarAvoidance.Steer(_transform.position, direction, _controller.radius * _transform.lossyScale.x);
+
             Vector3 target = direction.sqrMagnitude > Mathf.Epsilon
                 ? Vector3.ClampMagnitude(direction, 1f) * CurrentTopSpeed
                 : Vector3.zero;

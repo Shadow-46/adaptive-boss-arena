@@ -534,12 +534,12 @@ namespace AdaptiveBossArena.Editor
                 lungeSpeed: 16f, stagger: StaggerStrength.Interrupt, telegraph: false,
                 reaction: ImpactReaction.Knockdown);
 
-            // Like the Cataclysmic Wave, a blast from the body, so it leaves no scar.
+            // Like the Cataclysmic Wave, a blast from the body, so it leaves no scar - and a standing pillar takes it.
             AttackDefinition shockwave = CreateAttack(
                 "BossShockwave", "Shockwave", DamageType.BossProjectile,
                 damage: 14f, startup: 0.70f, active: 0.45f, recovery: 0.60f,
                 range: 7f, arc: 360f, poise: 25f, knockback: 6f, hitStop: 0.07f, trauma: 0.35f,
-                shape: AttackShape.Sphere, telegraph: true,
+                shape: AttackShape.Sphere, telegraph: true, blockedByCover: true,
                 reaction: ImpactReaction.Knockback);
 
             // Fast and cheap, with a short wind-up. On its own it is barely a threat; its purpose is
@@ -568,7 +568,7 @@ namespace AdaptiveBossArena.Editor
                 "BossPhaseShockwave", "Cataclysmic Wave", DamageType.BossProjectile,
                 damage: 22f, startup: 0.95f, active: 0.40f, recovery: 0.70f,
                 range: 8.5f, arc: 360f, poise: 30f, knockback: 9f, hitStop: 0.12f, trauma: 0.6f,
-                shape: AttackShape.Sphere, telegraph: true, unblockable: true,
+                shape: AttackShape.Sphere, telegraph: true, unblockable: true, blockedByCover: true,
                 reaction: ImpactReaction.Launch);
 
             // The answer to dodging on reflex. The wind-up is the perilous overhead's, held nearly half a
@@ -648,6 +648,7 @@ namespace AdaptiveBossArena.Editor
             bool leavesHazard = false,
             float hazardRadius = 2.5f,
             float hazardOffset = 2f,
+            bool blockedByCover = false,
             float hazardDamagePerTick = 4f,
             float hazardDuration = 3f,
             Vector3? offset = null,
@@ -688,6 +689,7 @@ namespace AdaptiveBossArena.Editor
                     .Bool("_leavesHazard", leavesHazard)
                     .Float("_hazardRadius", hazardRadius)
                     .Float("_hazardForwardOffset", hazardOffset)
+                    .Bool("_blockedByCover", blockedByCover)
                     .Float("_hazardDamagePerTick", hazardDamagePerTick)
                     .Float("_hazardDurationSeconds", hazardDuration);
 

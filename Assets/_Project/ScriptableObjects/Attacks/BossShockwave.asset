@@ -39,6 +39,7 @@ MonoBehaviour:
   _hazardDamagePerTick: 3
   _hazardDurationSeconds: 4
   _hazardForwardOffset: 2
+  _blockedByCover: 1
   _trackingWindowFraction: 0.6
   _unblockable: 0
   _unparryable: 0

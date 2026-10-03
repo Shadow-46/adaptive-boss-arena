@@ -161,6 +161,12 @@ namespace AdaptiveBossArena.Combat
                  "far enough out, and the radius small enough, that the attacker's flanks and back stay clear.")]
         private float _hazardForwardOffset = 2f;
 
+        [Header("Cover")]
+        [SerializeField]
+        [Tooltip("When true, standing stone between the attacker and a target shelters the target. For blasts " +
+                 "thrown out along the floor, not for blows struck with a body or a blade.")]
+        private bool _blockedByCover;
+
         [Header("Tracking")]
         [SerializeField]
         [Tooltip("Fraction of the wind-up during which the attacker may still turn to follow its target. " +
@@ -232,6 +238,9 @@ namespace AdaptiveBossArena.Combat
 
         /// <summary>How far ahead of the attacker the hazard is centred.</summary>
         public float HazardForwardOffset => _hazardForwardOffset;
+
+        /// <summary>Whether standing stone between the attacker and a target shelters the target.</summary>
+        public bool BlockedByCover => _blockedByCover;
 
         /// <summary>Where this attack's hazard is centred, at floor height, for an attacker standing and facing as given.</summary>
         /// <remarks>

@@ -82,6 +82,12 @@ namespace AdaptiveBossArena.Tests.PlayMode
                     continue;
                 }
 
+                // The pillars stand on the floor on purpose, as cover and as bait; they are tested on their own.
+                if (collider.transform.parent != null && collider.transform.parent.name == "Pillars")
+                {
+                    continue;
+                }
+
                 Vector3 nearest = collider.ClosestPoint(body);
                 float fromCentre = new Vector2(nearest.x, nearest.z).magnitude;
 

@@ -10,8 +10,9 @@ namespace AdaptiveBossArena.Combat
     /// <remarks>
     /// <para>
     /// Breaking hides the intact stone and throws pieces from the debris pool out of the space it filled.
-    /// It never touches a collider: what breaks is dressing, so the fight's geometry is the same before
-    /// and after, and a broken parapet cannot open a gap in the arena's boundary.
+    /// It never touches the arena's own colliders: what breaks is dressing, so a broken parapet cannot open a
+    /// gap in the arena's boundary. The one exception is stone that stands in the fight itself - a pillar on
+    /// the floor - which names its own blocking colliders, so once broken it is no longer an invisible wall.
     /// </para>
     /// <para>
     /// Restored for every retry, so an attempt always starts in the same room.
@@ -38,6 +39,10 @@ namespace AdaptiveBossArena.Combat
         [Tooltip("How many pieces it breaks into.")]
         private int _pieceCount = 5;
 
+        [SerializeField]
+        [Tooltip("Colliders that stop bodies only while the stone stands. Empty for dressing, which never blocks.")]
+        private Collider[] _blocking = new Collider[0];
+
         /// <summary>Whether this has been broken this attempt.</summary>
         public bool IsBroken { get; private set; }
 
@@ -57,12 +62,14 @@ namespace AdaptiveBossArena.Combat
         /// <param name="size">Its dimensions, in metres, which the pieces are cut from.</param>
         /// <param name="pieceCount">How many pieces it breaks into.</param>
         /// <param name="reachBonus">Extra reach, for stone standing back from where blows land.</param>
-        public void Bind(Renderer[] intact, Vector3 size, int pieceCount, float reachBonus = 0f)
+        /// <param name="blocking">Colliders that stop bodies only while the stone stands, or null for none.</param>
+        public void Bind(Renderer[] intact, Vector3 size, int pieceCount, float reachBonus = 0f, Collider[] blocking = null)
         {
             _intact = intact ?? new Renderer[0];
             _size = size;
             _pieceCount = pieceCount;
             _reachBonus = reachBonus;
+            _blocking = blocking ?? new Collider[0];
         }
 
         /// <summary>Breaks the stone, throwing its pieces away from the impact.</summary>
@@ -123,6 +130,14 @@ namespace AdaptiveBossArena.Combat
                 if (part != null)
                 {
                     part.enabled = visible;
+                }
+            }
+
+            foreach (Collider solid in _blocking)
+            {
+                if (solid != null)
+                {
+                    solid.enabled = visible;
                 }
             }
         }

@@ -119,7 +119,8 @@ namespace AdaptiveBossArena.Editor.Environment
 
         private static readonly Color StoneTint = new Color(0.78f, 0.76f, 0.74f);
         private static readonly Color BrickTint = new Color(0.72f, 0.70f, 0.70f);
-        private static readonly Color BlockTint = new Color(0.82f, 0.80f, 0.78f);
+        /// <summary>The worked stone of the columns, shared with the pillars on the floor.</summary>
+        internal static readonly Color BlockTint = new Color(0.82f, 0.80f, 0.78f);
         private static readonly Color CandleFlame = new Color(3.2f, 1.6f, 0.55f);
         private static readonly Color CandleLight = new Color(1f, 0.66f, 0.34f);
         // Moonlight blue, matching the key; the shafts were a warm sunbeam.

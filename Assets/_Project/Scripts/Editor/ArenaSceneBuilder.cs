@@ -171,6 +171,7 @@ namespace AdaptiveBossArena.Editor
             ReplaceFloorCollider(floor, config);
             BuildWalls(config, arenaRoot.transform);
             Environment.CathedralBuilder.Build(config, arenaRoot.transform);
+            Environment.PillarBuilder.Build(arenaRoot.transform);
             BuildEnvironment(config, arenaRoot.transform);
         }
 

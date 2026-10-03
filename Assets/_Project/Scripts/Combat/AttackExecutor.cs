@@ -414,6 +414,14 @@ namespace AdaptiveBossArena.Combat
                 Hurtbox hurtbox = _detector.Results[i];
                 int targetId = hurtbox.Owner.GetHashCode();
 
+                // Sheltered behind stone, the wave passes this target by. Not recorded as struck, so a target that
+                // steps out of cover while the wave is still live is caught by it.
+                if (attack.BlockedByCover &&
+                    CoverRules.IsShielded(_origin.position, hurtbox.transform.position, Layers.ArenaMask))
+                {
+                    continue;
+                }
+
                 // Recording the target before knowing the outcome is intentional. An attack that was
                 // dodged must not get a second chance at the same target on the next frame.
                 if (!_alreadyStruck.Add(targetId))
