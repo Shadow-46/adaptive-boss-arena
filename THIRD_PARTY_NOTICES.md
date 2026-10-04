@@ -60,3 +60,14 @@ nothing.
   - 471097 Knife/sword swing - spycrah (the knight's sword swings)
   - 174279 Cathedral Ambience 1 (XY Stereo) - Quistard (the arena's room sound)
 - Source: https://freesound.org/people/<author>/sounds/<id>/
+
+## Sketchfab - "Igris-Boss (Solo Leveling Arsie)" (the boss)
+
+- Author: 20062020year on Sketchfab, who credits nekopixil (https://www.deviantart.com/nekopixil)
+- Source: https://sketchfab.com/3d-models/ec6c37cb8d31456ea7acaf1a443a73aa
+- Licence: CC Attribution 4.0 (CC BY 4.0), as listed on its Sketchfab page
+- Files: not in this repository. Downloaded into the git-ignored `Assets/_Project/Art/Licensed/` folder and built
+  into the player; a clone without it builds the earlier boss instead.
+- Changes: rescaled; lower levels of detail and the built-in weapon removed; armour, seam glow and plume colour
+  regenerated from the model's own maps.
+- The character is from Solo Leveling; this free, non-commercial demo uses the fan model as published.
