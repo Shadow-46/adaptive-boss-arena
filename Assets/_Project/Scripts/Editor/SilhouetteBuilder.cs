@@ -69,6 +69,17 @@ namespace AdaptiveBossArena.Editor
                 Object.DestroyImmediate(collider);
             }
 
+            // A model ripped from a game ships its lower levels of detail and its own weapon alongside its body. All
+            // drawn at once they doubled the figure; the weapon is the game's own, which carries the strike volume.
+            foreach (Renderer renderer in instance.GetComponentsInChildren<Renderer>(true))
+            {
+                if (Art.SpareMeshes.IsSpare(renderer.name))
+                {
+                    // The renderer, not the object: a prefab instance may lose components but keeps its children.
+                    Object.DestroyImmediate(renderer);
+                }
+            }
+
             animator = instance.GetComponentInChildren<Animator>(true);
 
             if (animator != null)

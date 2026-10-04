@@ -37,8 +37,46 @@ namespace AdaptiveBossArena.Editor.Art
         /// <summary>The knight's character file.</summary>
         public const string KnightCharacter = MixamoFolder + "Characters/Paladin J Nordstrom.fbx";
 
-        /// <summary>The boss's character file.</summary>
+        /// <summary>
+        /// The skeleton the boss's animations were authored on, and its body when the corrupted knight is absent.
+        /// </summary>
+        /// <remarks>
+        /// Kept even once the corrupted knight is the body. A clip is read through the skeleton it was made for, and
+        /// every boss clip is a Mixamo file; read through the knight's Biped skeleton they would not import at all.
+        /// Imported as humanoid motion, they then play on any humanoid body.
+        /// </remarks>
         public const string BossCharacter = MixamoFolder + "Characters/Warrok W Kurniawan.fbx";
+
+        /// <summary>The corrupted knight the boss now is, when this checkout has it.</summary>
+        /// <remarks>
+        /// A free Sketchfab model rigged with a 3ds Max Biped skeleton, which Unity's humanoid mapping reads bone for
+        /// bone - so it needs no auto-rigging, which refused it for already having a skeleton.
+        /// </remarks>
+        public const string CorruptedKnightBody = MixamoFolder + "Characters/Shadow_Igris_Boss.fbx";
+
+        /// <summary>
+        /// Import scale for the corrupted knight. Its file declares centimetres but was authored a hundredth too
+        /// small besides; at 1 it stood two centimetres tall.
+        /// </summary>
+        private const float CorruptedKnightImportScale = 100f;
+
+        /// <summary>
+        /// Scale that stands the corrupted knight half as tall again as the knight: its head at 1.98 m as imported,
+        /// the knight's at 1.54 m, so 1.54 x 1.5 / 1.98.
+        /// </summary>
+        private const float CorruptedKnightScale = 1.17f;
+
+        /// <summary>The brute's scale, a head taller than the knight.</summary>
+        private const float BruteScale = 1.05f;
+
+        /// <summary>The boss's body: the corrupted knight when present, else the brute.</summary>
+        public static string BossBody => File.Exists(CorruptedKnightBody) ? CorruptedKnightBody : BossCharacter;
+
+        /// <summary>The scale that sizes <see cref="BossBody"/>.</summary>
+        public static float BossBodyScale => File.Exists(CorruptedKnightBody) ? CorruptedKnightScale : BruteScale;
+
+        /// <summary>Folder the corrupted knight's own maps were unpacked to.</summary>
+        private const string CorruptedKnightMaps = "Assets/_Project/Art/Licensed/Igris/";
 
         private static readonly string[] LoopingWords = { "idle", "walk", "run", "strafe" };
 
@@ -47,7 +85,7 @@ namespace AdaptiveBossArena.Editor.Art
 
         /// <summary>Bumped whenever the import rules change, so files already imported pick them up.</summary>
         /// <returns>The version of these import rules.</returns>
-        public override uint GetVersion() => 4;
+        public override uint GetVersion() => 5;
 
         /// <summary>
         /// A clip's name: its file name, with the character Mixamo previewed it on removed.
@@ -110,6 +148,11 @@ namespace AdaptiveBossArena.Editor.Art
 
             if (IsCharacter)
             {
+                if (assetPath == CorruptedKnightBody)
+                {
+                    importer.globalScale = CorruptedKnightImportScale;
+                }
+
                 importer.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
                 importer.materialImportMode = ModelImporterMaterialImportMode.ImportViaMaterialDescription;
                 importer.importAnimation = false;
@@ -128,6 +171,12 @@ namespace AdaptiveBossArena.Editor.Art
 
         private void OnPreprocessTexture()
         {
+            if (assetPath.StartsWith(CorruptedKnightMaps))
+            {
+                PrepareCorruptedKnightMap((TextureImporter)assetImporter);
+                return;
+            }
+
             if (!assetPath.StartsWith(MixamoFolder))
             {
                 return;
@@ -140,6 +189,25 @@ namespace AdaptiveBossArena.Editor.Art
             if (assetPath.Contains("_normal"))
             {
                 importer.textureType = TextureImporterType.NormalMap;
+            }
+        }
+
+        /// <summary>
+        /// Makes the corrupted knight's maps readable, so its material can be generated from them, and imports each
+        /// as what it is: the normal map as one, the packed mask as data rather than colour.
+        /// </summary>
+        private void PrepareCorruptedKnightMap(TextureImporter importer)
+        {
+            importer.isReadable = true;
+            importer.maxTextureSize = 2048;
+
+            if (assetPath.Contains("_NM"))
+            {
+                importer.textureType = TextureImporterType.NormalMap;
+            }
+            else if (assetPath.Contains("_DT"))
+            {
+                importer.sRGBTexture = false;
             }
         }
 

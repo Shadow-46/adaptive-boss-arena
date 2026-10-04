@@ -123,8 +123,8 @@ namespace AdaptiveBossArena.Editor.Art
         /// <summary>The boss: Mixamo's Warrok, a hunched brute, with the great sword set.</summary>
         public static CharacterClipTable Brute => new CharacterClipTable(
             "BruteController",
-            LicensedArtPostprocessor.BossCharacter,
-            1.05f,
+            LicensedArtPostprocessor.BossBody,
+            LicensedArtPostprocessor.BossBodyScale,
             new[] { Mixamo + "Animations/Boss", Mixamo + "Animations/Shared", QuaterniusLibrary1 },
             new[]
             {
@@ -192,8 +192,8 @@ namespace AdaptiveBossArena.Editor.Art
         /// </remarks>
         public static CharacterClipTable BruteFrenzy => new CharacterClipTable(
             "BruteFrenzyController",
-            LicensedArtPostprocessor.BossCharacter,
-            1.05f,
+            LicensedArtPostprocessor.BossBody,
+            LicensedArtPostprocessor.BossBodyScale,
             new[] { Mixamo + "Animations/Boss", Mixamo + "Animations/Shared", QuaterniusLibrary1 },
             new[]
             {

@@ -41,7 +41,9 @@ namespace AdaptiveBossArena.Editor.Art
         /// <summary>The brute's hide: rough, with the specular map picking out horn and armour.</summary>
         /// <returns>The material, or null when the licensed art is absent.</returns>
         public static Material Brute() =>
-            Build("BruteBody", LicensedArtPostprocessor.BossCharacter, "bear", smoothness: 0.35f);
+            File.Exists(LicensedArtPostprocessor.CorruptedKnightBody) && CorruptedKnightMaterials.Available
+                ? CorruptedKnightMaterials.Build()
+                : Build("BruteBody", LicensedArtPostprocessor.BossCharacter, "bear", smoothness: 0.35f);
 
         private static Material Build(string name, string character, string texturePrefix, float smoothness, float specularScale = 1f)
         {

@@ -26,6 +26,10 @@ namespace AdaptiveBossArena.Editor
         /// <summary>Radius of the brute's hurtbox: how close a knight can stand, and how far past a blade's tip it can be struck.</summary>
         public const float HurtboxRadius = 0.85f;
 
+        /// <summary>The weak-point core's size against the body radius, on the brute and on the corrupted knight.</summary>
+        private const float BruteCoreFraction = 0.34f;
+        private const float KnightCoreFraction = 0.17f;
+
         // The weak point sits over the glowing core the brute silhouette already carries, and is
         // deliberately wider than the art it covers: a 0.3 m sphere would be a pixel-hunt at combat
         // speed, and the decision worth asking for is where the player stands, not how precisely
@@ -112,7 +116,11 @@ namespace AdaptiveBossArena.Editor
             if (SilhouetteBuilder.TryBuildRig(
                     visualRoot.transform, animationConfig, SilhouetteBuilder.BruteRigMaterial(), out Animator rig))
             {
-                SilhouetteBuilder.AttachBruteCore(rig, BodyRadius * 0.34f);
+                // The corrupted knight is slim where the brute was barrel-chested: a brute-sized core stood off its
+                // breastplate as a ball. Half the size, it sits in the plate as an ember heart and still marks the
+                // weak point.
+                bool knight = Art.LicensedArtPostprocessor.BossBody == Art.LicensedArtPostprocessor.CorruptedKnightBody;
+                SilhouetteBuilder.AttachBruteCore(rig, BodyRadius * (knight ? KnightCoreFraction : BruteCoreFraction));
 
                 // The brute's clips are a two-handed great sword set, swung by nothing until now.
                 Art.ArmsBuilder.MountCleaver(
