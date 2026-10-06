@@ -1,3 +1,4 @@
+using System.Linq;
 using AdaptiveBossArena.AI;
 using AdaptiveBossArena.Combat;
 using AdaptiveBossArena.Combat.Feel;
@@ -26,6 +27,12 @@ namespace AdaptiveBossArena.Editor
         /// <summary>Radius of the brute's hurtbox: how close a knight can stand, and how far past a blade's tip it can be struck.</summary>
         public const float HurtboxRadius = 0.85f;
 
+        /// <summary>
+        /// The knight's blade glow at rest: dark enough to read as cold iron, but above zero, because a material
+        /// generated with no emission at all is built without the emission keyword and could never burn.
+        /// </summary>
+        private static readonly Color DormantBladeGlow = new Color(0.004f, 0.001f, 0f);
+
         /// <summary>The weak-point core's size against the body radius, on the brute and on the corrupted knight.</summary>
         private const float BruteCoreFraction = 0.34f;
         private const float KnightCoreFraction = 0.17f;
@@ -49,6 +56,25 @@ namespace AdaptiveBossArena.Editor
 
         private static readonly Color BossColor = new Color(0.85f, 0.25f, 0.3f);
         private static readonly Color WeakPointColor = new Color(1f, 0.85f, 0.3f);
+
+        /// <summary>Gives the corrupted knight the fire that breaks out of it phase by phase.</summary>
+        /// <param name="visualRoot">The boss's visual root, which carries the display.</param>
+        /// <param name="rig">The knight's rig.</param>
+        /// <param name="bladeMaterial">The blade's material, which marks which of the sword's parts burn.</param>
+        private static void AttachCorruption(GameObject visualRoot, Animator rig, Material bladeMaterial)
+        {
+            SkinnedMeshRenderer body = rig.GetComponentsInChildren<SkinnedMeshRenderer>(true)
+                .FirstOrDefault(renderer => renderer.enabled && !Art.SpareMeshes.IsSpare(renderer.name));
+            Transform hand = rig.GetBoneTransform(HumanBodyBones.RightHand);
+            Transform cleaver = hand != null ? hand.Find("Cleaver") : null;
+            Renderer[] blades = cleaver != null
+                ? cleaver.GetComponentsInChildren<Renderer>(true).Where(renderer => renderer.sharedMaterial == bladeMaterial).ToArray()
+                : new Renderer[0];
+
+            visualRoot.AddComponent<CorruptionDisplay>().Bind(
+                body, blades, Art.CorruptedKnightMaterials.LoadCrackLevels(), Art.CorruptedKnightMaterials.EmberGlow,
+                MaterialLibrary.GetOrCreateImpactSparks());
+        }
 
         /// <summary>Creates or replaces the boss prefab.</summary>
         [MenuItem(EditorMenus.Setup + "Generate Boss Prefab", priority = EditorMenus.SetupPriorityBuildScene - 1)]
@@ -122,11 +148,21 @@ namespace AdaptiveBossArena.Editor
                 bool knight = Art.LicensedArtPostprocessor.BossBody == Art.LicensedArtPostprocessor.CorruptedKnightBody;
                 SilhouetteBuilder.AttachBruteCore(rig, BodyRadius * (knight ? KnightCoreFraction : BruteCoreFraction));
 
-                // The brute's clips are a two-handed great sword set, swung by nothing until now.
+                // The brute's clips are a two-handed great sword set, swung by nothing until now. The knight's blade
+                // is dark iron that can burn: its emission is kept, faintly, so the corruption can raise it per phase.
+                Material blade = knight
+                    ? MaterialLibrary.GetOrCreateSurface("CorruptedBlade", new Color(0.12f, 0.1f, 0.1f), metallic: 0.9f, smoothness: 0.5f, emission: DormantBladeGlow)
+                    : MaterialLibrary.GetOrCreateSurface("BruteCleaver", new Color(0.3f, 0.28f, 0.27f), metallic: 0.9f, smoothness: 0.45f);
+
                 Art.ArmsBuilder.MountCleaver(
                     rig,
-                    MaterialLibrary.GetOrCreateSurface("BruteCleaver", new Color(0.3f, 0.28f, 0.27f), metallic: 0.9f, smoothness: 0.45f),
+                    blade,
                     MaterialLibrary.GetOrCreateSurface("BruteGrip", new Color(0.12f, 0.08f, 0.06f), metallic: 0.1f, smoothness: 0.25f));
+
+                if (knight)
+                {
+                    AttachCorruption(visualRoot, rig, blade);
+                }
             }
             else
             {

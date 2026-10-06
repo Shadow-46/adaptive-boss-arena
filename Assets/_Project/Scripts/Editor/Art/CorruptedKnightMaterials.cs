@@ -83,7 +83,9 @@ namespace AdaptiveBossArena.Editor.Art
             AssetAuthoring.EnsureFolderExists(GeneratedFolder);
             float[] plume = PlumeMask();
             Texture2D albedo = SaveTexture("CorruptedKnightAlbedo", Albedo(shade, plume), true);
-            Texture2D seams = SaveTexture("CorruptedKnightSeams", Seams(colour, plume), true);
+            Color[] seamPixels = Seams(colour, plume);
+            Texture2D seams = SaveTexture("CorruptedKnightSeams", seamPixels, true);
+            CrackLevels = BuildCrackLevels(seams, seamPixels, shade, plume);
 
             string path = GeneratedFolder + "/CorruptedKnight.mat";
             var material = AssetDatabase.LoadAssetAtPath<Material>(path);
@@ -264,6 +266,89 @@ namespace AdaptiveBossArena.Editor.Art
 
         private static Vector2 Wrap(Vector2 uv) => new Vector2(uv.x - Mathf.Floor(uv.x), uv.y - Mathf.Floor(uv.y));
 
+        /// <summary>
+        /// The glow map for each phase, from the seams alone to plate split open with fire. Set by <see cref="Build"/>.
+        /// </summary>
+        public static Texture2D[] CrackLevels { get; private set; } = new Texture2D[0];
+
+        /// <summary>Loads the glow maps <see cref="Build"/> wrote, whichever session wrote them.</summary>
+        /// <returns>One per phase, or an empty array when they have not been generated.</returns>
+        public static Texture2D[] LoadCrackLevels()
+        {
+            var levels = new Texture2D[CrackWidthByPhase.Length];
+
+            for (int level = 0; level < levels.Length; level++)
+            {
+                string name = level == 0 ? "CorruptedKnightSeams" : "CorruptedKnightCracks" + level;
+                levels[level] = AssetDatabase.LoadAssetAtPath<Texture2D>(GeneratedFolder + "/" + name + ".asset");
+
+                if (levels[level] == null)
+                {
+                    return new Texture2D[0];
+                }
+            }
+
+            return levels;
+        }
+
+        /// <summary>
+        /// How wide the cracks have opened in each phase, as a fraction of the noise's ridge: none, hairlines, open,
+        /// and in the Last Stand a web across every plate.
+        /// </summary>
+        private static readonly float[] CrackWidthByPhase = { 0f, 0.035f, 0.07f, 0.12f };
+
+        /// <summary>A crack's glow against a seam's: a little dimmer, so the original seams still lead the eye.</summary>
+        private const float CrackGlow = 0.85f;
+
+        /// <summary>The shade below which a texel is not plate - the gaps between plates, where nothing cracks.</summary>
+        private const float PlateShade = 0.15f;
+
+        /// <summary>
+        /// Builds a glow map per phase: the seams, plus cracks that widen phase by phase across the plate.
+        /// </summary>
+        /// <remarks>
+        /// The cracks follow ridged Perlin noise in texture space - the lines where the noise crosses its middle -
+        /// which run as long meandering fractures rather than speckle. One pattern, widened each phase, so the same
+        /// cracks open further rather than new ones appearing at random. Never on the plume, and only on plate.
+        /// </remarks>
+        private static Texture2D[] BuildCrackLevels(Texture2D seamMap, Color[] seams, Texture2D shade, float[] plume)
+        {
+            var levels = new Texture2D[CrackWidthByPhase.Length];
+            levels[0] = seamMap;
+
+            var ridge = new float[Size * Size];
+            var plate = new float[Size * Size];
+
+            for (int y = 0; y < Size; y++)
+            {
+                for (int x = 0; x < Size; x++)
+                {
+                    float u = (x + 0.5f) / Size, v = (y + 0.5f) / Size;
+                    float n = 0.65f * Mathf.PerlinNoise(u * 6f + 11.3f, v * 6f + 4.7f) +
+                              0.35f * Mathf.PerlinNoise(u * 13f + 2.1f, v * 13f + 9.4f);
+                    ridge[y * Size + x] = 1f - Mathf.Abs(2f * n - 1f);
+                    plate[y * Size + x] = shade.GetPixelBilinear(u, v).a > PlateShade ? 1f - plume[y * Size + x] : 0f;
+                }
+            }
+
+            for (int level = 1; level < levels.Length; level++)
+            {
+                float width = CrackWidthByPhase[level];
+                var pixels = new Color[Size * Size];
+
+                for (int i = 0; i < pixels.Length; i++)
+                {
+                    float crack = Ramp(1f - width, 1f - width * 0.3f, ridge[i]) * plate[i] * CrackGlow;
+                    float heat = Mathf.Max(seams[i].r, crack);
+                    pixels[i] = new Color(heat, heat, heat, 1f);
+                }
+
+                levels[level] = SaveTexture("CorruptedKnightCracks" + level, pixels, true);
+            }
+
+            return levels;
+        }
+
         /// <summary>A smooth 0-to-1 ramp as a value crosses from one edge to the other.</summary>
         /// <remarks>Not <see cref="Mathf.SmoothStep"/> on the value, whose arguments are the ends, not edges.</remarks>
         private static float Ramp(float edge0, float edge1, float x) =>
@@ -275,6 +360,9 @@ namespace AdaptiveBossArena.Editor.Art
             var texture = new Texture2D(Size, Size, TextureFormat.RGBA32, mips) { name = name, wrapMode = TextureWrapMode.Clamp };
             texture.SetPixels(pixels);
             texture.Apply(mips);
+
+            // Compressed: uncompressed, each map is four megabytes the browser must download and hold.
+            EditorUtility.CompressTexture(texture, TextureFormat.DXT1, TextureCompressionQuality.Normal);
 
             var existing = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
 

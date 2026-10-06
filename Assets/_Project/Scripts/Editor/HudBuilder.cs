@@ -70,8 +70,6 @@ namespace AdaptiveBossArena.Editor
         /// <summary>Bone-coloured lettering.</summary>
         private static readonly Color LetteringColor = new Color(0.78f, 0.72f, 0.62f);
 
-        /// <summary>The boss's name, spaced out above its gauge.</summary>
-        private const string BossTitle = "T H E   H O L L O W   B R U T E";
 
         /// <summary>Thickness of a gauge's iron rim, in reference pixels.</summary>
         private const float FrameThickness = 2f;
@@ -208,7 +206,7 @@ namespace AdaptiveBossArena.Editor
             GameObject group = CreatePanel(root, "BossVitals", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
                 new Vector2(0f, -46f), new Vector2(900f, 78f), Color.clear);
 
-            Text title = CreateText(group.transform, "BossName", BossTitle, 22, TextAnchor.LowerCenter);
+            Text title = CreateText(group.transform, "BossName", Core.Constants.BossIdentity.HealthBarTitle, 22, TextAnchor.LowerCenter);
             title.rectTransform.anchoredPosition = new Vector2(0f, 44f);
             title.rectTransform.sizeDelta = new Vector2(900f, 30f);
             title.color = LetteringColor;

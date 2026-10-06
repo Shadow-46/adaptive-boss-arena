@@ -408,8 +408,6 @@ namespace AdaptiveBossArena.Game
             _roundIntro.Begin(OnIntroComplete);
         }
 
-        /// <summary>The boss's name, shown as it is met.</summary>
-        private const string BossTitle = "T H E   H O L L O W   B R U T E";
 
         /// <summary>Shake under the entrance roar.</summary>
         private const float EntranceRoarTrauma = 0.35f;
@@ -420,7 +418,7 @@ namespace AdaptiveBossArena.Game
         /// <summary>Holds the camera on the boss under its name and a roar, then hands the fight over.</summary>
         private void PlayEntrance()
         {
-            _roundIntro.BeginEntrance(BossTitle, OnIntroComplete);
+            _roundIntro.BeginEntrance(BossIdentity.EntranceTitle, OnIntroComplete);
 
             if (_cameraRig == null)
             {

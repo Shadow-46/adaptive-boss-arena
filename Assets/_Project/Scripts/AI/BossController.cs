@@ -110,6 +110,7 @@ namespace AdaptiveBossArena.AI
         /// <summary>The rig's physical body, woken on death. Null for a primitive body.</summary>
         private RagdollActivator _ragdoll;
         private PhaseAura _phaseAura;
+        private CorruptionDisplay _corruption;
 
         /// <summary>
         /// How long the boss shrugs off hits while transforming into a new phase.
@@ -230,6 +231,7 @@ namespace AdaptiveBossArena.AI
             _bridge = GetComponentInChildren<CharacterAnimationBridge>();
             _ragdoll = GetComponentInChildren<RagdollActivator>();
             _phaseAura = GetComponentInChildren<PhaseAura>();
+            _corruption = GetComponentInChildren<CorruptionDisplay>();
         }
 
         private void Start()
@@ -958,6 +960,9 @@ namespace AdaptiveBossArena.AI
                 _context.CurrentPhase.AdaptationRateMultiplier * _adaptationRateScale);
 
             _phaseAura?.SetPhase(phaseIndex);
+
+            // The corrupted knight's fire breaks out further with each phase, and dies back on a retry.
+            _corruption?.SetPhase(phaseIndex);
 
             // The last phase is fought bare-handed: a different body, not only faster numbers.
             _bridge?.SetFrenzy(phaseIndex >= FrenzyPhaseIndex);
