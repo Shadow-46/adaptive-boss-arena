@@ -300,6 +300,52 @@ namespace AdaptiveBossArena.Editor.Art
             AddPart(cleaver.transform, "Blade", bladeMaterial, Blade(1.45f, 0.24f, 0.05f, 0.1f), new Vector3(0f, 0f, 0.18f) * scale, scale);
         }
 
+        /// <summary>How far across the palm a hilt sits, from the wrist toward the knuckles.</summary>
+        private const float PalmGripFraction = 0.5f;
+
+        /// <summary>
+        /// Puts a model's own sword in a rig's right hand, and returns the mount the strike volume and trail ride on.
+        /// </summary>
+        /// <remarks>
+        /// A model taken from a game carries its sword on a prop bone that the game's own animations placed in the
+        /// hand. The clips here reach the body through the humanoid skeleton, which knows nothing of that bone, so the
+        /// sword would hang where the model was posed with it, nearly two metres off. The bone is set into the grip
+        /// instead, turned the way a sword is held, and scaled so the blade is as long as the fight was measured for.
+        /// The mount is named as the generated sword's is and sits on the same line, so everything that finds the
+        /// sword finds this one.
+        /// </remarks>
+        /// <param name="rig">The rig's humanoid Animator.</param>
+        /// <param name="sword">The model's sword, skinned to its prop bone, which runs along the bone's +Z.</param>
+        /// <param name="tipDistance">How far from the grip the point should reach, in metres.</param>
+        /// <returns>The mount, or null when the rig has no hand or the sword no bone.</returns>
+        public static Transform HoldPropSword(Animator rig, SkinnedMeshRenderer sword, float tipDistance)
+        {
+            Transform hand = rig.GetBoneTransform(HumanBodyBones.RightHand);
+            Transform knuckles = rig.GetBoneTransform(HumanBodyBones.RightMiddleProximal);
+            Transform prop = sword.rootBone;
+
+            if (hand == null || prop == null || prop.parent == null)
+            {
+                return null;
+            }
+
+            Vector3 palm = knuckles != null
+                ? Vector3.Lerp(hand.position, knuckles.position, PalmGripFraction)
+                : hand.position;
+            Quaternion grip = GripRotation(rig, right: true);
+
+            // The point is the mesh's furthest reach along the blade, in the bone's own units.
+            float meshTip = Mathf.Max(0.01f, sword.sharedMesh.bounds.max.z);
+            prop.SetPositionAndRotation(palm, grip);
+            prop.localScale = Vector3.one * (tipDistance / meshTip / Mathf.Max(0.01f, prop.parent.lossyScale.x));
+
+            var mount = new GameObject("Cleaver");
+            mount.transform.SetParent(hand, false);
+            mount.transform.SetPositionAndRotation(palm, grip);
+
+            return mount.transform;
+        }
+
         private static void AddPart(Transform parent, string name, Material material, Mesh mesh, Vector3 localPosition, float scale)
         {
             var part = new GameObject(name);

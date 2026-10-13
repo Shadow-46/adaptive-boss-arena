@@ -57,23 +57,71 @@ namespace AdaptiveBossArena.Editor
         private static readonly Color BossColor = new Color(0.85f, 0.25f, 0.3f);
         private static readonly Color WeakPointColor = new Color(1f, 0.85f, 0.3f);
 
+        /// <summary>How far the knight's own sword reaches from his grip, in metres.</summary>
+        /// <remarks>
+        /// The model's blade is drawn for a giant: at his size it would reach two and a half metres, past anything the
+        /// fight's reach was tuned around. A third longer than the generated great sword reads as his and still
+        /// leaves the player a ring to stand in.
+        /// </remarks>
+        private const float KnightSwordTip = 1.9f;
+
+        /// <summary>Where the knight's blade begins past the guard, as a fraction of its reach.</summary>
+        private const float KnightSwordGuardFraction = 0.17f;
+
+        /// <summary>The generated great sword's blade, from the hand.</summary>
+        private const float GreatSwordBase = 0.45f;
+        private const float GreatSwordTip = 1.6f;
+
         /// <summary>Gives the corrupted knight the fire that breaks out of it phase by phase.</summary>
         /// <param name="visualRoot">The boss's visual root, which carries the display.</param>
         /// <param name="rig">The knight's rig.</param>
-        /// <param name="bladeMaterial">The blade's material, which marks which of the sword's parts burn.</param>
-        private static void AttachCorruption(GameObject visualRoot, Animator rig, Material bladeMaterial)
+        /// <param name="blades">The sword's renderers, which burn.</param>
+        private static void AttachCorruption(GameObject visualRoot, Animator rig, Renderer[] blades)
         {
             SkinnedMeshRenderer body = rig.GetComponentsInChildren<SkinnedMeshRenderer>(true)
-                .FirstOrDefault(renderer => renderer.enabled && !Art.SpareMeshes.IsSpare(renderer.name));
-            Transform hand = rig.GetBoneTransform(HumanBodyBones.RightHand);
-            Transform cleaver = hand != null ? hand.Find("Cleaver") : null;
-            Renderer[] blades = cleaver != null
-                ? cleaver.GetComponentsInChildren<Renderer>(true).Where(renderer => renderer.sharedMaterial == bladeMaterial).ToArray()
-                : new Renderer[0];
+                .FirstOrDefault(renderer => renderer.enabled && Art.SpareMeshes.IsBody(renderer.name));
 
             visualRoot.AddComponent<CorruptionDisplay>().Bind(
                 body, blades, Art.CorruptedKnightMaterials.LoadCrackLevels(), Art.CorruptedKnightMaterials.EmberGlow,
                 MaterialLibrary.GetOrCreateImpactSparks());
+        }
+
+        /// <summary>
+        /// Puts the knight's own sword in his hand, drawn in the blade's material.
+        /// </summary>
+        /// <param name="rig">The knight's rig.</param>
+        /// <param name="blade">The blade's material.</param>
+        /// <returns>The sword's renderers, empty when the model carries no sword of its own.</returns>
+        private static Renderer[] HoldOwnSword(Animator rig, Material blade)
+        {
+            SkinnedMeshRenderer sword = rig.GetComponentsInChildren<SkinnedMeshRenderer>(true)
+                .FirstOrDefault(renderer => renderer.enabled && Art.SpareMeshes.IsWeapon(renderer.name));
+
+            if (sword == null || Art.ArmsBuilder.HoldPropSword(rig, sword, KnightSwordTip) == null)
+            {
+                return new Renderer[0];
+            }
+
+            sword.sharedMaterials = Enumerable.Repeat(blade, Mathf.Max(1, sword.sharedMaterials.Length)).ToArray();
+
+            // Swung through arcs the model never posed in: the bounds of its rest pose would cull the blade mid-swing.
+            sword.updateWhenOffscreen = true;
+
+            return new Renderer[] { sword };
+        }
+
+        /// <summary>The generated great sword's blade renderers, for a knight model that carries no sword of its own.</summary>
+        /// <param name="rig">The knight's rig.</param>
+        /// <param name="blade">The blade's material, which marks which of the sword's parts burn.</param>
+        /// <returns>The blade's renderers.</returns>
+        private static Renderer[] MountedBlades(Animator rig, Material blade)
+        {
+            Transform hand = rig.GetBoneTransform(HumanBodyBones.RightHand);
+            Transform cleaver = hand != null ? hand.Find("Cleaver") : null;
+
+            return cleaver != null
+                ? cleaver.GetComponentsInChildren<Renderer>(true).Where(renderer => renderer.sharedMaterial == blade).ToArray()
+                : new Renderer[0];
         }
 
         /// <summary>Creates or replaces the boss prefab.</summary>
@@ -139,6 +187,8 @@ namespace AdaptiveBossArena.Editor
             var animationConfig =
                 GeneratedAssets.Config<CharacterAnimationConfig>("DefaultBossAnimation");
 
+            bool ownSword = false;
+
             if (SilhouetteBuilder.TryBuildRig(
                     visualRoot.transform, animationConfig, SilhouetteBuilder.BruteRigMaterial(), out Animator rig))
             {
@@ -154,15 +204,23 @@ namespace AdaptiveBossArena.Editor
                     ? MaterialLibrary.GetOrCreateSurface("CorruptedBlade", new Color(0.12f, 0.1f, 0.1f), metallic: 0.9f, smoothness: 0.5f, emission: DormantBladeGlow)
                     : MaterialLibrary.GetOrCreateSurface("BruteCleaver", new Color(0.3f, 0.28f, 0.27f), metallic: 0.9f, smoothness: 0.45f);
 
-                Art.ArmsBuilder.MountCleaver(
-                    rig,
-                    blade,
-                    MaterialLibrary.GetOrCreateSurface("BruteGrip", new Color(0.12f, 0.08f, 0.06f), metallic: 0.1f, smoothness: 0.25f));
+                // The knight swings his own jagged sword; the brute, or a knight model without one, the generated blade.
+                Renderer[] blades = knight ? HoldOwnSword(rig, blade) : new Renderer[0];
+
+                if (blades.Length == 0)
+                {
+                    Art.ArmsBuilder.MountCleaver(
+                        rig,
+                        blade,
+                        MaterialLibrary.GetOrCreateSurface("BruteGrip", new Color(0.12f, 0.08f, 0.06f), metallic: 0.1f, smoothness: 0.25f));
+                }
 
                 if (knight)
                 {
-                    AttachCorruption(visualRoot, rig, blade);
+                    AttachCorruption(visualRoot, rig, blades.Length > 0 ? blades : MountedBlades(rig, blade));
                 }
+
+                ownSword = blades.Length > 0;
             }
             else
             {
@@ -192,10 +250,12 @@ namespace AdaptiveBossArena.Editor
 
             if (cleaver != null)
             {
-                WeaponTrailBuilder.Attach(cleaver, Vector3.zero, baseDistance: 0.45f, tipDistance: 1.6f, warmSteel);
+                float tip = ownSword ? KnightSwordTip : GreatSwordTip;
+                float bladeBase = ownSword ? KnightSwordTip * KnightSwordGuardFraction : GreatSwordBase;
+                WeaponTrailBuilder.Attach(cleaver, Vector3.zero, baseDistance: bladeBase, tipDistance: tip, warmSteel);
 
-                // The great sword the brute's cuts land with, over the same span the trail smears.
-                StrikeVolumeBuilder.Attach(cleaver, Combat.StrikerParts.Weapon, 0.45f, 1.6f, 0.14f);
+                // The sword the cuts land with, over the same span the trail smears.
+                StrikeVolumeBuilder.Attach(cleaver, Combat.StrikerParts.Weapon, bladeBase, tip, 0.14f);
             }
             else
             {

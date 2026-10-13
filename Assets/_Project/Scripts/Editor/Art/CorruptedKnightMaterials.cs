@@ -202,7 +202,7 @@ namespace AdaptiveBossArena.Editor.Art
         {
             foreach (SkinnedMeshRenderer renderer in model.GetComponentsInChildren<SkinnedMeshRenderer>(true))
             {
-                if (!SpareMeshes.IsSpare(renderer.name))
+                if (SpareMeshes.IsBody(renderer.name))
                 {
                     return renderer;
                 }

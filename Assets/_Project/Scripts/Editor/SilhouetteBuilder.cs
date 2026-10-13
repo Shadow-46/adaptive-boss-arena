@@ -69,8 +69,8 @@ namespace AdaptiveBossArena.Editor
                 Object.DestroyImmediate(collider);
             }
 
-            // A model ripped from a game ships its lower levels of detail and its own weapon alongside its body. All
-            // drawn at once they doubled the figure; the weapon is the game's own, which carries the strike volume.
+            // A model ripped from a game ships its lower levels of detail alongside its body. All drawn at once they
+            // doubled the figure. Its own weapon stays, for the prefab builder to put in the hand.
             foreach (Renderer renderer in instance.GetComponentsInChildren<Renderer>(true))
             {
                 if (Art.SpareMeshes.IsSpare(renderer.name))
@@ -100,11 +100,17 @@ namespace AdaptiveBossArena.Editor
 
             // The imported model's own materials are placeholders and are not imported, so every
             // surface would otherwise render with the engine's default. The body takes the character's
-            // generated material, which knows the render pipeline and the art direction.
+            // generated material, which knows the render pipeline and the art direction. A weapon is not armour: the
+            // prefab builder gives it the blade's material.
             if (bodyMaterial != null)
             {
                 foreach (Renderer renderer in instance.GetComponentsInChildren<Renderer>(true))
                 {
+                    if (Art.SpareMeshes.IsWeapon(renderer.name))
+                    {
+                        continue;
+                    }
+
                     var materials = new Material[renderer.sharedMaterials.Length == 0 ? 1 : renderer.sharedMaterials.Length];
 
                     for (int i = 0; i < materials.Length; i++)
