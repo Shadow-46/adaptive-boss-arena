@@ -23,6 +23,7 @@ namespace AdaptiveBossArena.Tests.EditMode
         [TestCase("BossShockwave")]
         [TestCase("BossPhaseShockwave")]
         [TestCase("BossPerilousOverhead")]
+        [TestCase("BossEdict")]
         public void GroundStrikesAndUnblockablesKeepTheirWarning(string attack)
         {
             Assert.IsTrue(Load(attack).ShowTelegraph, attack + " lost its ground warning.");
@@ -31,6 +32,8 @@ namespace AdaptiveBossArena.Tests.EditMode
         [TestCase("BossSweep")]
         [TestCase("BossCharge")]
         [TestCase("BossJab")]
+        [TestCase("BossThrust")]
+        [TestCase("BossRebuke")]
         [TestCase("PlayerLight1")]
         [TestCase("PlayerHeavy")]
         public void OrdinarySwingsAreReadFromTheBody(string attack)

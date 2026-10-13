@@ -18,6 +18,8 @@ namespace AdaptiveBossArena.Tests.EditMode
 
         [TestCase("BossShockwave", true)]
         [TestCase("BossPhaseShockwave", true)]
+        [TestCase("BossEdict", true)]
+        [TestCase("BossThrust", false)]
         [TestCase("BossSweep", false)]
         [TestCase("BossSlam", false)]
         [TestCase("BossCharge", false)]

@@ -47,4 +47,5 @@ MonoBehaviour:
   _showTelegraph: 1
   _comboWindowStart: 0.1
   _comboWindowEnd: 0.85
+  _followUps: []
   _strikers: 16

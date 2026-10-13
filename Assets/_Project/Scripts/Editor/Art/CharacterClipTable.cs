@@ -28,6 +28,10 @@ namespace AdaptiveBossArena.Editor.Art
             // for what the body does rather than for the move that uses them, so one clip can serve several.
             "Kick", "Spin", "Grab", "Leap", "Claw", "Rip", "Roar",
 
+            // The corrupted knight's commander moves: a lunging thrust, a thrust-and-boot rebuke, and the edict
+            // gathered with the blade held high.
+            "Thrust", "Rebuke", "Edict",
+
             // The execution, which used to borrow a passing slash. The parry stance is not here: it is
             // cross-faded as a state by the bridge, not scrubbed by an attack's timeline.
             "Riposte"
@@ -176,7 +180,14 @@ namespace AdaptiveBossArena.Editor.Art
                 // Tearing a pillar out of the floor, thrown with the weight of the shoulder behind it.
                 ["Rip"] = "Mutant Punch",
                 // The roar: head thrown back, chest open. Also the phase transitions. The knight's is a war cry.
-                ["Roar"] = Roar
+                ["Roar"] = Roar,
+
+                // Commander's Thrust: slash (2) drives the point forward from a deep lunge.
+                ["Thrust"] = "great sword slash (2)",
+                // Iron Rebuke: kick (2) jabs the point, then plants a boot.
+                ["Rebuke"] = "great sword kick (2)",
+                // Blood-Red Edict: power up raises the blade upright and gathers before it is cried out.
+                ["Edict"] = "great sword power up"
             },
             // walk (2) steps back; strafe (2) and (4) step right, strafe and (3) left.
             new[]
@@ -244,7 +255,10 @@ namespace AdaptiveBossArena.Editor.Art
                 ["Leap"] = "Mutant Jump Attack",
                 ["Claw"] = "Mutant Swiping",
                 ["Rip"] = "Mutant Punch",
-                ["Roar"] = "Standing Taunt Battlecry"
+                ["Roar"] = "Standing Taunt Battlecry",
+                ["Thrust"] = "great sword slash (2)",
+                ["Rebuke"] = "great sword kick (2)",
+                ["Edict"] = "great sword power up"
             },
             new[]
             {
@@ -300,7 +314,10 @@ namespace AdaptiveBossArena.Editor.Art
                 ["Leap"] = "Mutant Jump Attack",
                 ["Claw"] = "Mutant Swiping",
                 ["Rip"] = "Mutant Punch",
-                ["Roar"] = "Mutant Roaring"
+                ["Roar"] = "Mutant Roaring",
+                ["Thrust"] = "Mutant Jump Attack",
+                ["Rebuke"] = "Mutant Punch",
+                ["Edict"] = "Mutant Roaring"
             },
             dropsWeapon: true);
 

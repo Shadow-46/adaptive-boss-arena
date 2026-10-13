@@ -27,6 +27,8 @@ namespace AdaptiveBossArena.Tests.EditMode
         [TestCase("BossGrab", StrikerParts.RightHand | StrikerParts.LeftHand)]
         [TestCase("BossLeapSmash", StrikerParts.Body)]
         [TestCase("BossCharge", StrikerParts.Weapon | StrikerParts.Body)]
+        [TestCase("BossThrust", StrikerParts.Weapon)]
+        [TestCase("BossRebuke", StrikerParts.Weapon)]
         public void TheAttackStrikesWithThePartItsClipSwings(string attackName, StrikerParts expected)
         {
             var attack = AssetDatabase.LoadAssetAtPath<AttackDefinition>($"{AttackFolder}/{attackName}.asset");
@@ -44,6 +46,8 @@ namespace AdaptiveBossArena.Tests.EditMode
         [TestCase("BossKick")]
         [TestCase("BossGrab")]
         [TestCase("BossLeapSmash")]
+        [TestCase("BossThrust")]
+        [TestCase("BossRebuke")]
         public void TheBossPlansEachBlowFromAReachItsBodyHas(string attackName)
         {
             // The boss plans every swing from this range. Measured from a direct clip sample it kept each clip's
@@ -60,6 +64,7 @@ namespace AdaptiveBossArena.Tests.EditMode
         [TestCase("BossSlam")]
         [TestCase("BossShockwave")]
         [TestCase("BossPhaseShockwave")]
+        [TestCase("BossEdict")]
         [TestCase("PlayerSpecial")]
         public void AnAreaAttackStaysOnTheAreaDrawnForIt(string attackName)
         {

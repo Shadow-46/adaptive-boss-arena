@@ -1,4 +1,6 @@
+using System.Reflection;
 using AdaptiveBossArena.AI.States;
+using AdaptiveBossArena.Combat;
 using AdaptiveBossArena.Core.Services;
 using NUnit.Framework;
 using UnityEngine;
@@ -166,6 +168,51 @@ namespace AdaptiveBossArena.Tests.EditMode
             // shorten the phase's own rhythm, which is not a capability the boss is meant to gain.
             Assert.AreEqual(
                 1f, BossAttackState.AttackCooldownFor(1f, -2f, isFeint: false), 0.0001f);
+        }
+
+        [Test]
+        public void AChainFollowsTheDrillTheSwingWasAuthoredWith()
+        {
+            AttackDefinition sweep = ScriptableObject.CreateInstance<AttackDefinition>();
+            AttackDefinition jab = ScriptableObject.CreateInstance<AttackDefinition>();
+            AttackDefinition thrust = ScriptableObject.CreateInstance<AttackDefinition>();
+            DrillInto(sweep, thrust);
+
+            // The moveset lists the jab first, so an undrilled pick from the fixed source would take it.
+            AttackDefinition next = BossAttackState.PickFollowUp(
+                sweep, new[] { jab, sweep, thrust }, new FixedBoolRandom(true));
+
+            Assert.AreSame(thrust, next, "The sweep did not flow into the thrust it is drilled into.");
+            DestroyAll(sweep, jab, thrust);
+        }
+
+        [Test]
+        public void ADrillNeverReachesForAMoveThePhaseHasNotUnlocked()
+        {
+            // The opening phase has no thrust: its sweep must chain as it always did, from its own moveset.
+            AttackDefinition sweep = ScriptableObject.CreateInstance<AttackDefinition>();
+            AttackDefinition slam = ScriptableObject.CreateInstance<AttackDefinition>();
+            AttackDefinition thrust = ScriptableObject.CreateInstance<AttackDefinition>();
+            DrillInto(sweep, thrust);
+
+            AttackDefinition next = BossAttackState.PickFollowUp(
+                sweep, new[] { slam, sweep }, new FixedBoolRandom(true));
+
+            Assert.AreSame(slam, next, "The chain used a move the phase has not unlocked.");
+            DestroyAll(sweep, slam, thrust);
+        }
+
+        private static void DrillInto(AttackDefinition attack, params AttackDefinition[] followUps) =>
+            typeof(AttackDefinition)
+                .GetField("_followUps", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(attack, followUps);
+
+        private static void DestroyAll(params Object[] objects)
+        {
+            foreach (Object item in objects)
+            {
+                Object.DestroyImmediate(item);
+            }
         }
     }
 }

@@ -53,6 +53,9 @@ namespace AdaptiveBossArena.AI.States
         private bool _isFeinting;
         private int _comboRemaining;
 
+        /// <summary>The swing just thrown, whose authored follow-ups the chain continues with.</summary>
+        private AttackDefinition _lastSwing;
+
         /// <summary>
         /// True once the attack — and any combo it grew into — has run its course.
         /// </summary>
@@ -95,6 +98,7 @@ namespace AdaptiveBossArena.AI.States
             context.LastAttackWasCommitted = !_isFeinting && (attack.LungeSpeed > 0f || attack.Unblockable);
 
             context.Motor.Halt();
+            _lastSwing = attack;
             context.Attacks.Begin(attack, context.DistanceToPlayer);
         }
 
@@ -243,7 +247,7 @@ namespace AdaptiveBossArena.AI.States
                 return;
             }
 
-            AttackDefinition next = PickFollowUp(context);
+            AttackDefinition next = PickFollowUp(_lastSwing, context.CurrentPhase.Attacks, context.Random);
             bool inReach = next != null && context.HasPerceivedPlayer &&
                            context.DistanceToPlayer <= next.EffectiveReach;
 
@@ -258,20 +262,42 @@ namespace AdaptiveBossArena.AI.States
             // A follow-up is a commitment by definition — the boss has strung itself into a chain — so
             // a chain that swings through empty air can overbalance it just as a lunge can.
             context.LastAttackWasCommitted = true;
+            _lastSwing = next;
             context.Attacks.Begin(next, context.DistanceToPlayer);
         }
 
-        /// <summary>Chooses a follow-up at random from the current phase's moveset.</summary>
-        private static AttackDefinition PickFollowUp(BossContext context)
+        /// <summary>
+        /// Chooses the next blow of a chain: one of the last swing's authored follow-ups that this phase allows,
+        /// or any move of the phase when it has none.
+        /// </summary>
+        /// <remarks>
+        /// Filtered by the phase's moveset first, so an authored drill can never reach for a move the phase has
+        /// not unlocked - the opening's sweep does not flow into a thrust the knight has not yet seen.
+        /// </remarks>
+        /// <param name="lastSwing">The swing just thrown, or null.</param>
+        /// <param name="moveset">The current phase's moves.</param>
+        /// <param name="random">The seeded random source.</param>
+        /// <returns>The follow-up, or null for an empty moveset.</returns>
+        public static AttackDefinition PickFollowUp(
+            AttackDefinition lastSwing, AttackDefinition[] moveset, IRandomProvider random)
         {
-            AttackDefinition[] moveset = context.CurrentPhase.Attacks;
-
             if (moveset == null || moveset.Length == 0)
             {
                 return null;
             }
 
-            return moveset[context.Random.NextInt(0, moveset.Length)];
+            if (lastSwing != null)
+            {
+                AttackDefinition[] drilled = System.Array.FindAll(
+                    lastSwing.FollowUps, followUp => followUp != null && System.Array.IndexOf(moveset, followUp) >= 0);
+
+                if (drilled.Length > 0)
+                {
+                    return drilled[random.NextInt(0, drilled.Length)];
+                }
+            }
+
+            return moveset[random.NextInt(0, moveset.Length)];
         }
 
         /// <summary>

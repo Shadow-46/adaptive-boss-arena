@@ -100,6 +100,7 @@ namespace AdaptiveBossArena.Editor
                 ReactionProfile reactionProfile = CreateReactionProfile();
                 PlayerAttacks playerAttacks = CreatePlayerAttacks();
                 BossAttacks bossAttacks = CreateBossAttacks();
+                AssignFollowUps(bossAttacks);
                 CounterStrategy[] strategies = CreateCounterStrategies();
 
                 WeaponDefinition[] weapons = CreateWeapons(playerAttacks);
@@ -151,7 +152,10 @@ namespace AdaptiveBossArena.Editor
                 AttackDefinition spin,
                 AttackDefinition kick,
                 AttackDefinition grab,
-                AttackDefinition leap)
+                AttackDefinition leap,
+                AttackDefinition thrust,
+                AttackDefinition rebuke,
+                AttackDefinition edict)
             {
                 Sweep = sweep;
                 Slam = slam;
@@ -165,6 +169,9 @@ namespace AdaptiveBossArena.Editor
                 Kick = kick;
                 Grab = grab;
                 Leap = leap;
+                Thrust = thrust;
+                Rebuke = rebuke;
+                Edict = edict;
             }
 
             public AttackDefinition Sweep { get; }
@@ -197,6 +204,15 @@ namespace AdaptiveBossArena.Editor
 
             /// <summary>The leap that closes the arena and scars where it lands.</summary>
             public AttackDefinition Leap { get; }
+
+            /// <summary>The lunging thrust that punishes backing away in a straight line.</summary>
+            public AttackDefinition Thrust { get; }
+
+            /// <summary>The thrust-and-boot that throws a crowding player off.</summary>
+            public AttackDefinition Rebuke { get; }
+
+            /// <summary>The war cry that drives back everything near the knight, the Last Stand's signature.</summary>
+            public AttackDefinition Edict { get; }
         }
 
         private static ReactionProfile CreateReactionProfile()
@@ -271,7 +287,10 @@ namespace AdaptiveBossArena.Editor
             // The held overhead wears the same raised blade as the perilous one and is stretched over its
             // longer wind-up by the time-warp, which is the whole read: the pose is familiar, the timing is not.
             ("BossDelayedOverhead", "Heavy"), ("BossSpinCleave", "Spin"), ("BossKick", "Kick"),
-            ("BossGrab", "Grab"), ("BossLeapSmash", "Leap")
+            ("BossGrab", "Grab"), ("BossLeapSmash", "Leap"),
+
+            // The commander's moves, each on a clip of its own.
+            ("BossThrust", "Thrust"), ("BossRebuke", "Rebuke"), ("BossEdict", "Edict")
         };
 
         /// <summary>Which parts of the body each attack strikes with.</summary>
@@ -303,7 +322,8 @@ namespace AdaptiveBossArena.Editor
             ("BossCharge", StrikerParts.Weapon | StrikerParts.Body),
             ("BossKick", StrikerParts.RightFoot),
             ("BossGrab", StrikerParts.RightHand | StrikerParts.LeftHand),
-            ("BossLeapSmash", StrikerParts.Body)
+            ("BossLeapSmash", StrikerParts.Body),
+            ("BossThrust", StrikerParts.Weapon), ("BossRebuke", StrikerParts.Weapon)
         };
 
         /// <summary>The parts an attack strikes with, by asset name; none for one not in the table.</summary>
@@ -620,9 +640,68 @@ namespace AdaptiveBossArena.Editor
                 telegraph: true, leavesHazard: true, hazardRadius: 1.4f, hazardOffset: 1.9f,
                 hazardDamagePerTick: 3f, hazardDuration: 3.5f, reaction: ImpactReaction.Knockdown);
 
+            // Commander's Thrust: the answer to backing away in a straight line. It closes with a lunge on a point
+            // only forty degrees wide, so a step to the side beats it where a step back does not. Its recovery is the
+            // price of the reach: a sidestepped thrust leaves the knight's flank open.
+            AttackDefinition thrust = CreateAttack(
+                "BossThrust", "Commander's Thrust", DamageType.BossMelee,
+                damage: 16f, startup: 0.5f, active: 0.12f, recovery: 0.62f,
+                range: 4f, arc: 40f, poise: 30f, knockback: 6f, hitStop: 0.08f, trauma: 0.3f,
+                lungeSpeed: 10f, stagger: StaggerStrength.Interrupt, telegraph: false,
+                reaction: ImpactReaction.Knockback);
+
+            // Iron Rebuke: the answer to crowding him. Quick and short, it throws the player off their feet, so
+            // standing inside his reach to trade blows stops being the safe place it was against a great sword.
+            AttackDefinition rebuke = CreateAttack(
+                "BossRebuke", "Iron Rebuke", DamageType.BossMelee,
+                damage: 10f, startup: 0.4f, active: 0.14f, recovery: 0.6f,
+                range: 2.6f, arc: 70f, poise: 45f, knockback: 10f, hitStop: 0.08f, trauma: 0.35f,
+                stagger: StaggerStrength.Interrupt, telegraph: false, reaction: ImpactReaction.Launch);
+
+            // Blood-Red Edict: the Last Stand's signature. A war cry gathered with the blade held high, that drives
+            // everything near him back. It cannot be blocked, but its reach is short and a pillar stands it: the
+            // answer is to be away from him, or behind stone, when the blade comes up.
+            AttackDefinition edict = CreateAttack(
+                "BossEdict", "Blood-Red Edict", DamageType.BossProjectile,
+                damage: 12f, startup: 0.85f, active: 0.3f, recovery: 0.6f,
+                range: 5f, arc: 360f, poise: 30f, knockback: 11f, hitStop: 0.1f, trauma: 0.55f,
+                shape: AttackShape.Sphere, telegraph: true, unblockable: true, blockedByCover: true,
+                overlayColor: new Color(0.85f, 0.05f, 0.05f, 0.6f), reaction: ImpactReaction.Knockback);
+
             return new BossAttacks(
                 sweep, slam, charge, shockwave, jab, perilous, phaseShockwave,
-                delayedOverhead, spin, kick, grab, leap);
+                delayedOverhead, spin, kick, grab, leap, thrust, rebuke, edict);
+        }
+
+        /// <summary>
+        /// Writes the boss's drilled chains: which blows each swing flows into.
+        /// </summary>
+        /// <remarks>
+        /// References, not tuning, so they are written on every run. The sweep opens the guard for the thrust or
+        /// the jab; the thrust is followed by the rebuke for a player who closed in to punish it, or the spin for
+        /// one who circled; the jab sets up the sweep or the thrust. Each is still filtered by the phase's moveset,
+        /// so the opening's sweep, with no thrust unlocked, chains as it always did.
+        /// </remarks>
+        private static void AssignFollowUps(BossAttacks attacks)
+        {
+            WriteFollowUps(attacks.Sweep, attacks.Thrust, attacks.Jab);
+            WriteFollowUps(attacks.Thrust, attacks.Rebuke, attacks.Spin);
+            WriteFollowUps(attacks.Jab, attacks.Sweep, attacks.Thrust);
+        }
+
+        private static void WriteFollowUps(AttackDefinition attack, params AttackDefinition[] followUps)
+        {
+            var serialized = new SerializedObject(attack);
+            SerializedProperty list = serialized.FindProperty("_followUps");
+            list.arraySize = followUps.Length;
+
+            for (int i = 0; i < followUps.Length; i++)
+            {
+                list.GetArrayElementAtIndex(i).objectReferenceValue = followUps[i];
+            }
+
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(attack);
         }
 
         private static AttackDefinition CreateAttack(
@@ -1282,14 +1361,15 @@ namespace AdaptiveBossArena.Editor
                     moveMultiplier: 1.15f, cooldown: 0.85f, adaptationRate: 1.4f,
                     signature: attacks.Charge,
                     attacks.Sweep, attacks.Slam, attacks.Charge, attacks.Jab, attacks.Perilous,
-                    attacks.DelayedOverhead, attacks.Spin, attacks.Kick);
+                    attacks.DelayedOverhead, attacks.Spin, attacks.Kick, attacks.Thrust);
 
                 WritePhase(
                     phases.GetArrayElementAtIndex(2), ShouldWriteTuning(created), "Relentless", threshold: 0.33f,
                     moveMultiplier: 1.3f, cooldown: 0.6f, adaptationRate: 2f,
                     signature: attacks.Shockwave,
                     attacks.Sweep, attacks.Slam, attacks.Charge, attacks.Shockwave, attacks.Jab, attacks.Perilous,
-                    attacks.DelayedOverhead, attacks.Spin, attacks.Kick, attacks.Grab, attacks.Leap);
+                    attacks.DelayedOverhead, attacks.Spin, attacks.Kick, attacks.Grab, attacks.Leap, attacks.Thrust,
+                    attacks.Rebuke);
 
                 // Last Stand: the desperation phase. It flows through the same escalation beat as the
                 // others — roar, shockwave, invulnerable rear-up — but arrives with the fullest
@@ -1301,9 +1381,10 @@ namespace AdaptiveBossArena.Editor
                 WritePhase(
                     phases.GetArrayElementAtIndex(3), ShouldWriteTuning(created), "Frenzied", threshold: 0.25f,
                     moveMultiplier: 1.55f, cooldown: 0.4f, adaptationRate: 2.5f,
-                    signature: attacks.Shockwave,
+                    signature: attacks.Edict,
                     attacks.Sweep, attacks.Slam, attacks.Charge, attacks.Shockwave, attacks.Jab, attacks.Perilous,
-                    attacks.DelayedOverhead, attacks.Spin, attacks.Kick, attacks.Grab, attacks.Leap);
+                    attacks.DelayedOverhead, attacks.Spin, attacks.Kick, attacks.Grab, attacks.Leap, attacks.Thrust,
+                    attacks.Rebuke, attacks.Edict);
             }
         }
 

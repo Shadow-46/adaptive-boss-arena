@@ -205,6 +205,10 @@ namespace AdaptiveBossArena.Combat
         [Tooltip("Point within recovery, as a fraction, after which the combo is dropped.")]
         private float _comboWindowEnd = 0.85f;
 
+        [SerializeField]
+        [Tooltip("Boss only: the blows this one flows into in a chain. Empty draws from the whole phase moveset.")]
+        private AttackDefinition[] _followUps = new AttackDefinition[0];
+
         /// <summary>Name shown in debug tooling.</summary>
         public string DisplayName => _displayName;
 
@@ -220,6 +224,14 @@ namespace AdaptiveBossArena.Combat
         /// because the boss plans its reach from it and telegraphs are drawn from it.
         /// </remarks>
         public StrikerParts Strikers => _strikers;
+
+        /// <summary>The blows this one flows into when the boss strings a chain, or empty for any.</summary>
+        /// <remarks>
+        /// A swordsman's chains are drills, not dice: the sweep opens the guard the thrust goes through. An authored
+        /// follow-up only narrows the choice to moves the phase already allows, so it gives the boss no capability
+        /// it did not have, and it makes his chains learnable.
+        /// </remarks>
+        public AttackDefinition[] FollowUps => _followUps ?? new AttackDefinition[0];
 
         /// <summary>Optional effect spawned at the attacker when the attack begins, or null.</summary>
         public GameObject CastVfxPrefab => _castVfxPrefab;

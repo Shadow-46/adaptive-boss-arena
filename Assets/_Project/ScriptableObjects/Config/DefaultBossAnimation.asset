@@ -68,6 +68,18 @@ MonoBehaviour:
     _state: Leap
     _contactFraction: 0.17021276
     _frenzyContactFraction: 0.17021276
+  - _attack: {fileID: 11400000, guid: 2dabd91a87aa93a4b84e8ac31ab32081, type: 2}
+    _state: Thrust
+    _contactFraction: 0.21276596
+    _frenzyContactFraction: 0.21276596
+  - _attack: {fileID: 11400000, guid: 5106b539c15b48e43b661f9d557ed432, type: 2}
+    _state: Rebuke
+    _contactFraction: 0.38297874
+    _frenzyContactFraction: 0.38297874
+  - _attack: {fileID: 11400000, guid: 6608e108f6ac25047aa241c56aee51fe, type: 2}
+    _state: Edict
+    _contactFraction: 0.78723407
+    _frenzyContactFraction: 0.78723407
   _clipContactFraction: 0.45
   _idleBobAmplitude: 0.04
   _idleBobFrequency: 1
