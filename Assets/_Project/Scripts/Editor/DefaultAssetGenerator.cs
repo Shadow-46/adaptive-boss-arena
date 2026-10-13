@@ -365,7 +365,8 @@ namespace AdaptiveBossArena.Editor
 
             AssignRig("DefaultPlayerAnimation", knight, PlayerClipBindings);
 
-            // The brute alone has a second form: the same rig, fighting bare-handed in its last phase.
+            // The boss alone has a second form: the same rig in its last phase, bare-handed for the brute and
+            // berserk with the burning sword for the corrupted knight.
             AssignRig(
                 "DefaultBossAnimation", brute, BossClipBindings,
                 licensed ? Art.CharacterClipTable.BruteFrenzy : null);
@@ -396,6 +397,7 @@ namespace AdaptiveBossArena.Editor
             serialized.FindProperty("_rigPrefab").objectReferenceValue = controller != null ? rig : null;
             serialized.FindProperty("_animatorController").objectReferenceValue = controller;
             serialized.FindProperty("_frenzyController").objectReferenceValue = frenzy;
+            serialized.FindProperty("_frenzyDropsWeapon").boolValue = frenzyTable != null && frenzyTable.DropsWeapon;
             serialized.FindProperty("_rigScale").floatValue = scale;
 
             SerializedProperty list = serialized.FindProperty("_attackClips");
@@ -412,7 +414,7 @@ namespace AdaptiveBossArena.Editor
                 entry.FindPropertyRelative("_contactFraction").floatValue =
                     Art.ClipContactMeasure.ContactFor(table, bindings[i].State, bone);
 
-                // The frenzy has no blade, so a weapon attack there is timed off the fist that throws it.
+                // Timed off the frenzy's own clips; where it has no blade, off the fist that throws the blow.
                 entry.FindPropertyRelative("_frenzyContactFraction").floatValue = frenzyTable != null
                     ? Art.ClipContactMeasure.ContactFor(frenzyTable, bindings[i].State, bone)
                     : 0f;
@@ -1293,8 +1295,8 @@ namespace AdaptiveBossArena.Editor
                 // others — roar, shockwave, invulnerable rear-up — but arrives with the fullest
                 // moveset, the shortest recovery and the fastest adaptation the boss can reach, so the
                 // final stretch of the fight is its most dangerous and its most legible at once.
-                // Frenzied: it throws the sword away and fights with its hands, faster and with no recovery
-                // worth the name. At a quarter of its health rather than a seventh, so the last form is a
+                // Frenzied: berserk, faster and with no recovery worth the name - the knight with his sword
+                // ablaze, the brute with its hands. At a quarter of its health rather than a seventh, so the last form is a
                 // stretch of the fight rather than a flourish at the end of it.
                 WritePhase(
                     phases.GetArrayElementAtIndex(3), ShouldWriteTuning(created), "Frenzied", threshold: 0.25f,

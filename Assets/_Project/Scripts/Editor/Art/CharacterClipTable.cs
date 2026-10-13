@@ -48,6 +48,7 @@ namespace AdaptiveBossArena.Editor.Art
         /// Moving clips for the directional blend - forward, back and both sides - placed by their measured travel.
         /// Empty keeps the single-speed blend of <paramref name="locomotion"/>.
         /// </param>
+        /// <param name="dropsWeapon">Whether this form fights bare-handed.</param>
         public CharacterClipTable(
             string name,
             string rigModel,
@@ -55,7 +56,8 @@ namespace AdaptiveBossArena.Editor.Art
             string[] clipSources,
             (float Speed, string Clip)[] locomotion,
             IReadOnlyDictionary<string, string> states,
-            string[] directional = null)
+            string[] directional = null,
+            bool dropsWeapon = false)
         {
             Name = name;
             RigModel = rigModel;
@@ -64,6 +66,7 @@ namespace AdaptiveBossArena.Editor.Art
             Locomotion = locomotion;
             States = states;
             Directional = directional ?? new string[0];
+            DropsWeapon = dropsWeapon;
         }
 
         /// <summary>The knight: Mixamo's Paladin with the sword and shield set.</summary>
@@ -172,10 +175,77 @@ namespace AdaptiveBossArena.Editor.Art
                 ["Claw"] = "Mutant Swiping",
                 // Tearing a pillar out of the floor, thrown with the weight of the shoulder behind it.
                 ["Rip"] = "Mutant Punch",
-                // The roar: head thrown back, chest open. Also the phase transitions.
-                ["Roar"] = "Mutant Roaring"
+                // The roar: head thrown back, chest open. Also the phase transitions. The knight's is a war cry.
+                ["Roar"] = Roar
             },
             // walk (2) steps back; strafe (2) and (4) step right, strafe and (3) left.
+            new[]
+            {
+                "great sword walk", "great sword run (2)", "great sword walk (2)",
+                "great sword strafe", "great sword strafe (2)", "great sword strafe (3)", "great sword strafe (4)"
+            });
+
+        /// <summary>Whether the boss is the corrupted knight, rather than the brute.</summary>
+        private static bool KnightBoss =>
+            LicensedArtPostprocessor.BossBody == LicensedArtPostprocessor.CorruptedKnightBody;
+
+        /// <summary>The boss's roar: the brute's bestial one, or the knight's war cry.</summary>
+        private static string Roar => KnightBoss ? "Standing Taunt Battlecry" : "Mutant Roaring";
+
+        /// <summary>The boss's last form: the knight berserk with his sword, or the brute bare-handed.</summary>
+        public static CharacterClipTable BruteFrenzy => KnightBoss ? KnightBerserk : BruteBareHanded;
+
+        /// <summary>
+        /// The corrupted knight in his Last Stand: the same body and sword, every cut swapped for a wilder one.
+        /// </summary>
+        /// <remarks>
+        /// The same state names as <see cref="Brute"/>, so every attack keeps its binding and the swap needs no moves
+        /// of its own. Each cut is the most violent variant of the set: the strings become the spinning ones, the
+        /// overheads come down from a leap, and the guard is a war cry - he blocks nothing any more.
+        /// </remarks>
+        private static CharacterClipTable KnightBerserk => new CharacterClipTable(
+            "BruteFrenzyController",
+            LicensedArtPostprocessor.BossBody,
+            LicensedArtPostprocessor.BossBodyScale,
+            new[] { Mixamo + "Animations/Boss", Mixamo + "Animations/Shared", QuaterniusLibrary1 },
+            new[]
+            {
+                (0f, "great sword idle"),
+                // Into the run sooner: the berserker barely walks.
+                (0.2f, "great sword walk"),
+                (1f, "great sword run (2)")
+            },
+            new Dictionary<string, string>
+            {
+                [CharacterAnimatorParameters.RollState] = "Roll",
+                [CharacterAnimatorParameters.GuardState] = "Standing Taunt Battlecry",
+                [CharacterAnimatorParameters.StaggerState] = "great sword impact (3)",
+                [CharacterAnimatorParameters.DeathState] = "two handed sword death",
+                [CharacterAnimatorParameters.HitState] = "great sword impact",
+                [CharacterAnimatorParameters.AirborneState] = "great sword impact (2)",
+                [CharacterAnimatorParameters.KnockedDownState] = "great sword impact (2)",
+
+                ["Light1"] = "great sword slash (4)",
+                // The Wide Sweep carried the whole way round.
+                ["Light2"] = "great sword high spin attack",
+                ["Light3"] = "great sword high spin attack",
+                // The overheads come down from a leap.
+                ["Heavy"] = "great sword jump attack",
+                ["Special"] = "great sword attack",
+                ["Overhead"] = "great sword jump attack",
+                // The Jab becomes the wild crossing cut.
+                ["Hook"] = "great sword slash (5)",
+                ["Dash"] = "great sword slide attack",
+                // The shockwaves are cried out, not cast.
+                ["Cast"] = "Standing Taunt Battlecry",
+                ["Kick"] = "great sword kick",
+                ["Spin"] = "great sword high spin attack",
+                ["Grab"] = "Zombie Attack",
+                ["Leap"] = "Mutant Jump Attack",
+                ["Claw"] = "Mutant Swiping",
+                ["Rip"] = "Mutant Punch",
+                ["Roar"] = "Standing Taunt Battlecry"
+            },
             new[]
             {
                 "great sword walk", "great sword run (2)", "great sword walk (2)",
@@ -190,7 +260,7 @@ namespace AdaptiveBossArena.Editor.Art
         /// <see cref="Brute"/>'s, so every attack keeps the clip binding it already had and the frenzy needs no
         /// moves of its own - swinging the same "Heavy" plays a thrown punch here and a raised blade there.
         /// </remarks>
-        public static CharacterClipTable BruteFrenzy => new CharacterClipTable(
+        private static CharacterClipTable BruteBareHanded => new CharacterClipTable(
             "BruteFrenzyController",
             LicensedArtPostprocessor.BossBody,
             LicensedArtPostprocessor.BossBodyScale,
@@ -231,7 +301,8 @@ namespace AdaptiveBossArena.Editor.Art
                 ["Claw"] = "Mutant Swiping",
                 ["Rip"] = "Mutant Punch",
                 ["Roar"] = "Mutant Roaring"
-            });
+            },
+            dropsWeapon: true);
 
         /// <summary>Name of the generated controller.</summary>
         public string Name { get; }
@@ -253,6 +324,9 @@ namespace AdaptiveBossArena.Editor.Art
 
         /// <summary>Moving clips for the directional blend, or empty for the single-speed blend.</summary>
         public string[] Directional { get; }
+
+        /// <summary>Whether this form fights bare-handed, so the mounted weapon is hidden while it plays.</summary>
+        public bool DropsWeapon { get; }
 
         /// <summary>The CC0 mannequin both fighters use when the licensed art is absent.</summary>
         /// <param name="name">Name of the generated controller.</param>

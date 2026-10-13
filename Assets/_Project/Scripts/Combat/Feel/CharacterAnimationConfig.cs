@@ -37,8 +37,12 @@ namespace AdaptiveBossArena.Combat.Feel
         private RuntimeAnimatorController _animatorController;
 
         [SerializeField]
-        [Tooltip("Controller for the final, weaponless phase, or none for a fighter that has no second form.")]
+        [Tooltip("Controller for the final phase, or none for a fighter that has no second form.")]
         private RuntimeAnimatorController _frenzyController;
+
+        [SerializeField]
+        [Tooltip("Whether the final phase throws the weapon away and fights bare-handed.")]
+        private bool _frenzyDropsWeapon;
 
         [SerializeField]
         [Tooltip("Uniform scale applied to the rig, so one mannequin can be a knight or a brute.")]
@@ -202,9 +206,16 @@ namespace AdaptiveBossArena.Combat.Feel
         /// <summary>Controller the rig plays through.</summary>
         public RuntimeAnimatorController AnimatorController => _animatorController;
 
-        /// <summary>Controller for the final phase, in which the fighter has thrown its weapon away.</summary>
-        /// <remarks>Null for anything that fights the same way throughout, which is every fighter but the brute.</remarks>
+        /// <summary>Controller for the final phase: the brute's bare hands, or the corrupted knight's berserk sword.</summary>
+        /// <remarks>Null for anything that fights the same way throughout, which is every fighter but the boss.</remarks>
         public RuntimeAnimatorController FrenzyController => _frenzyController;
+
+        /// <summary>Whether the final phase throws the weapon away.</summary>
+        /// <remarks>
+        /// The brute's frenzy clips have empty hands, so its sword must go with them. The corrupted knight goes
+        /// berserk with his blade burning: a knight who drops his sword reads as beaten, not as more dangerous.
+        /// </remarks>
+        public bool FrenzyDropsWeapon => _frenzyDropsWeapon;
 
         /// <summary>Uniform scale applied to the rig.</summary>
         public float RigScale => _rigScale;

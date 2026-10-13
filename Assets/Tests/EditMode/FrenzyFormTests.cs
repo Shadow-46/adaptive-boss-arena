@@ -7,7 +7,7 @@ using UnityEditor.Animations;
 namespace AdaptiveBossArena.Tests.EditMode
 {
     /// <summary>
-    /// Asserts the brute's bare-handed final form can play everything its armed form can.
+    /// Asserts the boss's final form can play everything its armed form can, and fights differently.
     /// </summary>
     /// <remarks>
     /// The frenzy is a second controller swapped onto the same rig mid-fight, and nothing that drives it knows
@@ -53,10 +53,25 @@ namespace AdaptiveBossArena.Tests.EditMode
             Assume.That(armed != null && frenzied != null, "The brute is not rigged in this checkout.");
             Assert.AreNotSame(armed, frenzied, "The frenzy is the armed controller, so nothing changes at the swap.");
 
-            // The whole point of the last phase: it is not swinging the sword any more.
+            // The whole point of the last phase: the brute's fists or the knight's leaping cuts, not the same swing.
             Assert.AreNotEqual(
                 MotionName(armed, "Heavy"), MotionName(frenzied, "Heavy"),
-                "The frenzy's heavy swing is the armed one, so it fights the same way bare-handed.");
+                "The frenzy's heavy swing is the armed one, so the last phase fights the same way.");
+        }
+
+        [Test]
+        public void TheCorruptedKnightKeepsHisSwordInTheLastStand()
+        {
+            var config = AssetDatabase.LoadAssetAtPath<CharacterAnimationConfig>(BossAnimationConfig);
+
+            Assume.That(
+                config != null && config.FrenzyController != null &&
+                AdaptiveBossArena.Editor.Art.LicensedArtPostprocessor.BossBody ==
+                AdaptiveBossArena.Editor.Art.LicensedArtPostprocessor.CorruptedKnightBody,
+                "The corrupted knight is not the boss in this checkout.");
+
+            // A knight who throws his sword away reads as beaten, not as more dangerous.
+            Assert.IsFalse(config.FrenzyDropsWeapon, "The knight drops his sword for the Last Stand.");
         }
 
         private static string[] StateNames(AnimatorController controller) =>

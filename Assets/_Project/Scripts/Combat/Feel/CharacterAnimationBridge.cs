@@ -101,14 +101,14 @@ namespace AdaptiveBossArena.Combat.Feel
         }
 
         /// <summary>
-        /// Switches the body between the armed form and the frenzy, which fights bare-handed.
+        /// Switches the body between the armed form and the frenzy.
         /// </summary>
         /// <remarks>
         /// Both controllers carry the same state names over the same rig, so nothing that drives this bridge
         /// needs to know which one is playing: the next state request lands on the new controller and the
-        /// fight continues. The weapon is hidden with it, because the frenzy's clips have empty hands.
+        /// fight continues. The weapon is hidden with it when the frenzy fights bare-handed.
         /// </remarks>
-        /// <param name="frenzied">True to fight bare-handed, false to return to the armed form.</param>
+        /// <param name="frenzied">True for the frenzy, false to return to the armed form.</param>
         public void SetFrenzy(bool frenzied)
         {
             RuntimeAnimatorController wanted = frenzied && _config != null && _config.FrenzyController != null
@@ -127,7 +127,7 @@ namespace AdaptiveBossArena.Combat.Feel
             _hitLayer = _animator.GetLayerIndex(CharacterAnimatorParameters.HitLayer);
             _currentState = null;
 
-            SetWeaponVisible(!frenzied);
+            SetWeaponVisible(!(frenzied && _config.FrenzyDropsWeapon));
         }
 
         /// <summary>Whether the frenzy's controller is the one playing, which times every blow off its own clips.</summary>
