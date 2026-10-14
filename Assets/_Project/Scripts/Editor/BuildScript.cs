@@ -39,6 +39,9 @@ namespace AdaptiveBossArena.Editor
         [MenuItem(EditorMenus.Setup + "Build Windows (x64)")]
         public static void BuildWindows() => Build(BuildTarget.StandaloneWindows64, WindowsOutput);
 
+        /// <summary>Files from the repository root that travel inside every release zip.</summary>
+        private static readonly string[] ReleaseNotices = { "LICENSE", "THIRD_PARTY_NOTICES.md" };
+
         /// <summary>
         /// Builds the Windows player and packs it into a zip ready to attach to a release.
         /// </summary>
@@ -56,6 +59,16 @@ namespace AdaptiveBossArena.Editor
             }
 
             Directory.CreateDirectory(ReleaseFolder);
+
+            // The release carries its own licence and credits: the corrupted knight's model is CC-BY, which asks for
+            // credit wherever the work goes, and a zip passed around on its own has no repository beside it.
+            foreach (string notice in ReleaseNotices)
+            {
+                if (File.Exists(notice))
+                {
+                    File.Copy(notice, Path.Combine(WindowsFolder, Path.GetFileName(notice)), overwrite: true);
+                }
+            }
 
             string zipPath = Path.Combine(ReleaseFolder, $"AdaptiveBossArena-{ShortCommit()}-win64.zip");
 
