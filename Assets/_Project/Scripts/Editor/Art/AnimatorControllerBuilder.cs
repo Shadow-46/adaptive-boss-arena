@@ -64,6 +64,14 @@ namespace AdaptiveBossArena.Editor.Art
             controller.AddParameter(CharacterAnimatorParameters.AttackTime, AnimatorControllerParameterType.Float);
             controller.AddParameter(CharacterAnimatorParameters.ReactionTime, AnimatorControllerParameterType.Float);
 
+            // One until the bridge sets it, so a fighter it never drives still walks at the clips' own pace.
+            controller.AddParameter(new AnimatorControllerParameter
+            {
+                name = CharacterAnimatorParameters.LocomotionRate,
+                type = AnimatorControllerParameterType.Float,
+                defaultFloat = 1f
+            });
+
             AnimatorStateMachine machine = controller.layers[0].stateMachine;
 
             AnimatorState locomotion = machine.AddState(CharacterAnimatorParameters.LocomotionState);
@@ -71,6 +79,10 @@ namespace AdaptiveBossArena.Editor.Art
                 ? BuildDirectionalLocomotion(controller, clips, table)
                 : BuildLocomotion(controller, clips, table.Locomotion);
             machine.defaultState = locomotion;
+
+            // The legs are played at the pace the body actually covers ground, so the feet do not slide.
+            locomotion.speedParameter = CharacterAnimatorParameters.LocomotionRate;
+            locomotion.speedParameterActive = true;
 
             foreach (KeyValuePair<string, string> entry in table.States)
             {

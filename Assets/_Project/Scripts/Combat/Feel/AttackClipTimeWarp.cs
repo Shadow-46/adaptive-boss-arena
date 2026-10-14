@@ -17,6 +17,13 @@ namespace AdaptiveBossArena.Combat.Feel
     /// swing and a slow heavy one, each landing inside its own active window. The input is the attack's
     /// elapsed time, which stops during hit-stop, so the pose freezes on the impact with everything else.
     /// </para>
+    /// <para>
+    /// The pieces are joined by a monotone cubic rather than straight lines. Straight segments change the clip's
+    /// playback rate in a step at every joint - a wind-up crawling at half speed, then the contact snapping past
+    /// at three times - which read as a hitch at the start of every swing. The cubic passes through the same
+    /// points, so the blade lands at the same instant, but the rate eases from one piece into the next, and it
+    /// can never run the clip backwards.
+    /// </para>
     /// </remarks>
     public readonly struct AttackClipTimeWarp
     {
@@ -70,21 +77,51 @@ namespace AdaptiveBossArena.Combat.Feel
         /// <returns>Seconds into the clip.</returns>
         public float ClipTimeAt(float attackElapsedSeconds)
         {
-            float t = Mathf.Max(0f, attackElapsedSeconds);
-
-            if (t < StartupSeconds)
-            {
-                return Remap(t, 0f, StartupSeconds, 0f, ContactStart);
-            }
+            // The warp's joints: the swing's start, the contact opening, its middle, its close, and the clip's end.
+            // A joint with no time before it (an attack without a wind-up, say) takes the later clip time, as the
+            // straight pieces did.
+            System.Span<float> x = stackalloc float[KnotCount];
+            System.Span<float> y = stackalloc float[KnotCount];
+            int count = 0;
 
             float activeEnd = StartupSeconds + ActiveSeconds;
+            AddKnot(x, y, ref count, 0f, 0f);
+            AddKnot(x, y, ref count, StartupSeconds, ContactStart);
+            AddKnot(x, y, ref count, StartupSeconds + ActiveSeconds * 0.5f, (ContactStart + ContactEnd) * 0.5f);
+            AddKnot(x, y, ref count, activeEnd, ContactEnd);
+            AddKnot(x, y, ref count, activeEnd + RecoverySeconds, ClipLengthSeconds);
 
-            if (t < activeEnd)
+            float t = Mathf.Max(0f, attackElapsedSeconds);
+
+            if (count < 2)
             {
-                return Remap(t, StartupSeconds, activeEnd, ContactStart, ContactEnd);
+                return y[0];
             }
 
-            return Remap(t, activeEnd, activeEnd + RecoverySeconds, ContactEnd, ClipLengthSeconds);
+            if (t >= x[count - 1])
+            {
+                return y[count - 1];
+            }
+
+            int k = 0;
+
+            while (t > x[k + 1])
+            {
+                k++;
+            }
+
+            float h = x[k + 1] - x[k];
+            float s = (t - x[k]) / h;
+            float m0 = Slope(x, y, count, k);
+            float m1 = Slope(x, y, count, k + 1);
+
+            // Cubic Hermite between the two joints, with the joints' own rates as tangents.
+            float s2 = s * s;
+            float s3 = s2 * s;
+            float value = (2f * s3 - 3f * s2 + 1f) * y[k] + (s3 - 2f * s2 + s) * h * m0 +
+                          (-2f * s3 + 3f * s2) * y[k + 1] + (s3 - s2) * h * m1;
+
+            return Mathf.Clamp(value, y[k], y[k + 1]);
         }
 
         /// <summary>The same position as a fraction of the clip, as an Animator's normalised time takes it.</summary>
@@ -93,14 +130,55 @@ namespace AdaptiveBossArena.Combat.Feel
         public float NormalizedTimeAt(float attackElapsedSeconds) =>
             Mathf.Clamp01(ClipTimeAt(attackElapsedSeconds) / ClipLengthSeconds);
 
-        private static float Remap(float value, float fromStart, float fromEnd, float toStart, float toEnd)
+        /// <summary>The warp's joints: the start, the contact opening, middle and close, and the clip's end.</summary>
+        private const int KnotCount = 5;
+
+        /// <summary>Time below which two joints are one.</summary>
+        private const float JointEpsilon = 1e-5f;
+
+        private static void AddKnot(System.Span<float> x, System.Span<float> y, ref int count, float time, float clipTime)
         {
-            if (fromEnd - fromStart <= Mathf.Epsilon)
+            if (count > 0 && time <= x[count - 1] + JointEpsilon)
             {
-                return toEnd;
+                y[count - 1] = clipTime;
+                return;
             }
 
-            return Mathf.Lerp(toStart, toEnd, Mathf.Clamp01((value - fromStart) / (fromEnd - fromStart)));
+            x[count] = time;
+            y[count] = clipTime;
+            count++;
+        }
+
+        /// <summary>
+        /// The playback rate at a joint, chosen so the curve never overshoots: the weighted harmonic mean of the
+        /// rates either side (Fritsch and Butland), zero where the clip holds still on one side, and the one-sided
+        /// rate at the ends.
+        /// </summary>
+        private static float Slope(System.Span<float> x, System.Span<float> y, int count, int k)
+        {
+            if (k == 0)
+            {
+                return (y[1] - y[0]) / (x[1] - x[0]);
+            }
+
+            if (k == count - 1)
+            {
+                return (y[k] - y[k - 1]) / (x[k] - x[k - 1]);
+            }
+
+            float h0 = x[k] - x[k - 1];
+            float h1 = x[k + 1] - x[k];
+            float d0 = (y[k] - y[k - 1]) / h0;
+            float d1 = (y[k + 1] - y[k]) / h1;
+
+            if (d0 <= 0f || d1 <= 0f)
+            {
+                return 0f;
+            }
+
+            float w0 = 2f * h1 + h0;
+            float w1 = h1 + 2f * h0;
+            return (w0 + w1) / (w0 / d0 + w1 / d1);
         }
     }
 }

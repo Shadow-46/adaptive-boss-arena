@@ -35,5 +35,42 @@ namespace AdaptiveBossArena.Combat.Feel
             Vector3 local = Quaternion.Inverse(facing) * planar.normalized;
             return new Vector2(local.x, local.z).normalized * speed01;
         }
+
+        /// <summary>Speed fraction by which the legs have fully taken the moving rate.</summary>
+        private const float RateBlendInSpeed = 0.3f;
+
+        /// <summary>The slowest and fastest the legs are played, as a multiple of their natural pace.</summary>
+        private const float MinimumRate = 0.7f;
+        private const float MaximumRate = 1.4f;
+
+        /// <summary>
+        /// How fast to play the locomotion clips so the feet keep pace with the ground.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Each clip sits in the blend where it travels, as a fraction of the fastest clip, so at any position the
+        /// blend walks the body at that fraction of the fastest clip's pace. The body really moves at that fraction
+        /// of its own top speed. The two differ by one number, top speed over the clip's pace, and played at that
+        /// rate the feet stop sliding - on the brute's run, the knight's sprint and the frenzy's faster legs alike.
+        /// </para>
+        /// <para>
+        /// Faded in from a standstill, so the idle never fidgets at a run's tempo, and clamped, because legs at
+        /// half speed read as slow motion and at double as a cartoon: past that, a little slide is the lesser evil.
+        /// </para>
+        /// </remarks>
+        /// <param name="topSpeed">The body's top speed now, in metres per second.</param>
+        /// <param name="clipTopSpeed">The fastest locomotion clip's own pace on this body, in metres per second.</param>
+        /// <param name="speed01">Speed as a fraction of the top speed.</param>
+        /// <returns>The playback rate, one when either speed is unknown.</returns>
+        public static float PlaybackRate(float topSpeed, float clipTopSpeed, float speed01)
+        {
+            if (topSpeed <= 0f || clipTopSpeed <= 0f)
+            {
+                return 1f;
+            }
+
+            float moving = Mathf.Clamp(topSpeed / clipTopSpeed, MinimumRate, MaximumRate);
+            return Mathf.Lerp(1f, moving, Mathf.Clamp01(speed01 / RateBlendInSpeed));
+        }
     }
 }

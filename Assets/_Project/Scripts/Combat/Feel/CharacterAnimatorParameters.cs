@@ -19,6 +19,9 @@ namespace AdaptiveBossArena.Combat.Feel
         /// <summary>Movement along the facing, scaled by speed: forward is positive. Drives walks, runs and back-steps.</summary>
         public const string MoveZ = "MoveZ";
 
+        /// <summary>Playback rate of the locomotion clips, so the feet keep pace with the ground.</summary>
+        public const string LocomotionRate = "LocomotionRate";
+
         /// <summary>Normalised clip time for the attack state playing, set from the attack's timeline.</summary>
         public const string AttackTime = "AttackTime";
 

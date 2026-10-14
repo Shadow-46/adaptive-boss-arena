@@ -523,6 +523,7 @@ namespace AdaptiveBossArena.AI
             float topSpeed = _context.Motor.CurrentTopSpeed;
             float speed01 = topSpeed > 0f ? _context.Motor.Speed / topSpeed : 0f;
 
+            _animator.SetTopSpeed(topSpeed);
             _animator.SetMotionState(
                 state, _context.Attacks.Phase, speed01,
                 _context.Attacks.CurrentAttack, _context.Attacks.ElapsedSeconds);

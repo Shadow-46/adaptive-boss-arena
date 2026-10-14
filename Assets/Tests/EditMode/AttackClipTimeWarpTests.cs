@@ -64,5 +64,29 @@ namespace AdaptiveBossArena.Tests.EditMode
             Assert.AreEqual(1.1f, warp.ClipTimeAt(10f), 0.001f);
             Assert.AreEqual(1f, warp.NormalizedTimeAt(10f), 0.001f);
         }
+
+        [Test]
+        public void TheBladeStillMeetsTheLiveWindowAtItsEdges()
+        {
+            // Smoothing the joints must not move them: the wind-up still ends where the contact begins.
+            AttackClipTimeWarp warp = Heavy();
+
+            Assert.AreEqual(warp.ContactStart, warp.ClipTimeAt(0.34f), 0.001f);
+            Assert.AreEqual(warp.ContactEnd, warp.ClipTimeAt(0.44f), 0.001f);
+        }
+
+        [Test]
+        public void ThePlaybackRateEasesThroughTheStartOfTheContact()
+        {
+            // Straight pieces stepped the clip's rate at every joint: the heavy's wind-up crawled, then the contact
+            // snapped past, which read as a hitch at the start of every swing.
+            AttackClipTimeWarp warp = Heavy();
+            const float Step = 0.004f;
+
+            float before = (warp.ClipTimeAt(0.34f) - warp.ClipTimeAt(0.34f - Step)) / Step;
+            float after = (warp.ClipTimeAt(0.34f + Step) - warp.ClipTimeAt(0.34f)) / Step;
+
+            Assert.That(after / before, Is.InRange(0.85f, 1.18f), "The clip's rate jumps where the contact begins.");
+        }
     }
 }

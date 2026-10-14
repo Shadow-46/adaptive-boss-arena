@@ -97,6 +97,10 @@ namespace AdaptiveBossArena.Combat.Feel
         /// <param name="time">The combat time service.</param>
         public void SetTime(Core.Services.ITimeService time) => _time = time;
 
+        /// <summary>Tells a rig the body's top speed now, so its legs keep pace with the ground.</summary>
+        /// <param name="metresPerSecond">The top speed.</param>
+        public void SetTopSpeed(float metresPerSecond) => _bridge?.SetTopSpeed(metresPerSecond);
+
         /// <summary>
         /// Pushes the character's visible state for this frame.
         /// </summary>

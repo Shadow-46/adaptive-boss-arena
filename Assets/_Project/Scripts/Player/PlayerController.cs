@@ -386,6 +386,7 @@ namespace AdaptiveBossArena.Player
 
             float rising = _machine.CurrentState == _getUpState ? _getUpState.Progress(_context) : 0f;
 
+            _animator.SetTopSpeed(_config.MoveSpeed);
             _animator.SetMotionState(
                 _context.ObservableState, _context.Attacks.Phase, speed01,
                 _context.Attacks.CurrentAttack, _context.Attacks.ElapsedSeconds, rising);

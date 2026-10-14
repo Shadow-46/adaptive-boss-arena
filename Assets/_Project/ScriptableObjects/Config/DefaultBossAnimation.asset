@@ -18,6 +18,7 @@ MonoBehaviour:
   _animatorController: {fileID: 9100000, guid: 523d0de9a22d587439de7f046f0f6141, type: 2}
   _frenzyController: {fileID: 9100000, guid: 1102e94b403ef51428b83cf6dcae42b9, type: 2}
   _frenzyDropsWeapon: 0
+  _locomotionTopSpeed: 5.424276
   _rigScale: 1.17
   _attackClips:
   - _attack: {fileID: 11400000, guid: c36e1a4c0c2652e44a0844711735c22a, type: 2}

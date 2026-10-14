@@ -41,6 +41,10 @@ namespace AdaptiveBossArena.Combat.Feel
         private const float ContactSpanFraction = 0.08f;
 
         private static readonly int SpeedParam = Animator.StringToHash(CharacterAnimatorParameters.Speed);
+        private static readonly int LocomotionRateParam = Animator.StringToHash(CharacterAnimatorParameters.LocomotionRate);
+
+        /// <summary>The body's top speed now, in metres per second, for matching the legs to the ground.</summary>
+        private float _topSpeed;
         private static readonly int MoveXParam = Animator.StringToHash(CharacterAnimatorParameters.MoveX);
         private static readonly int MoveZParam = Animator.StringToHash(CharacterAnimatorParameters.MoveZ);
 
@@ -180,6 +184,10 @@ namespace AdaptiveBossArena.Combat.Feel
             }
         }
 
+        /// <summary>Tells the bridge the body's top speed now, so the legs can be played at its pace.</summary>
+        /// <param name="metresPerSecond">The top speed, which a phase or a slow may change.</param>
+        public void SetTopSpeed(float metresPerSecond) => _topSpeed = Mathf.Max(0f, metresPerSecond);
+
         /// <summary>Pushes this frame's observable state, and the attack in progress if any.</summary>
         /// <param name="state">What an onlooker would see the character doing.</param>
         /// <param name="attackPhase">Phase of the attack in flight.</param>
@@ -200,7 +208,14 @@ namespace AdaptiveBossArena.Combat.Feel
                 return;
             }
 
-            _animator.SetFloat(SpeedParam, Mathf.Clamp01(planarSpeed01));
+            // Eased like the direction, so a speed that steps - a lunge ending, a phase quickening - does not snap
+            // the blend to another clip in one frame.
+            _animator.SetFloat(SpeedParam, Mathf.Clamp01(planarSpeed01), DirectionDampSeconds, Time.deltaTime);
+            _animator.SetFloat(
+                LocomotionRateParam,
+                LocomotionDirection.PlaybackRate(_topSpeed, _config != null ? _config.LocomotionTopSpeed : 0f, planarSpeed01),
+                DirectionDampSeconds,
+                Time.deltaTime);
             _animator.SetFloat(ReactionTimeParam, Mathf.Clamp01(reactionProgress01));
             DriveDirection(planarSpeed01);
 

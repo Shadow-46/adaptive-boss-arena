@@ -24,6 +24,25 @@ namespace AdaptiveBossArena.Editor.Art
     {
         private const int Samples = 60;
 
+        /// <summary>
+        /// The pace of the fighter's fastest locomotion clip on its body as built, in metres per second.
+        /// </summary>
+        /// <remarks>
+        /// Measured on the model at its import size, then scaled by the rig scale the prefab applies, because a
+        /// stride on a body a sixth larger covers a sixth more ground.
+        /// </remarks>
+        /// <param name="table">The fighter.</param>
+        /// <returns>The pace, or zero when nothing could be measured.</returns>
+        public static float TopSpeedOf(CharacterClipTable table)
+        {
+            IEnumerable<string> moving = table.Directional.Length > 0
+                ? table.Directional
+                : table.Locomotion.Select(step => step.Clip);
+
+            float fastest = moving.Select(clip => TravelOf(table, clip).magnitude).DefaultIfEmpty(0f).Max();
+            return fastest * table.RigScale;
+        }
+
         /// <summary>A clip's travel in the model's own space: x across, y along its forward, in metres per second.</summary>
         /// <param name="table">The fighter whose model poses the clip.</param>
         /// <param name="clipName">The clip.</param>

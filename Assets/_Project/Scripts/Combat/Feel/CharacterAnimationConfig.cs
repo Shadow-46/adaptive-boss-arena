@@ -45,6 +45,11 @@ namespace AdaptiveBossArena.Combat.Feel
         private bool _frenzyDropsWeapon;
 
         [SerializeField]
+        [Tooltip("The fastest locomotion clip's own pace on this body, in m/s. Measured in setup; zero plays clips as authored.")]
+        [Min(0f)]
+        private float _locomotionTopSpeed;
+
+        [SerializeField]
         [Tooltip("Uniform scale applied to the rig, so one mannequin can be a knight or a brute.")]
         [Min(0.1f)]
         private float _rigScale = 1f;
@@ -216,6 +221,9 @@ namespace AdaptiveBossArena.Combat.Feel
         /// berserk with his blade burning: a knight who drops his sword reads as beaten, not as more dangerous.
         /// </remarks>
         public bool FrenzyDropsWeapon => _frenzyDropsWeapon;
+
+        /// <summary>The fastest locomotion clip's own pace on this body, in metres per second, or zero if unmeasured.</summary>
+        public float LocomotionTopSpeed => _locomotionTopSpeed;
 
         /// <summary>Uniform scale applied to the rig.</summary>
         public float RigScale => _rigScale;

@@ -419,6 +419,8 @@ namespace AdaptiveBossArena.Editor
             serialized.FindProperty("_frenzyController").objectReferenceValue = frenzy;
             serialized.FindProperty("_frenzyDropsWeapon").boolValue = frenzyTable != null && frenzyTable.DropsWeapon;
             serialized.FindProperty("_rigScale").floatValue = scale;
+            serialized.FindProperty("_locomotionTopSpeed").floatValue =
+                controller != null ? Art.ClipTravelMeasure.TopSpeedOf(table) : 0f;
 
             SerializedProperty list = serialized.FindProperty("_attackClips");
             list.arraySize = bindings.Length;
