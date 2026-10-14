@@ -112,6 +112,9 @@ namespace AdaptiveBossArena.Editor
             atmosphere?.Bind(directionalLight, channels.BossPhase);
             atmosphere?.BindGrade(FindVolume(PhaseGradeVolumeName));
 
+            GameObject mist = GameObject.Find(AdaptiveBossArena.Editor.Environment.CathedralBuilder.GroundMistName);
+            atmosphere?.BindMist(mist != null ? mist.GetComponent<Renderer>() : null);
+
             // Found by name: there are two global volumes now, and the screen effects and the browser budget must
             // both work on the main one, never the escalation grade.
             UnityEngine.Rendering.Volume mainVolume = FindVolume(MainVolumeName);

@@ -83,7 +83,7 @@ namespace AdaptiveBossArena.Editor
 
             visualRoot.AddComponent<CorruptionDisplay>().Bind(
                 body, blades, Art.CorruptedKnightMaterials.LoadCrackLevels(), Art.CorruptedKnightMaterials.EmberGlow,
-                MaterialLibrary.GetOrCreateImpactSparks());
+                MaterialLibrary.GetOrCreateImpactSparks(), MaterialLibrary.GetOrCreateHeatHaze());
         }
 
         /// <summary>

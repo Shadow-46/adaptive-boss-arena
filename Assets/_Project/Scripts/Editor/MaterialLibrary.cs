@@ -491,6 +491,83 @@ namespace AdaptiveBossArena.Editor
             return material;
         }
 
+        /// <summary>
+        /// Loads or creates the material the heat haze rising off the corrupted knight is drawn with.
+        /// </summary>
+        /// <remarks>
+        /// An asset referenced from the boss prefab, so the custom shader is guaranteed to ship, as the sparks'
+        /// is. The noise is two smooth fields in red and green, the sideways and upward bend of the air.
+        /// </remarks>
+        /// <returns>The haze material, or null when the shader is missing.</returns>
+        public static Material GetOrCreateHeatHaze()
+        {
+            const string materialName = "HeatHaze";
+            string path = EditorMenus.GeneratedMaterialFolder + "/" + materialName + ".mat";
+
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+
+            if (material == null)
+            {
+                Shader shader = Shader.Find("AdaptiveBossArena/HeatHaze");
+
+                if (shader == null)
+                {
+                    Debug.LogWarning("[Adaptive Boss Arena] The heat haze shader is missing; the haze will not render.");
+                    return null;
+                }
+
+                material = new Material(shader) { name = materialName };
+                AssetAuthoring.EnsureFolderExists(EditorMenus.GeneratedMaterialFolder);
+                AssetDatabase.CreateAsset(material, path);
+            }
+
+            material.SetTexture("_NoiseMap", HazeNoise());
+            material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            EditorUtility.SetDirty(material);
+
+            return material;
+        }
+
+        /// <summary>Two tiling smooth noise fields, sideways in red and upward in green, centred on grey.</summary>
+        private static Texture2D HazeNoise()
+        {
+            const int Size = 64;
+            const string Name = "HeatHazeNoise";
+            string path = EditorMenus.GeneratedMaterialFolder + "/" + Name + ".asset";
+
+            var existing = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            var texture = new Texture2D(Size, Size, TextureFormat.RGBA32, true, linear: true)
+            {
+                name = Name,
+                wrapMode = TextureWrapMode.Repeat
+            };
+
+            for (int y = 0; y < Size; y++)
+            {
+                for (int x = 0; x < Size; x++)
+                {
+                    // Sampled around circles, so the field tiles seamlessly as it scrolls.
+                    float u = (float)x / Size * Mathf.PI * 2f;
+                    float v = (float)y / Size * Mathf.PI * 2f;
+                    float across = Mathf.PerlinNoise(2f + Mathf.Cos(u) * 1.5f, 2f + Mathf.Sin(v) * 1.5f + Mathf.Sin(u));
+                    float up = Mathf.PerlinNoise(7f + Mathf.Sin(u) * 1.5f, 5f + Mathf.Cos(v) * 1.5f + Mathf.Cos(u));
+                    texture.SetPixel(x, y, new Color(across, up, 0.5f, 1f));
+                }
+            }
+
+            texture.Apply(true);
+            AssetAuthoring.EnsureFolderExists(EditorMenus.GeneratedMaterialFolder);
+            AssetDatabase.CreateAsset(texture, path);
+
+            return texture;
+        }
+
         /// <summary>Loads or creates the material blood and dust are drawn with.</summary>
         /// <remarks>
         /// Alpha-blended, unlike the sparks: blood and dust are matter that covers what is behind it. Drawn

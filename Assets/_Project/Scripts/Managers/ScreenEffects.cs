@@ -78,6 +78,24 @@ namespace AdaptiveBossArena.Game
         private float _baseAberration;
         private float _baseBloom;
 
+        /// <summary>The profile copy whose bloom has been lifted for High, so a step down can take the lift back.</summary>
+        private VolumeProfile _liftedProfile;
+
+        /// <summary>
+        /// How much brighter High blooms than the tiers below.
+        /// </summary>
+        /// <remarks>
+        /// High alone also gets the filtered bloom, which is smooth where the cheap one flickers as a bright pixel
+        /// crawls across the screen - the embers, the burning blade and the seams of the knight's armour are exactly
+        /// such pixels. With the filtering the glow can be pushed a little further before it smears.
+        /// </remarks>
+        public const float HighBloomLift = 0.2f;
+
+        /// <summary>The bloom lift a quality gets: <see cref="HighBloomLift"/> on High, none below.</summary>
+        /// <param name="quality">The quality in effect.</param>
+        /// <returns>Added to the profile's bloom intensity.</returns>
+        public static float BloomLift(GraphicsQuality quality) => quality == GraphicsQuality.High ? HighBloomLift : 0f;
+
         private IAudioService _audio;
 
         private float _health = 1f;
@@ -151,7 +169,25 @@ namespace AdaptiveBossArena.Game
             _baseVignetteColor = _vignette != null ? _vignette.color.value : Color.black;
             _baseSaturation = _color != null ? _color.saturation.value : 0f;
             _baseAberration = _aberration != null ? _aberration.intensity.value : 0f;
+            LiftBloom(profile);
             _baseBloom = _bloom != null ? _bloom.intensity.value : 0f;
+        }
+
+        /// <summary>Gives High its filtered, brighter bloom, or takes it back from a copy lifted before.</summary>
+        private void LiftBloom(VolumeProfile profile)
+        {
+            if (_bloom == null)
+            {
+                _liftedProfile = null;
+                return;
+            }
+
+            float authored = _bloom.intensity.value - (profile == _liftedProfile ? HighBloomLift : 0f);
+            float lift = BloomLift(Core.Services.GraphicsTier.Current);
+
+            _bloom.intensity.Override(authored + lift);
+            _bloom.highQualityFiltering.Override(lift > 0f);
+            _liftedProfile = lift > 0f ? profile : null;
         }
 
         private void Update()

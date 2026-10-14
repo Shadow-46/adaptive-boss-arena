@@ -37,6 +37,9 @@ namespace AdaptiveBossArena.Combat.Feel
         /// <summary>Embers shed off the armour each second in each phase.</summary>
         private static readonly float[] EmbersPerSecondByPhase = { 0f, 6f, 16f, 32f };
 
+        /// <summary>Plumes of heat rising off the armour each second in each phase: none until the fire is loose.</summary>
+        private static readonly float[] HazePerSecondByPhase = { 0f, 0f, 7f, 14f };
+
         /// <summary>How far the breath swings the glow either side of its level.</summary>
         private const float BreathDepth = 0.18f;
 
@@ -67,6 +70,13 @@ namespace AdaptiveBossArena.Combat.Feel
         [Tooltip("Additive material the embers are drawn with.")]
         private Material _emberMaterial;
 
+        [SerializeField]
+        [Tooltip("Distortion material the heat haze is drawn with, or none.")]
+        private Material _hazeMaterial;
+
+        private ParticleSystem _haze;
+        private bool _hazeAllowed;
+
         private MaterialPropertyBlock _block;
         private ParticleSystem _embers;
         private int _phase;
@@ -84,13 +94,17 @@ namespace AdaptiveBossArena.Combat.Feel
         /// <param name="crackLevels">A glow map per phase.</param>
         /// <param name="ember">The fire's opening colour.</param>
         /// <param name="emberMaterial">Additive material for the embers.</param>
-        public void Bind(Renderer body, Renderer[] blade, Texture2D[] crackLevels, Color ember, Material emberMaterial)
+        /// <param name="hazeMaterial">Distortion material for the heat haze, or null for none.</param>
+        public void Bind(
+            Renderer body, Renderer[] blade, Texture2D[] crackLevels, Color ember, Material emberMaterial,
+            Material hazeMaterial = null)
         {
             _body = body;
             _blade = blade ?? new Renderer[0];
             _crackLevels = crackLevels ?? new Texture2D[0];
             _ember = ember;
             _emberMaterial = emberMaterial;
+            _hazeMaterial = hazeMaterial;
         }
 
         /// <summary>Shows a phase. A step up flares and opens the next cracks; a reset snaps back to the start.</summary>
@@ -119,6 +133,7 @@ namespace AdaptiveBossArena.Combat.Feel
         {
             _block = new MaterialPropertyBlock();
             BuildEmbers();
+            BuildHaze();
             SetPhase(0);
             Apply(1f);
         }
@@ -132,6 +147,12 @@ namespace AdaptiveBossArena.Combat.Feel
             _bladeHeat = Mathf.Lerp(_bladeHeat, BladeHeatByPhase[_phase], t);
             _flare = Mathf.Max(0f, _flare - FlareDecayPerSecond * deltaTime);
             _breathClock += deltaTime * BreathRateByPhase[_phase];
+
+            // The quality can change mid-fight; the haze follows it on the next frame.
+            if (_haze != null && EffectBudget.AllowsHeatHaze != _hazeAllowed)
+            {
+                ApplyEmbers();
+            }
 
             // Perlin rather than a sine, so the breath is uneven, like a fire rather than a metronome.
             float breath = 1f + BreathDepth * (Mathf.PerlinNoise(_breathClock, 0.37f) * 2f - 1f);
@@ -219,14 +240,71 @@ namespace AdaptiveBossArena.Combat.Feel
 
         private void ApplyEmbers()
         {
-            if (_embers == null)
+            if (_embers != null)
+            {
+                ParticleSystem.EmissionModule emission = _embers.emission;
+                float rate = EmbersPerSecondByPhase[_phase];
+                emission.rateOverTime = EffectBudget.IsReduced ? rate * 0.5f : rate;
+            }
+
+            if (_haze != null)
+            {
+                _hazeAllowed = EffectBudget.AllowsHeatHaze;
+                ParticleSystem.EmissionModule haze = _haze.emission;
+                haze.rateOverTime = _hazeAllowed ? HazePerSecondByPhase[_phase] : 0f;
+            }
+        }
+
+        /// <summary>
+        /// Heat rising off the armour once the fire is loose, bending the air behind the knight.
+        /// </summary>
+        /// <remarks>
+        /// Soft discs rising from the body's surface, each bending what stands behind it a little and fading as it
+        /// climbs. Drawn only where <see cref="EffectBudget.AllowsHeatHaze"/>: elsewhere the scene copy it bends
+        /// does not exist.
+        /// </remarks>
+        private void BuildHaze()
+        {
+            if (!(_body is SkinnedMeshRenderer skin) || _hazeMaterial == null)
             {
                 return;
             }
 
-            ParticleSystem.EmissionModule emission = _embers.emission;
-            float rate = EmbersPerSecondByPhase[_phase];
-            emission.rateOverTime = EffectBudget.IsReduced ? rate * 0.5f : rate;
+            var hazeObject = new GameObject("CorruptionHaze");
+            hazeObject.transform.SetParent(transform, false);
+            _haze = hazeObject.AddComponent<ParticleSystem>();
+            _haze.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+            ParticleSystem.MainModule main = _haze.main;
+            main.loop = true;
+            main.playOnAwake = true;
+            main.useUnscaledTime = true;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.9f, 1.5f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.05f, 0.2f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.7f, 1.3f);
+            main.startColor = Color.white;
+            main.gravityModifier = -0.12f;
+            main.maxParticles = 40;
+
+            ParticleSystem.ShapeModule shape = _haze.shape;
+            shape.shapeType = ParticleSystemShapeType.SkinnedMeshRenderer;
+            shape.skinnedMeshRenderer = skin;
+
+            ParticleSystem.ColorOverLifetimeModule fade = _haze.colorOverLifetime;
+            fade.enabled = true;
+            var gradient = new Gradient();
+            gradient.SetKeys(
+                new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.25f), new GradientAlphaKey(0f, 1f) });
+            fade.color = gradient;
+
+            var renderer = hazeObject.GetComponent<ParticleSystemRenderer>();
+            renderer.sharedMaterial = _hazeMaterial;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+
+            _haze.Play();
         }
     }
 }

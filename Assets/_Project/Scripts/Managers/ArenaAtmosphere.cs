@@ -137,6 +137,10 @@ namespace AdaptiveBossArena.Game
         [Tooltip("The escalation grade's volume, whose weight rises with the phase. Optional.")]
         private UnityEngine.Rendering.Volume _phaseGrade;
 
+        [SerializeField]
+        [Tooltip("The ground mist, tinted with the phase and hidden on Low.")]
+        private Renderer _mist;
+
         /// <summary>The light probes as baked, under the opening ambience. Null when the scene has none.</summary>
         private UnityEngine.Rendering.SphericalHarmonicsL2[] _bakedProbes;
 
@@ -225,7 +229,51 @@ namespace AdaptiveBossArena.Game
         /// <param name="phaseGrade">The volume whose weight rises with the phase.</param>
         public void BindGrade(UnityEngine.Rendering.Volume phaseGrade) => _phaseGrade = phaseGrade;
 
+        /// <summary>Assigns the ground mist, tinted with the phase. Used by the scene generator.</summary>
+        /// <param name="mist">The mist's renderer.</param>
+        public void BindMist(Renderer mist) => _mist = mist;
+
+        /// <summary>Whether a quality draws the ground mist: every one but Low.</summary>
+        /// <param name="quality">The quality in effect.</param>
+        /// <returns>True to draw it.</returns>
+        public static bool ShowsMist(GraphicsQuality quality) => quality != GraphicsQuality.Low;
+
+        /// <summary>How far the mist is lifted above the haze it is coloured from.</summary>
+        /// <remarks>
+        /// The haze is the colour of the far dark; mist that colour vanished into the floor. Lifted, and pulled a
+        /// quarter of the way toward the key light, it catches the moon at the opening and the fire at the end.
+        /// </remarks>
+        private const float MistLift = 2.2f;
+        private const float MistLightShare = 0.25f;
+
+        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        private MaterialPropertyBlock _mistBlock;
+
         private void OnPhaseChanged(int phaseIndex) => _targetPhase = phaseIndex;
+
+        private void TintMist(Color haze)
+        {
+            if (_mist == null)
+            {
+                return;
+            }
+
+            bool shown = ShowsMist(GraphicsTier.Current);
+            _mist.enabled = shown;
+
+            if (!shown)
+            {
+                return;
+            }
+
+            _mistBlock ??= new MaterialPropertyBlock();
+            Color tint = Color.Lerp(haze, _lightColor * _lightIntensity, MistLightShare) * MistLift;
+            tint.a = 1f;
+
+            _mist.GetPropertyBlock(_mistBlock);
+            _mistBlock.SetColor(BaseColorId, tint);
+            _mist.SetPropertyBlock(_mistBlock);
+        }
 
         private void SnapTo(Profile profile)
         {
@@ -260,6 +308,7 @@ namespace AdaptiveBossArena.Game
             RenderSettings.ambientEquatorColor = equator;
             RenderSettings.ambientGroundColor = _ground * lift;
             RenderSettings.fogColor = HazeColor.Derive(equator, _lightColor, _lightIntensity);
+            TintMist(RenderSettings.fogColor);
 
             if (_phaseGrade != null)
             {

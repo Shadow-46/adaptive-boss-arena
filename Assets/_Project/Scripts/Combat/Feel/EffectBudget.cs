@@ -24,6 +24,16 @@ namespace AdaptiveBossArena.Combat.Feel
         /// </remarks>
         public static bool IsReduced => Core.Services.GraphicsTier.Current == Core.Services.GraphicsQuality.Low;
 
+        /// <summary>
+        /// Whether heat haze may be drawn: High, outside the browser.
+        /// </summary>
+        /// <remarks>
+        /// The haze bends a copy of the scene that only the desktop High pipeline makes. Anywhere else the copy does
+        /// not exist and the haze would draw flat grey discs, so it is never emitted there.
+        /// </remarks>
+        public static bool AllowsHeatHaze =>
+            Core.Services.GraphicsTier.Current == Core.Services.GraphicsQuality.High && !IsWebPlayer;
+
         /// <summary>Impact bursts alive at once in a browser: enough for a combo and a clash, not a firework.</summary>
         public const int WebImpactBursts = 6;
     }

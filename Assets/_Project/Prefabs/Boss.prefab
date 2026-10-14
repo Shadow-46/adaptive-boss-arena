@@ -635,6 +635,7 @@ MonoBehaviour:
   - {fileID: 2800000, guid: bcc7faa54a9533242bdfb8685134a491, type: 2}
   _ember: {r: 2.4, g: 0.55, b: 0.1, a: 1}
   _emberMaterial: {fileID: 2100000, guid: 1672d035545a7de48b12ec37400669ec, type: 2}
+  _hazeMaterial: {fileID: 2100000, guid: aa2f7766332eba746b61d7d03ce98e34, type: 2}
 --- !u!114 &3345568671229177686
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -107,6 +107,9 @@ namespace AdaptiveBossArena.Editor
             public bool AdditionalLightShadows { get; init; }
             public int LightsPerObject { get; init; }
             public bool DepthTexture { get; init; }
+
+            /// <summary>Whether the scene is copied after the opaque pass, for the heat haze to bend.</summary>
+            public bool OpaqueTexture { get; init; }
         }
 
         /// <summary>
@@ -210,7 +213,10 @@ namespace AdaptiveBossArena.Editor
             SoftShadows = true,
             AdditionalLightShadows = true,
             LightsPerObject = 8,
-            DepthTexture = true
+            DepthTexture = true,
+
+            // Desktop High alone pays for a copy of the scene every frame, which is what the heat haze bends.
+            OpaqueTexture = true
         };
 
         /// <summary>
@@ -344,6 +350,7 @@ namespace AdaptiveBossArena.Editor
             // feature could have worked even if one had been added. The web tier has neither, and a depth
             // copy every frame is a cost it pays for nothing.
             SetIfPresent(serialized, "m_RequireDepthTexture", tier.DepthTexture);
+            SetIfPresent(serialized, "m_RequireOpaqueTexture", tier.OpaqueTexture);
 
             // Lets a light reach only some renderers. On every tier, because the character light that keeps the
             // fighters readable depends on it, and Low - which loses the fires - needs that light most.

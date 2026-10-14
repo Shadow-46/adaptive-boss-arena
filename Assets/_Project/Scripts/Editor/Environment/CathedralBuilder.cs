@@ -162,6 +162,7 @@ namespace AdaptiveBossArena.Editor.Environment
             BuildDebris(root.transform, radius);
             BuildShafts(root.transform);
             BuildDust(root.transform, radius);
+            BuildGroundMist(root.transform, radius);
             BuildBraziers(root.transform, radius);
 
             // The dust and the candles are what the web build thins; hand them to the platform lighting, which
@@ -309,7 +310,10 @@ namespace AdaptiveBossArena.Editor.Environment
             material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
             material.SetOverrideTag("RenderType", "Transparent");
 
-            // Before every other transparent thing, so scars and warnings always draw over the stains.
+            // Before every other transparent thing, so scars, warnings and the mist always draw over the stains. Set
+            // through the shader's own offset as well: URP's material validation recomputes the queue from it, and
+            // reset a bare queue to the plain transparent one.
+            material.SetFloat("_QueueOffset", -50f);
             material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent - 50;
             material.SetTexture("_BaseMap", texture);
             material.SetColor("_BaseColor", colour);
@@ -1099,7 +1103,95 @@ namespace AdaptiveBossArena.Editor.Environment
             return new Vector3(Mathf.Cos(radians) * distance, 0f, Mathf.Sin(radians) * distance);
         }
 
-        private static Material GetOrCreateAdditive(string materialName, Texture2D texture, Color colour)
+        /// <summary>Name of the ground mist's object, which the atmosphere tints per phase.</summary>
+        public const string GroundMistName = "GroundMist";
+
+        /// <summary>
+        /// Low banks of mist lying over the floor, drifting slowly.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Wide, faint sheets laid flat a hand's breadth above the stone, so they read as mist pooled on the floor
+        /// rather than as fog in the air, and never stand up between the camera and the fighters. Alpha-blended, not
+        /// additive: mist veils the floor, it does not glow, and the atmosphere tints it each phase - moonlit grey
+        /// at the opening, ember red by the Last Stand.
+        /// </para>
+        /// <para>
+        /// On unscaled time like the dust, so it keeps drifting through a hit-stop. Hidden on Low, where its overdraw
+        /// is the most expensive thing on screen for the least it adds.
+        /// </para>
+        /// </remarks>
+        private static void BuildGroundMist(Transform root, float radius)
+        {
+            var mistObject = new GameObject(GroundMistName);
+            mistObject.transform.SetParent(root, false);
+            mistObject.transform.position = new Vector3(0f, MistHeight, 0f);
+
+            ParticleSystem system = mistObject.AddComponent<ParticleSystem>();
+
+            ParticleSystem.MainModule main = system.main;
+            main.loop = true;
+            main.prewarm = true;
+            main.useUnscaledTime = true;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(16f, 24f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.08f, 0.22f);
+            main.startSize = new ParticleSystem.MinMaxCurve(5f, 9f);
+            main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+            main.startColor = new Color(1f, 1f, 1f, MistOpacity);
+            main.maxParticles = 40;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+
+            ParticleSystem.EmissionModule emission = system.emission;
+            emission.rateOverTime = 2f;
+
+            ParticleSystem.ShapeModule shape = system.shape;
+            shape.shapeType = ParticleSystemShapeType.Box;
+            shape.scale = new Vector3(radius * 1.5f, 0.2f, radius * 1.5f);
+            shape.randomDirectionAmount = 1f;
+
+            // Spinning very slowly as they drift, so a bank never holds one shape long enough to read as a sprite.
+            ParticleSystem.RotationOverLifetimeModule spin = system.rotationOverLifetime;
+            spin.enabled = true;
+            spin.z = new ParticleSystem.MinMaxCurve(-0.05f, 0.05f);
+
+            ParticleSystem.ColorOverLifetimeModule fade = system.colorOverLifetime;
+            fade.enabled = true;
+
+            var gradient = new Gradient();
+            gradient.SetKeys(
+                new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                new[]
+                {
+                    new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.3f),
+                    new GradientAlphaKey(1f, 0.7f), new GradientAlphaKey(0f, 1f)
+                });
+            fade.color = gradient;
+
+            var renderer = mistObject.GetComponent<ParticleSystemRenderer>();
+            renderer.renderMode = ParticleSystemRenderMode.HorizontalBillboard;
+            renderer.sharedMaterial = GetOrCreateAdditive("GroundMist", MistTexture(), Color.white, additive: false);
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            renderer.maxParticleSize = 4f;
+        }
+
+        /// <summary>Height the mist lies at: above the floor tiles and the blood, below a fallen knight.</summary>
+        private const float MistHeight = 0.25f;
+
+        /// <summary>How opaque one sheet of mist is at its thickest; several overlap where it pools.</summary>
+        private const float MistOpacity = 0.16f;
+
+        /// <summary>A soft, uneven bank: a disc fading to its rim, broken up by noise so it never reads as round.</summary>
+        private static Texture2D MistTexture() => GetOrCreateTexture("GroundMistBank", 128, 128, (u, v) =>
+        {
+            float r = new Vector2(u * 2f - 1f, v * 2f - 1f).magnitude;
+            float disc = 1f - Edge(0.15f, 1f, r);
+            float noise = Mathf.PerlinNoise(u * 4f + 11.3f, v * 4f + 7.1f) * 0.65f +
+                          Mathf.PerlinNoise(u * 9f + 3.7f, v * 9f + 19.2f) * 0.35f;
+            return disc * disc * Mathf.Clamp01(noise * 1.4f - 0.15f);
+        });
+
+        private static Material GetOrCreateAdditive(string materialName, Texture2D texture, Color colour, bool additive = true)
         {
             string path = EditorMenus.GeneratedMaterialFolder + "/" + materialName + ".mat";
             var material = AssetDatabase.LoadAssetAtPath<Material>(path);
@@ -1120,11 +1212,13 @@ namespace AdaptiveBossArena.Editor.Environment
             }
 
             material.SetFloat("_Surface", 1f);
-            material.SetFloat("_Blend", 2f);
+            material.SetFloat("_Blend", additive ? 2f : 0f);
             material.SetFloat("_ZWrite", 0f);
             material.SetFloat("_Cull", 0f);
             material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
-            material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
+            material.SetFloat("_DstBlend", (float)(additive
+                ? UnityEngine.Rendering.BlendMode.One
+                : UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha));
             material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
             material.SetOverrideTag("RenderType", "Transparent");
             material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
