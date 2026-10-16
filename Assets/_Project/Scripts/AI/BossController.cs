@@ -281,6 +281,9 @@ namespace AdaptiveBossArena.AI
             _selector = new BossAttackSelector(random);
 
             BuildLearning(random);
+
+            // A fight entered from the menu after a loss is still the same rivalry.
+            SessionMemory.TryRecall(_adaptation);
             BuildStateMachine();
             SubscribeToVitals();
             ApplyPhase(0);
@@ -694,8 +697,12 @@ namespace AdaptiveBossArena.AI
             return DamageResult.NoDamage(DamageOutcome.Deflected);
         }
 
-        /// <summary>Restores the boss to its starting condition for a retry.</summary>
-        /// <param name="spawnPosition">Where to place the boss.</param>
+        /// <summary>Keeps a faded copy of what this fight taught the boss, for the next attempt.</summary>
+        /// <remarks>Called by the encounter when the player falls or restarts; a win forgets instead.</remarks>
+        public void RememberFight() => SessionMemory.Remember(_adaptation);
+
+        /// <summary>Resets the boss for a new attempt, opening it with whatever it remembers of the player.</summary>
+        /// <param name="spawnPosition">Where the boss starts.</param>
         public void ResetForNewAttempt(Vector3 spawnPosition)
         {
             if (!_isInitialised)
@@ -726,6 +733,9 @@ namespace AdaptiveBossArena.AI
             _context.Attacks.Cancel();
             _context.Motor.Teleport(spawnPosition);
             _adaptation.Reset();
+
+            // The same player, trying again: the boss opens the rematch remembering them, faded.
+            SessionMemory.TryRecall(_adaptation);
 
             ApplyPhase(0);
             _machine.ForceState(_idleState);

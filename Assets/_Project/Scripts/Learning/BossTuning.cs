@@ -159,7 +159,16 @@ namespace AdaptiveBossArena.Learning
             }
         }
 
-        /// <summary>Returns every parameter to its baseline immediately, for a fight restart.</summary>
+        /// <summary>Jumps every value to its target at once, for an attempt that opens already remembering.</summary>
+        public void SnapToTargets()
+        {
+            for (int i = 0; i < ParameterCount; i++)
+            {
+                _current[i] = _target[i];
+            }
+        }
+
+        /// <summary>Returns every value and target to its baseline, for a fight that starts over.</summary>
         public void ResetToBaseline()
         {
             for (int i = 0; i < ParameterCount; i++)

@@ -91,6 +91,8 @@ namespace AdaptiveBossArena.Tests.EditMode
 
             public BossTuning Tuning { get; }
 
+            public AdaptationManager Manager => _manager;
+
             public BehaviorProfile Profile => _manager.Profile;
 
             public bool IsActive(string id) => _manager.ActiveStrategies.Any(strategy => strategy.name == id);
@@ -215,6 +217,9 @@ namespace AdaptiveBossArena.Tests.EditMode
         [SetUp]
         public void RequireStrategies()
         {
+            // Memory between attempts is static and would leak from one test's fight into the next.
+            SessionMemory.Forget();
+
             Assume.That(
                 AssetDatabase.FindAssets("t:CounterStrategy", new[] { StrategyFolder }).Length,
                 Is.GreaterThan(0),
@@ -426,6 +431,47 @@ namespace AdaptiveBossArena.Tests.EditMode
             Assume.That(fight.IsActive("CounterPassivity") && fight.IsActive("CounterKiting"), "Adopted: " + fight.Timeline());
             Assert.LessOrEqual(fight.Tuning.GetTarget(BossTuningParameter.Aggression), 1.05f);
             Assert.Greater(fight.Tuning.GetTarget(BossTuningParameter.Aggression), 0.75f);
+        }
+
+        [TearDown]
+        public void ForgetEverything() => SessionMemory.Forget();
+
+        [Test]
+        public void TheRematchOpensRememberingThePlayer()
+        {
+            var turtle = new Player { Answer = Answer.Guard, GuardsBetweenSwings = true };
+            var first = new Fight(turtle);
+            first.Run(60f, phase: 1);
+            Assume.That(first.IsActive("CounterTurtling"), "The first fight never read the turtle.");
+
+            SessionMemory.Remember(first.Manager);
+
+            var rematch = new Fight(turtle);
+            SessionMemory.TryRecall(rematch.Manager);
+
+            Assert.IsTrue(rematch.IsActive("CounterTurtling"), "The rematch opened blank.");
+            Assert.Greater(rematch.Tuning.Get(BossTuningParameter.AnswerGuardWeight), 0.3f,
+                "The remembered answer is in force only on paper.");
+            Assert.Less(
+                rematch.Tuning.Get(BossTuningParameter.AnswerGuardWeight),
+                first.Tuning.Get(BossTuningParameter.AnswerGuardWeight),
+                "The memory should be faded, not the whole fight carried over.");
+            CollectionAssert.Contains(SessionMemory.RememberedHabits, BehaviorFeature.Turtling);
+        }
+
+        [Test]
+        public void AChangedPlayerOverwritesTheMemory()
+        {
+            var first = new Fight(new Player { Answer = Answer.Guard, GuardsBetweenSwings = true });
+            first.Run(60f, phase: 1);
+            SessionMemory.Remember(first.Manager);
+
+            // The rematch: the player has stopped hiding behind the guard and dodges instead.
+            var rematch = new Fight(new Player());
+            SessionMemory.TryRecall(rematch.Manager);
+            rematch.Run(45f, phase: 1);
+
+            Assert.IsFalse(rematch.IsActive("CounterTurtling"), "The boss held on to a habit the player dropped.");
         }
 
     }

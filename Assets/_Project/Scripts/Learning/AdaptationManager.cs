@@ -331,6 +331,65 @@ namespace AdaptiveBossArena.Learning
             StrategyAdopted?.Invoke(chosen);
         }
 
+        /// <summary>A faded copy of everything this fight taught, for <see cref="SessionMemory"/>.</summary>
+        /// <param name="share">The share to keep.</param>
+        /// <returns>The snapshot.</returns>
+        public AdaptationSnapshot TakeSnapshot(float share)
+        {
+            var strengths = new Dictionary<CounterStrategy, float>();
+            var ordered = new List<KeyValuePair<CounterStrategy, float>>(_active);
+            ordered.Sort((a, b) => b.Value.CompareTo(a.Value));
+            var habits = new List<BehaviorFeature>();
+
+            foreach (KeyValuePair<CounterStrategy, float> active in ordered)
+            {
+                strengths[active.Key] = active.Value * share;
+
+                if (!habits.Contains(active.Key.TriggerFeature))
+                {
+                    habits.Add(active.Key.TriggerFeature);
+                }
+            }
+
+            return new AdaptationSnapshot(
+                _memory.CopyTallies(share), _tracker.CopyDodgeWeights(share), strengths, habits);
+        }
+
+        /// <summary>
+        /// Opens a freshly reset fight with a remembered one: its read on the player and its answers, faded.
+        /// </summary>
+        /// <remarks>
+        /// The remembered answers start in force, at their faded strength, and are held to the same rule as
+        /// any other: seen again, they strengthen; not seen within the grace, they lapse. The boss is ready
+        /// from the first second, but the player can still change its mind.
+        /// </remarks>
+        /// <param name="snapshot">What was remembered.</param>
+        public void Recall(AdaptationSnapshot snapshot)
+        {
+            if (snapshot == null)
+            {
+                return;
+            }
+
+            _memory.Restore(snapshot.Tallies);
+            _tracker.RestoreDodgeWeights(snapshot.DodgeWeights);
+            _recognizer.Analyse(_tracker, _memory, _profile, 0f);
+
+            foreach (KeyValuePair<CounterStrategy, float> remembered in snapshot.Strengths)
+            {
+                if (remembered.Key == null)
+                {
+                    continue;
+                }
+
+                _active[remembered.Key] = remembered.Value;
+                _lastEligibleAt[remembered.Key] = 0f;
+            }
+
+            ApplyTargets();
+            _tuning.SnapToTargets();
+        }
+
         /// <summary>Clears everything learned, for use when a fight restarts.</summary>
         public void Reset()
         {

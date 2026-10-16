@@ -146,6 +146,31 @@ namespace AdaptiveBossArena.Learning
             return true;
         }
 
+        /// <summary>A copy of the roll-direction bins, scaled, for carrying into another attempt.</summary>
+        /// <param name="share">The share to keep.</param>
+        /// <returns>The scaled weights.</returns>
+        public float[] CopyDodgeWeights(float share)
+        {
+            var weights = new float[DirectionHistogram.BinCount];
+
+            for (int i = 0; i < weights.Length; i++)
+            {
+                weights[i] = _dashDirections.Weight(i) * share;
+            }
+
+            return weights;
+        }
+
+        /// <summary>Adds remembered roll directions to this fight's.</summary>
+        /// <param name="weights">Weights from <see cref="CopyDodgeWeights"/>.</param>
+        public void RestoreDodgeWeights(float[] weights)
+        {
+            for (int i = 0; weights != null && i < weights.Length && i < DirectionHistogram.BinCount; i++)
+            {
+                _dashDirections.Add(DirectionHistogram.DirectionOfBin(i), weights[i]);
+            }
+        }
+
         /// <summary>Records a witnessed occurrence.</summary>
         /// <param name="combatEvent">What happened.</param>
         public void OnCombatEvent(in CombatEvent combatEvent)

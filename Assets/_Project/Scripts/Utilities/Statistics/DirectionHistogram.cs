@@ -98,6 +98,29 @@ namespace AdaptiveBossArena.Utilities.Statistics
             return HasSignal ? _weights[bin] / _totalWeight : 0f;
         }
 
+        /// <summary>The raw weight held by a bin, for carrying the histogram between fights.</summary>
+        /// <param name="bin">The bin.</param>
+        /// <returns>Its weight.</returns>
+        public float Weight(int bin)
+        {
+            if ((uint)bin >= BinCount)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(bin), bin, $"Bin must be in the range [0, {BinCount}).");
+            }
+
+            return _weights[bin];
+        }
+
+        /// <summary>The direction at the centre of a bin.</summary>
+        /// <param name="bin">The bin.</param>
+        /// <returns>A unit direction.</returns>
+        public static Vector2 DirectionOfBin(int bin)
+        {
+            float angle = bin * RadiansPerBin;
+            return new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
+        }
+
         /// <summary>Index of the most frequently observed sector, or -1 when there is no signal.</summary>
         public int DominantBin
         {

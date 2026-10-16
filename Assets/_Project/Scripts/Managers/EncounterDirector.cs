@@ -481,6 +481,13 @@ namespace AdaptiveBossArena.Game
         /// <summary>Resets both combatants and starts another attempt.</summary>
         public void RestartAttempt()
         {
+            // A restart before the fight was decided is a fight walked away from, not a fresh start: the boss
+            // remembers it as it would a loss. A decided fight was remembered, or forgotten, when it ended.
+            if (!_isDecided)
+            {
+                _boss?.RememberFight();
+            }
+
             Vector3 playerSpawn = _arenaConfig != null ? _arenaConfig.PlayerSpawn : Vector3.zero;
             Vector3 bossSpawn = _arenaConfig != null
                 ? _arenaConfig.BossSpawn
@@ -534,6 +541,16 @@ namespace AdaptiveBossArena.Game
             if (_isDecided)
             {
                 return;
+            }
+
+            // Beaten, the boss lets the player go; beaten by it, the player is remembered for the rematch.
+            if (won)
+            {
+                Learning.SessionMemory.Forget();
+            }
+            else
+            {
+                _boss?.RememberFight();
             }
 
             _isDecided = true;

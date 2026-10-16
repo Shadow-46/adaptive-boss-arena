@@ -115,6 +115,31 @@ namespace AdaptiveBossArena.Learning
         /// <param name="amount">How much, in occurrences or seconds.</param>
         public void Add(CombatTally tally, float amount = 1f) => _recent[(int)tally] += amount;
 
+        /// <summary>A copy of every faded tally, scaled, for carrying into another attempt.</summary>
+        /// <param name="share">The share to keep.</param>
+        /// <returns>The scaled tallies.</returns>
+        public float[] CopyTallies(float share)
+        {
+            var copy = new float[_recent.Length];
+
+            for (int i = 0; i < copy.Length; i++)
+            {
+                copy[i] = _recent[i] * share;
+            }
+
+            return copy;
+        }
+
+        /// <summary>Adds remembered tallies to this fight's, at the start of an attempt.</summary>
+        /// <param name="tallies">Tallies from <see cref="CopyTallies"/>.</param>
+        public void Restore(float[] tallies)
+        {
+            for (int i = 0; i < _recent.Length && tallies != null && i < tallies.Length; i++)
+            {
+                _recent[i] += tallies[i];
+            }
+        }
+
         /// <summary>Fades every tally, so old habits weigh less than current ones.</summary>
         /// <param name="halfLifeSeconds">Time for an unreinforced tally to halve.</param>
         /// <param name="deltaTime">Elapsed time.</param>
