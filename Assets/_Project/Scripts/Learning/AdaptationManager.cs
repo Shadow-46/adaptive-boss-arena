@@ -114,7 +114,35 @@ namespace AdaptiveBossArena.Learning
             _tracker.OnCombatEvent(combatEvent);
 
         /// <summary>
-        /// Advances the learning loop.
+        /// Advances the learning loop from what the boss perceives of the player this frame.
+        /// </summary>
+        /// <remarks>
+        /// The observation is the delayed one every behaviour sees: learning is never fresher than what the
+        /// boss could act on.
+        /// </remarks>
+        /// <param name="deltaTime">Elapsed scaled time.</param>
+        /// <param name="timeNow">Current combat-clock time.</param>
+        /// <param name="bossPosition">Where the boss stands.</param>
+        /// <param name="observed">The player as the boss perceives them.</param>
+        /// <param name="currentPhase">One-based phase currently in effect.</param>
+        public void Tick(
+            float deltaTime,
+            float timeNow,
+            Vector3 bossPosition,
+            in Core.Perception.PlayerObservation observed,
+            int currentPhase)
+        {
+            _tracker.Observe(bossPosition, observed, deltaTime);
+
+            float separation = observed.IsValid
+                ? Vector3.ProjectOnPlane(observed.Position - bossPosition, Vector3.up).magnitude
+                : 0f;
+
+            Tick(deltaTime, timeNow, separation, currentPhase);
+        }
+
+        /// <summary>
+        /// Advances the learning loop from distance alone.
         /// </summary>
         /// <param name="deltaTime">Elapsed scaled time.</param>
         /// <param name="timeNow">Current combat-clock time.</param>

@@ -145,6 +145,16 @@ namespace AdaptiveBossArena.Core.Combat
 
         /// <summary>Damage dealt, for events that involve damage.</summary>
         public float Magnitude { get; init; }
+
+        /// <summary>
+        /// For an attack that began, how long its wind-up lasts, in seconds.
+        /// </summary>
+        /// <remarks>
+        /// A fact about the attacker's own swing. The boss reads it off its own attacks to judge how early the
+        /// player rolled: a dodge on the first frame of a long wind-up is a guess, the same dodge against a jab is
+        /// the only answer there was.
+        /// </remarks>
+        public float WindupSeconds { get; init; }
     }
 
     /// <summary>

@@ -85,10 +85,15 @@ namespace AdaptiveBossArena.Learning
             BehaviorFeature.Aggression => "You pressed forward and refused to give ground.",
             BehaviorFeature.WhiffRatio => "You swung at empty air often.",
             BehaviorFeature.HealFrequency => "You broke off to heal often.",
-            BehaviorFeature.DodgeTimingConsistency => "Your perfect dodges fell on the same beat.",
+            BehaviorFeature.DodgeTimingConsistency => "Your dodges were timed perfectly, again and again.",
             BehaviorFeature.EvasionSuccess => "You slipped almost everything it threw.",
             BehaviorFeature.GuardReliance => "You met it behind the guard rather than moving.",
             BehaviorFeature.DeflectSkill => "Your deflects landed on the beat, again and again.",
+            BehaviorFeature.DodgeEarliness => "You rolled the moment its arms went up.",
+            BehaviorFeature.CirclingBias => "You circled it the same way, every time.",
+            BehaviorFeature.Crowding => "You pressed yourself inside its reach.",
+            BehaviorFeature.Turtling => "You waited behind your guard.",
+            BehaviorFeature.HealUnderPressure => "You healed within its reach.",
             _ => feature.ToString()
         };
     }

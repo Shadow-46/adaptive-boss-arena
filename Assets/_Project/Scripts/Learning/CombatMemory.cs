@@ -27,6 +27,25 @@ namespace AdaptiveBossArena.Learning
 
         private readonly CircularBuffer<CombatEvent> _events;
 
+        /// <summary>
+        /// A dodge made within this share of a wind-up was made before the blade could be judged.
+        /// </summary>
+        /// <remarks>
+        /// Under half the wind-up, after the boss's own perception delay and a human reaction, is a guess at
+        /// the timing rather than a read of it. Measured against each swing's own length, so a fast jab
+        /// dodged as soon as it is seen never counts as early.
+        /// </remarks>
+        public const float EarlyDodgeShare = 0.45f;
+
+        /// <summary>How long after a wind-up begins a dodge still counts as an answer to it.</summary>
+        private const float SwingAnswerWindowSeconds = 1.6f;
+
+        private readonly float[] _recent = new float[System.Enum.GetValues(typeof(CombatTally)).Length];
+
+        private float _bossSwingStartedAt = float.NegativeInfinity;
+        private float _bossSwingWindup;
+        private bool _bossSwingResolved = true;
+
         /// <summary>Creates a memory with a fixed recall depth.</summary>
         /// <param name="capacity">Number of occurrences retained.</param>
         public CombatMemory(int capacity = DefaultCapacity) =>
@@ -86,6 +105,34 @@ namespace AdaptiveBossArena.Learning
         /// </remarks>
         public int BossParries { get; private set; }
 
+        /// <summary>A tally as it stands now, faded by how long ago each occurrence was.</summary>
+        /// <param name="tally">Which tally.</param>
+        /// <returns>The faded count or duration.</returns>
+        public float Recent(CombatTally tally) => _recent[(int)tally];
+
+        /// <summary>Adds to a faded tally. Used by the tracker for what it measures itself.</summary>
+        /// <param name="tally">Which tally.</param>
+        /// <param name="amount">How much, in occurrences or seconds.</param>
+        public void Add(CombatTally tally, float amount = 1f) => _recent[(int)tally] += amount;
+
+        /// <summary>Fades every tally, so old habits weigh less than current ones.</summary>
+        /// <param name="halfLifeSeconds">Time for an unreinforced tally to halve.</param>
+        /// <param name="deltaTime">Elapsed time.</param>
+        public void Fade(float halfLifeSeconds, float deltaTime)
+        {
+            if (halfLifeSeconds <= 0f || deltaTime <= 0f)
+            {
+                return;
+            }
+
+            float retained = UnityEngine.Mathf.Pow(0.5f, deltaTime / halfLifeSeconds);
+
+            for (int i = 0; i < _recent.Length; i++)
+            {
+                _recent[i] *= retained;
+            }
+        }
+
         /// <summary>Records an occurrence and updates the running counts.</summary>
         /// <param name="combatEvent">The occurrence to remember.</param>
         public void Record(in CombatEvent combatEvent)
@@ -108,28 +155,35 @@ namespace AdaptiveBossArena.Learning
             {
                 case CombatEventKind.AttackStarted:
                     PlayerAttacksThrown++;
+                    Add(CombatTally.PlayerAttacks);
 
                     if (combatEvent.DamageType == DamageType.Heavy)
                     {
                         PlayerHeavyAttacksThrown++;
+                        Add(CombatTally.PlayerHeavyAttacks);
                     }
 
                     break;
 
                 case CombatEventKind.AttackWhiffed:
                     PlayerAttacksWhiffed++;
+                    Add(CombatTally.PlayerWhiffs);
                     break;
 
                 case CombatEventKind.DodgePerformed:
                     PlayerDodges++;
+                    Add(CombatTally.PlayerDodges);
+                    RecordDodgeTiming(combatEvent.Timestamp);
                     break;
 
                 case CombatEventKind.PerfectDodge:
                     PlayerPerfectDodges++;
+                    Add(CombatTally.PlayerPerfectDodges);
                     break;
 
                 case CombatEventKind.HealStarted:
                     PlayerHealsStarted++;
+                    Add(CombatTally.PlayerHeals);
                     break;
 
                 // The defensive half of the fight. These four were published to the bus from the
@@ -141,10 +195,14 @@ namespace AdaptiveBossArena.Learning
 
                 case CombatEventKind.Deflected:
                     PlayerDeflects++;
+                    Add(CombatTally.PlayerDeflects);
+                    _bossSwingResolved = true;
                     break;
 
                 case CombatEventKind.Blocked:
                     PlayerBlocks++;
+                    Add(CombatTally.PlayerBlocks);
+                    _bossSwingResolved = true;
                     break;
 
                 case CombatEventKind.Riposte:
@@ -157,16 +215,35 @@ namespace AdaptiveBossArena.Learning
         {
             switch (combatEvent.Kind)
             {
+                case CombatEventKind.AttackStarted:
+                    _bossSwingStartedAt = combatEvent.Timestamp;
+                    _bossSwingWindup = combatEvent.WindupSeconds;
+                    _bossSwingResolved = false;
+                    break;
+
+                // A swing is resolved once, however many events it raises. A dodged swing also ends
+                // touching nothing and so reports a whiff; counted as both, every dodge twice inflated
+                // the boss's read on how hard the player is to hit.
                 case CombatEventKind.AttackLanded:
                     BossAttacksLanded++;
+                    Add(CombatTally.BossLanded);
+                    _bossSwingResolved = true;
                     break;
 
                 case CombatEventKind.AttackEvaded:
                     BossAttacksEvaded++;
+                    Add(CombatTally.BossEvaded);
+                    _bossSwingResolved = true;
                     break;
 
                 case CombatEventKind.AttackWhiffed:
-                    BossAttacksWhiffed++;
+                    if (!_bossSwingResolved)
+                    {
+                        BossAttacksWhiffed++;
+                        Add(CombatTally.BossWhiffed);
+                    }
+
+                    _bossSwingResolved = true;
                     break;
 
                 // Published by the attacker's executor with the defender as actor, so a swing the
@@ -176,6 +253,24 @@ namespace AdaptiveBossArena.Learning
                 case CombatEventKind.Parried:
                     BossParries++;
                     break;
+            }
+        }
+
+        /// <summary>Judges a dodge against the wind-up it answered, if it answered one.</summary>
+        private void RecordDodgeTiming(float dodgedAt)
+        {
+            float lead = dodgedAt - _bossSwingStartedAt;
+
+            if (lead < 0f || lead > SwingAnswerWindowSeconds || _bossSwingWindup <= 0f)
+            {
+                return;
+            }
+
+            Add(CombatTally.DodgesIntoSwings);
+
+            if (lead < _bossSwingWindup * EarlyDodgeShare)
+            {
+                Add(CombatTally.EarlyDodges);
             }
         }
 
@@ -207,6 +302,10 @@ namespace AdaptiveBossArena.Learning
         public void Clear()
         {
             _events.Clear();
+            System.Array.Clear(_recent, 0, _recent.Length);
+            _bossSwingStartedAt = float.NegativeInfinity;
+            _bossSwingWindup = 0f;
+            _bossSwingResolved = true;
 
             PlayerAttacksThrown = 0;
             PlayerHeavyAttacksThrown = 0;

@@ -815,7 +815,7 @@ namespace AdaptiveBossArena.Editor
 
             CounterStrategy closeDistance = CreateStrategy(
                 "CounterKiting",
-                BehaviorFeature.PreferredDistance, FeatureComparison.AtOrAbove, threshold: 0.65f,
+                BehaviorFeature.PreferredDistance, FeatureComparison.AtOrAbove, threshold: 0.4f,
                 phase: 1, weight: 1.2f,
                 tell: "It refuses to let you breathe.",
                 (BossTuningParameter.GapCloserWeight, 0.8f),
@@ -846,7 +846,7 @@ namespace AdaptiveBossArena.Editor
 
             CounterStrategy punishPassivity = CreateStrategy(
                 "CounterPassivity",
-                BehaviorFeature.AttackFrequency, FeatureComparison.AtOrBelow, threshold: 0.25f,
+                BehaviorFeature.AttackFrequency, FeatureComparison.AtOrBelow, threshold: 0.15f,
                 phase: 1, weight: 1f,
                 tell: "It presses the advantage.",
                 (BossTuningParameter.Aggression, 0.85f),

@@ -202,7 +202,8 @@ namespace AdaptiveBossArena.Combat
                 Unblockable = attack.Unblockable,
                 Position = _origin.position,
                 Direction = _origin.forward,
-                SeparationDistance = separationDistance
+                SeparationDistance = separationDistance,
+                WindupSeconds = attack.StartupSeconds
             });
         }
 

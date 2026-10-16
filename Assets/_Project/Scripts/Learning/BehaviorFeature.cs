@@ -33,9 +33,13 @@ namespace AdaptiveBossArena.Learning
         DashDirectionBias = 3,
 
         /// <summary>
-        /// Preferred engagement distance, normalised across the arena's usable range.
+        /// Share of the fight the player spends keeping well away from the boss.
         /// </summary>
-        /// <remarks>High values indicate a player who keeps away, which the boss answers with gap-closers.</remarks>
+        /// <remarks>
+        /// High values indicate a player who keeps away, which the boss answers with gap-closers. Measured as
+        /// time spent out of reach rather than as an average distance: the boss stalks in toward its own
+        /// range, so the average never strayed far from it whatever the player did.
+        /// </remarks>
         PreferredDistance = 4,
 
         /// <summary>Balance between closing and retreating. High values indicate a pressuring player.</summary>
@@ -47,7 +51,8 @@ namespace AdaptiveBossArena.Learning
         /// <summary>How readily the player commits to healing rather than continuing to fight.</summary>
         HealFrequency = 7,
 
-        /// <summary>How reliably the player dodges at the same moment within an attack's wind-up.</summary>
+        /// <summary>Share of the player's dodges timed perfectly enough to negate the blow.</summary>
+        /// <remarks>A player this sure of the timing is reading the boss's rhythm, which feints break.</remarks>
         DodgeTimingConsistency = 8,
 
         /// <summary>Share of the boss's attacks the player avoids cleanly. The overall read on player skill.</summary>
@@ -71,7 +76,35 @@ namespace AdaptiveBossArena.Learning
         /// <see cref="GuardReliance"/> says how often they guard, this says how well. It is the habit
         /// feints exist to punish, since a player this precise is reading a rhythm.
         /// </remarks>
-        DeflectSkill = 11
+        DeflectSkill = 11,
+
+        /// <summary>
+        /// Share of the player's rolls into a wind-up made before the blade could be judged.
+        /// </summary>
+        /// <remarks>
+        /// The panic roll: dodging as soon as the arms go up. The honest answer is to hold the raised blade a
+        /// beat longer, so the roll is spent before the blow comes.
+        /// </remarks>
+        DodgeEarliness = 12,
+
+        /// <summary>How consistently the player circles the boss the same way.</summary>
+        /// <remarks>Answered by stepping into the circle to cut it off, and by attacks that cover the flank.</remarks>
+        CirclingBias = 13,
+
+        /// <summary>Share of the fight the player spends pressed inside the boss's reach.</summary>
+        /// <remarks>Answered by the blows that throw a crowding player off: the rebuke and the seize.</remarks>
+        Crowding = 14,
+
+        /// <summary>Share of the time within reach that the player spends behind a raised guard.</summary>
+        /// <remarks>
+        /// Distinct from <see cref="GuardReliance"/>, which counts blows met on the guard: this one sees the
+        /// turtle who raises the guard and waits, whether or not the boss swings.
+        /// </remarks>
+        Turtling = 15,
+
+        /// <summary>Share of the player's heals begun within the boss's reach.</summary>
+        /// <remarks>A heal under the boss's nose is an opening any opponent would take, and so does it.</remarks>
+        HealUnderPressure = 16
     }
 
     /// <summary>

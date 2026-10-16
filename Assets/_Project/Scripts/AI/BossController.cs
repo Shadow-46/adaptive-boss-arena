@@ -467,7 +467,7 @@ namespace AdaptiveBossArena.AI
             // Learning is advanced after the state machine, so the habits it derives describe a
             // frame that has already been played rather than one in progress.
             _adaptation.Tick(
-                deltaTime, _time.CombatTime, _context.DistanceToPlayer, _context.PhaseIndex + 1);
+                deltaTime, _time.CombatTime, transform.position, _context.Perceived, _context.PhaseIndex + 1);
 
             UpdatePhase();
             UpdateResolve(deltaTime);
