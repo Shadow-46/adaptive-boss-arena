@@ -499,7 +499,8 @@ namespace AdaptiveBossArena.AI
         /// </remarks>
         private void UpdateResolve(float deltaTime)
         {
-            if (_resolve == null)
+            // A dead boss gathers no more resolve; it once kept charging until the encounter noticed the fight was over.
+            if (_resolve == null || !_health.IsAlive)
             {
                 return;
             }
@@ -832,6 +833,13 @@ namespace AdaptiveBossArena.AI
         /// </remarks>
         private bool WantsPhaseAttack(BossContext context)
         {
+            // A set-piece waits its turn: never out of a stagger the player earned, never mid-swing, never from
+            // the floor. It was a global transition that only checked the queue, so it could cut a stagger short.
+            if (!IsFreeToAct() || !_health.IsAlive)
+            {
+                return false;
+            }
+
             if (!_phaseAttackQueued ||
                 _phaseTransitionInvulnRemaining > 0f ||
                 context.IsOverbalanced ||
@@ -1045,6 +1053,14 @@ namespace AdaptiveBossArena.AI
         /// </remarks>
         private bool WantsToParry(BossContext context)
         {
+            // Only a boss with its hands free parries: not mid-swing, where the parry used to cancel its own blow,
+            // not out of a stagger the player earned, and not after death. The cooldowns alone are zero in all of
+            // those, which is how a global transition reached them.
+            if (!IsFreeToAct() || !_health.IsAlive)
+            {
+                return false;
+            }
+
             if (context.AttackCooldownRemaining > 0f || context.ParryCooldownRemaining > 0f)
             {
                 return false;

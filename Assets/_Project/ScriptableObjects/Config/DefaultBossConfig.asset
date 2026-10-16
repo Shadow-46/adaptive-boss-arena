@@ -67,7 +67,7 @@ MonoBehaviour:
     _attackCooldownSeconds: 0.85
     _adaptationRateMultiplier: 1.4
   - _name: Relentless
-    _healthThreshold: 0.33
+    _healthThreshold: 0.45
     _attacks:
     - {fileID: 11400000, guid: c36e1a4c0c2652e44a0844711735c22a, type: 2}
     - {fileID: 11400000, guid: 9a2b3bde94dd7424783e41b43ef210e0, type: 2}

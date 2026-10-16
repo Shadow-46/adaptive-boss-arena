@@ -618,7 +618,7 @@ namespace AdaptiveBossArena.Editor
             // than being two heavy swings back to back.
             AttackDefinition jab = CreateAttack(
                 "BossJab", "Jab", DamageType.BossMelee,
-                damage: 8f, startup: 0.28f, active: 0.08f, recovery: 0.32f,
+                damage: 8f, startup: 0.32f, active: 0.08f, recovery: 0.32f,
                 range: 3f, arc: 70f, poise: 12f, knockback: 3f, hitStop: 0.05f, trauma: 0.18f,
                 telegraph: false);
 
@@ -1467,7 +1467,7 @@ namespace AdaptiveBossArena.Editor
                     attacks.DelayedOverhead, attacks.Spin, attacks.Kick, attacks.Thrust);
 
                 WritePhase(
-                    phases.GetArrayElementAtIndex(2), ShouldWriteTuning(created), "Relentless", threshold: 0.33f,
+                    phases.GetArrayElementAtIndex(2), ShouldWriteTuning(created), "Relentless", threshold: 0.45f,
                     moveMultiplier: 1.3f, cooldown: 0.6f, adaptationRate: 2f,
                     signature: attacks.Shockwave,
                     attacks.Sweep, attacks.Slam, attacks.Charge, attacks.Shockwave, attacks.Jab, attacks.Perilous,
