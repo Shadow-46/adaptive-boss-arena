@@ -107,6 +107,15 @@ namespace AdaptiveBossArena.Combat.Feel
             _material = material;
         }
 
+        /// <summary>Fits the smear to a blade: from where it begins to its point, in metres from the mount.</summary>
+        /// <param name="baseDistance">Where the blade begins.</param>
+        /// <param name="tipDistance">Where the point is.</param>
+        public void SetSpan(float baseDistance, float tipDistance)
+        {
+            _baseDistance = Mathf.Max(0f, baseDistance);
+            _tipDistance = Mathf.Max(_baseDistance, tipDistance);
+        }
+
         /// <summary>Starts emitting, or extends emission if a swing is already under way.</summary>
         public void Begin()
         {

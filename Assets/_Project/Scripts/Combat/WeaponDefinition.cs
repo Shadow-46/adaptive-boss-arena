@@ -105,6 +105,17 @@ namespace AdaptiveBossArena.Combat
         [Tooltip("Posture dealt to the attacker by a clean deflect with this weapon.")]
         private float _deflectPostureDamage = 24f;
 
+        [Header("Blade")]
+        [SerializeField]
+        [Min(0f)]
+        [Tooltip("Where the blade begins, in metres from the grip. Written by the generator from the model.")]
+        private float _bladeBase = 0.25f;
+
+        [SerializeField]
+        [Min(0.1f)]
+        [Tooltip("Where the point is, in metres from the grip. Written by the generator from the model.")]
+        private float _bladeTip = 0.95f;
+
         [Header("Handling")]
         [SerializeField]
         [Range(0.5f, 1.5f)]
@@ -115,6 +126,18 @@ namespace AdaptiveBossArena.Combat
         [Range(0.5f, 2f)]
         [Tooltip("Multiplier on stamina costs. Heavier weapons cost more per swing.")]
         private float _staminaCostMultiplier = 1f;
+
+        /// <summary>Where the blade begins, in metres from the grip.</summary>
+        public float BladeBase => _bladeBase;
+
+        /// <summary>
+        /// Where the point is, in metres from the grip.
+        /// </summary>
+        /// <remarks>
+        /// The hits and the trail are fitted to this span when the weapon is drawn, so a greatsword strikes with
+        /// its whole length and an energy blade with only its own - what the player sees swing is what strikes.
+        /// </remarks>
+        public float BladeTip => _bladeTip;
 
         /// <summary>Name shown when the weapon is drawn.</summary>
         public string DisplayName => _displayName;

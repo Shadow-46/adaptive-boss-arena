@@ -30,5 +30,7 @@ MonoBehaviour:
   _defence: 2
   _deflectWindowSeconds: 0.28
   _deflectPostureDamage: 16
+  _bladeBase: 0.3378261
+  _bladeTip: 0.84000003
   _moveSpeedMultiplier: 1.12
   _staminaCostMultiplier: 0.85

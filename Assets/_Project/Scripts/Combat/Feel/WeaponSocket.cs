@@ -24,14 +24,32 @@ namespace AdaptiveBossArena.Combat.Feel
     {
         private GameObject _current;
 
-        /// <summary>Shows a weapon model here, replacing whatever was shown before.</summary>
-        /// <remarks>
-        /// Passing null clears the socket, which is the current behaviour for every weapon since none
-        /// carries a model yet. The old instance is destroyed rather than pooled: weapon swaps are
-        /// gated to the idle and move states and so are rare, and a live instance left parented would
-        /// stack blades on every switch.
-        /// </remarks>
-        /// <param name="modelPrefab">The weapon model to instantiate, or null to show nothing.</param>
+        /// <summary>Draws a weapon: its model in the hand, and its blade's span on the strike volume and the trail.</summary>
+        /// <param name="modelPrefab">The weapon's model, or null for none.</param>
+        /// <param name="bladeBase">Where its blade begins, in metres from the grip.</param>
+        /// <param name="bladeTip">Where its point is.</param>
+        public void Equip(GameObject modelPrefab, float bladeBase, float bladeTip)
+        {
+            Equip(modelPrefab);
+
+            // The blow is decided along the blade the hand now holds, and the smear follows it: a greatsword
+            // drawn after a short blade must not keep striking with the short blade's reach.
+            foreach (StrikeVolume volume in GetComponentsInChildren<StrikeVolume>(true))
+            {
+                if (volume.Part == StrikerParts.Weapon)
+                {
+                    volume.Configure(volume.Part, bladeBase, bladeTip, volume.Radius);
+                }
+            }
+
+            foreach (WeaponTrail trail in GetComponentsInChildren<WeaponTrail>(true))
+            {
+                trail.SetSpan(bladeBase, bladeTip);
+            }
+        }
+
+        /// <summary>Draws a model in the hand, leaving the strike and trail spans as they are.</summary>
+        /// <param name="modelPrefab">The weapon's model, or null for none.</param>
         public void Equip(GameObject modelPrefab)
         {
             if (_current != null)

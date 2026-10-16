@@ -1345,7 +1345,7 @@ namespace AdaptiveBossArena.Editor
             // with the references rather than the tuning: a missing model is a broken asset that
             // should heal itself on the next run, not a value someone may have adjusted by hand.
             GameObject model = WeaponModelBuilder.GetOrCreate(
-                assetName, signature, bladeLength, bladeWidth, bladeGlows);
+                assetName, signature, bladeLength, bladeWidth, bladeGlows, out float bladeBase, out float bladeTip);
 
             using (AssetAuthoring.AssetWriter writer = AssetAuthoring.Edit(weapon))
             {
@@ -1355,7 +1355,9 @@ namespace AdaptiveBossArena.Editor
                     .Reference("_specialAttack", attacks.Special)
                     .Reference("_empoweredSpecialAttack", empoweredSpecial)
                     .Reference("_riposteAttack", attacks.Heavy)
-                    .Reference("_modelPrefab", model);
+                    .Reference("_modelPrefab", model)
+                    .Float("_bladeBase", bladeBase)
+                    .Float("_bladeTip", bladeTip);
 
                 if (ShouldWriteTuning(created))
                 {

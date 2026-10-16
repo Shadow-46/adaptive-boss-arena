@@ -914,9 +914,8 @@ namespace AdaptiveBossArena.Player
             _context.Weapon = weapon;
             _context.ComboIndex = 0;
 
-            // Swaps the held model to match. Null model today, so this clears the socket and the
-            // weapon still reads through its trail and swing colour.
-            _weaponSocket?.Equip(weapon.ModelPrefab);
+            // Swaps the held model to match, and fits the strike and the trail to its blade.
+            _weaponSocket?.Equip(weapon.ModelPrefab, weapon.BladeBase, weapon.BladeTip);
 
             _weaponChannel?.Raise(weapon.DisplayName);
 

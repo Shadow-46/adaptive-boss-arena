@@ -71,3 +71,17 @@ nothing.
 - Changes: rescaled; lower levels of detail and the built-in weapon removed; armour, seam glow and plume colour
   regenerated from the model's own maps.
 - The character is from Solo Leveling; this free, non-commercial demo uses the fan model as published.
+
+## Cardinal Zebra - "LowPoly Fantasy Weapon Pack" (the knight's sword and greatsword)
+
+- Files: `Assets/_Project/Art/Licensed/Weapons/Low Poly Fantasy Weapon Pack/` (not in the repository; downloaded by the
+  developer)
+- Author: Rostislav Gnatovsky (Cardinal Zebra), https://cardinalzebra.itch.io/low-poly-fantasy-weapon-pack
+- Licence: CC0 1.0 Universal. Credit is not required; it is given anyway.
+
+## OpenGameArt - "Energy Sword" (the knight's energy blade)
+
+- Files: `Assets/_Project/Art/Licensed/Weapons/Energy Sword/` (not in the repository; downloaded by the developer and
+  converted from glTF to OBJ for import)
+- Source: https://opengameart.org/content/energy-sword
+- Licence: CC0 1.0 Universal. Credit is not required; it is given anyway.
