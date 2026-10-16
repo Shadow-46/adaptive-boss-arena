@@ -38,6 +38,36 @@ namespace AdaptiveBossArena.Learning
         private readonly IReadOnlyList<CounterStrategy> _catalogue;
         private readonly HashSet<CounterStrategy> _adopted = new HashSet<CounterStrategy>();
 
+        /// <summary>The counters in force now, and how hard each is applied.</summary>
+        private readonly Dictionary<CounterStrategy, float> _active = new Dictionary<CounterStrategy, float>();
+
+        /// <summary>When each active counter's habit was last seen.</summary>
+        private readonly Dictionary<CounterStrategy, float> _lastEligibleAt = new Dictionary<CounterStrategy, float>();
+
+        private readonly List<CounterStrategy> _expired = new List<CounterStrategy>();
+        private readonly List<CounterStrategy> _refreshed = new List<CounterStrategy>();
+        private readonly float[] _strongestPull = new float[Enum.GetValues(typeof(BossTuningParameter)).Length];
+        private readonly float[] _otherPulls = new float[Enum.GetValues(typeof(BossTuningParameter)).Length];
+
+        /// <summary>
+        /// How long a counter stays in force after its habit was last seen.
+        /// </summary>
+        /// <remarks>
+        /// Long enough that one fight's worth of a habit is not forgotten in a lull; short enough that a player
+        /// who has truly changed sees the counter go within the half-minute - which is the whole promise of
+        /// "change your habits and it changes its answer".
+        /// </remarks>
+        public const float GraceSeconds = 20f;
+
+        /// <summary>
+        /// The share of every counter but the strongest that a shared parameter takes on.
+        /// </summary>
+        /// <remarks>
+        /// Two counters raising aggression press harder than one, but not twice as hard: the strongest sets
+        /// the pace and the rest add a quarter each, so stacking reads as escalation rather than a jump.
+        /// </remarks>
+        public const float StackShare = 0.25f;
+
         private readonly float _analysisIntervalSeconds;
         private readonly float _minSecondsBetweenAdaptations;
         private readonly float _forgetHalfLifeSeconds;
@@ -104,6 +134,15 @@ namespace AdaptiveBossArena.Learning
 
         /// <summary>Strategies the boss has developed so far this fight.</summary>
         public IReadOnlyCollection<CounterStrategy> AdoptedStrategies => _adopted;
+
+        /// <summary>The counters in force now: adopted, and their habit still seen within the grace.</summary>
+        public IReadOnlyCollection<CounterStrategy> ActiveStrategies => _active.Keys;
+
+        /// <summary>How hard an active counter is applied now, or zero when it is not in force.</summary>
+        /// <param name="strategy">The counter.</param>
+        /// <returns>Its strength, zero to one.</returns>
+        public float StrengthOf(CounterStrategy strategy) =>
+            strategy != null && _active.TryGetValue(strategy, out float strength) ? strength : 0f;
 
         /// <summary>Combat-clock time habits were last recomputed.</summary>
         public float LastAnalysisAt => _profile.LastUpdatedAt;
@@ -172,7 +211,95 @@ namespace AdaptiveBossArena.Learning
             _nextAnalysisAt = timeNow + _analysisIntervalSeconds / _adaptationRateMultiplier;
             _recognizer.Analyse(_tracker, _memory, _profile, timeNow);
 
+            RefreshActive(timeNow, currentPhase);
             TryAdapt(timeNow, currentPhase);
+            ApplyTargets();
+        }
+
+        /// <summary>
+        /// Keeps each active counter in force while its habit is still seen, at the strength the habit now
+        /// earns, and lets it go once the habit has been gone for the grace.
+        /// </summary>
+        /// <remarks>
+        /// Counters used to be adopted once and then drain away with the memory half-life, so the boss forgot
+        /// its own answer while the player kept the habit. Now the answer holds exactly as long as the habit,
+        /// and through a lull it keeps the strength it last had.
+        /// </remarks>
+        private void RefreshActive(float timeNow, int currentPhase)
+        {
+            _expired.Clear();
+            _refreshed.Clear();
+
+            foreach (CounterStrategy strategy in _active.Keys)
+            {
+                FeatureReading reading = _profile.Get(strategy.TriggerFeature);
+
+                if (strategy.IsEligible(reading.Value, reading.Confidence, currentPhase))
+                {
+                    _refreshed.Add(strategy);
+                }
+                else if (timeNow - _lastEligibleAt[strategy] > GraceSeconds)
+                {
+                    _expired.Add(strategy);
+                }
+            }
+
+            foreach (CounterStrategy strategy in _expired)
+            {
+                _active.Remove(strategy);
+                _lastEligibleAt.Remove(strategy);
+            }
+
+            foreach (CounterStrategy strategy in _refreshed)
+            {
+                FeatureReading reading = _profile.Get(strategy.TriggerFeature);
+                _active[strategy] = strategy.Strength(reading.Value, reading.Confidence);
+                _lastEligibleAt[strategy] = timeNow;
+            }
+        }
+
+        /// <summary>
+        /// Points every tuning value at the target the counters in force add up to.
+        /// </summary>
+        /// <remarks>
+        /// Recomputed from all of them each analysis, so the order counters were adopted in never matters and
+        /// one never overwrites another: the strongest pull on a parameter sets it, the rest add a share.
+        /// Targets are set, not values; the boss eases toward them.
+        /// </remarks>
+        private void ApplyTargets()
+        {
+            Array.Clear(_strongestPull, 0, _strongestPull.Length);
+            Array.Clear(_otherPulls, 0, _otherPulls.Length);
+
+            foreach (KeyValuePair<CounterStrategy, float> active in _active)
+            {
+                if (active.Key.Adjustments == null)
+                {
+                    continue;
+                }
+
+                foreach (TuningAdjustment adjustment in active.Key.Adjustments)
+                {
+                    int index = (int)adjustment.Parameter;
+                    float pull = (adjustment.TargetValue - _tuning.GetBaseline(adjustment.Parameter)) * active.Value;
+
+                    if (Mathf.Abs(pull) > Mathf.Abs(_strongestPull[index]))
+                    {
+                        _otherPulls[index] += _strongestPull[index];
+                        _strongestPull[index] = pull;
+                    }
+                    else
+                    {
+                        _otherPulls[index] += pull;
+                    }
+                }
+            }
+
+            for (int i = 0; i < _strongestPull.Length; i++)
+            {
+                var parameter = (BossTuningParameter)i;
+                _tuning.SetTarget(parameter, _tuning.GetBaseline(parameter) + _strongestPull[i] + _otherPulls[i] * StackShare);
+            }
         }
 
         /// <summary>Adopts a new strategy if the cooldown has elapsed and one is eligible.</summary>
@@ -183,42 +310,25 @@ namespace AdaptiveBossArena.Learning
                 return;
             }
 
-            CounterStrategy chosen = _selector.Select(_catalogue, _profile, currentPhase, _adopted);
+            // Only counters not already in force are candidates: one that lapsed when its habit did can be
+            // adopted again if the habit returns, and says so again.
+            CounterStrategy chosen = _selector.Select(_catalogue, _profile, currentPhase, _active.Keys);
 
             if (chosen == null)
             {
                 return;
             }
 
-            Apply(chosen);
+            FeatureReading reading = _profile.Get(chosen.TriggerFeature);
+            _active[chosen] = chosen.Strength(reading.Value, reading.Confidence);
+            _lastEligibleAt[chosen] = timeNow;
+            _currentEaseHalfLife = Mathf.Max(0.5f, chosen.EaseInSeconds * 0.5f);
 
             _adopted.Add(chosen);
             _nextAdaptationAllowedAt =
                 timeNow + _minSecondsBetweenAdaptations / _adaptationRateMultiplier;
 
             StrategyAdopted?.Invoke(chosen);
-        }
-
-        /// <summary>Points the affected tuning values at their new targets.</summary>
-        /// <remarks>
-        /// Targets are set, not values. The boss does not become different at this instant; it
-        /// begins becoming different, over the strategy's own ease-in time.
-        /// </remarks>
-        private void Apply(CounterStrategy strategy)
-        {
-            _currentEaseHalfLife = Mathf.Max(0.5f, strategy.EaseInSeconds * 0.5f);
-
-            TuningAdjustment[] adjustments = strategy.Adjustments;
-
-            if (adjustments == null)
-            {
-                return;
-            }
-
-            foreach (TuningAdjustment adjustment in adjustments)
-            {
-                _tuning.SetTarget(adjustment.Parameter, adjustment.TargetValue);
-            }
         }
 
         /// <summary>Clears everything learned, for use when a fight restarts.</summary>
@@ -229,6 +339,8 @@ namespace AdaptiveBossArena.Learning
             _profile.Clear();
             _tuning.ResetToBaseline();
             _adopted.Clear();
+            _active.Clear();
+            _lastEligibleAt.Clear();
 
             _nextAnalysisAt = _analysisIntervalSeconds;
             _nextAdaptationAllowedAt = _minSecondsBetweenAdaptations;

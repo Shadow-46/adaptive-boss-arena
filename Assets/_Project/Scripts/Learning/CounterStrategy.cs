@@ -158,5 +158,30 @@ namespace AdaptiveBossArena.Learning
                 ? featureValue >= _threshold
                 : featureValue <= _threshold;
         }
+
+        /// <summary>The weakest a counter is ever applied, as a share of its full adjustment.</summary>
+        /// <remarks>
+        /// A habit just past the threshold still earns a clearly visible answer; a habit far past it, held with
+        /// certainty, earns the full one. Anything weaker than this would be a counter no player could notice.
+        /// </remarks>
+        public const float MinimumStrength = 0.6f;
+
+        /// <summary>
+        /// How hard to apply this counter: from <see cref="MinimumStrength"/> for a habit just past the
+        /// threshold to one for a habit at its extreme, scaled by how sure the boss is of it.
+        /// </summary>
+        /// <param name="featureValue">The habit's strength.</param>
+        /// <param name="confidence">How sure the boss is of it.</param>
+        /// <returns>The share of each adjustment to apply.</returns>
+        public float Strength(float featureValue, float confidence)
+        {
+            float span = _comparison == FeatureComparison.AtOrAbove ? 1f - _threshold : _threshold;
+            float excess = _comparison == FeatureComparison.AtOrAbove
+                ? featureValue - _threshold
+                : _threshold - featureValue;
+            float share = span <= 0.001f ? 1f : Mathf.Clamp01(excess / span);
+
+            return Mathf.Clamp01(confidence) * Mathf.Lerp(MinimumStrength, 1f, share);
+        }
     }
 }

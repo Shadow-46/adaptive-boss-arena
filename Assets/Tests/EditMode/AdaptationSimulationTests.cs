@@ -93,6 +93,10 @@ namespace AdaptiveBossArena.Tests.EditMode
 
             public BehaviorProfile Profile => _manager.Profile;
 
+            public bool IsActive(string id) => _manager.ActiveStrategies.Any(strategy => strategy.name == id);
+
+            public int AdoptionCount(string id) => _adopted.Count(entry => entry.Id == id);
+
             public float FirstAdoptionOf(string id) =>
                 _adopted.Where(entry => entry.Id == id).Select(entry => entry.At)
                     .DefaultIfEmpty(float.PositiveInfinity).First();
@@ -367,6 +371,61 @@ namespace AdaptiveBossArena.Tests.EditMode
             fight.Run(60f, phase: 1);
 
             Assert.Less(fight.FirstAdoptionOf("CounterCrowding"), 45f, "Adopted: " + fight.Timeline());
+        }
+
+        [Test]
+        public void TheAnswerHoldsForAsLongAsTheHabitDoes()
+        {
+            // Three minutes of heavy swings: the parry read must still be in force at the end, not drained away
+            // by the memory half-life while the player kept doing exactly what earned it.
+            var fight = new Fight(new Player { HeavyAttacks = true, AttackEvery = 1.2f });
+            fight.Run(180f, phase: 2);
+
+            Assert.IsTrue(fight.IsActive("CounterHeavySpam"), "The boss forgot its answer to a habit still held.");
+            Assert.Greater(fight.Tuning.Get(BossTuningParameter.ParryChance), 0.3f);
+        }
+
+        [Test]
+        public void TheAnswerGoesWhenTheHabitGoes()
+        {
+            var player = new Player { HeavyAttacks = true, AttackEvery = 1.2f };
+            var fight = new Fight(player);
+            fight.Run(60f, phase: 2);
+
+            player.HeavyAttacks = false;
+            fight.Run(120f, phase: 2);
+
+            Assert.IsFalse(fight.IsActive("CounterHeavySpam"), "The boss kept answering a habit the player dropped.");
+            Assert.Less(fight.Tuning.Get(BossTuningParameter.ParryChance), 0.18f);
+        }
+
+        [Test]
+        public void AReturningHabitIsAnsweredAgain()
+        {
+            var player = new Player { HeavyAttacks = true, AttackEvery = 1.2f };
+            var fight = new Fight(player);
+            fight.Run(60f, phase: 2);
+
+            player.HeavyAttacks = false;
+            fight.Run(120f, phase: 2);
+
+            player.HeavyAttacks = true;
+            fight.Run(60f, phase: 2);
+
+            Assert.IsTrue(fight.IsActive("CounterHeavySpam"), "Adopted: " + fight.Timeline());
+            Assert.GreaterOrEqual(fight.AdoptionCount("CounterHeavySpam"), 2, "Adopted: " + fight.Timeline());
+        }
+
+        [Test]
+        public void TwoCountersOnOneLeverPressHarderThanOneButNotDouble()
+        {
+            // A passive player who also keeps away: both the passivity and the kiting counters raise aggression.
+            var fight = new Fight(new Player { AttackEvery = 15f, Distance = 8f });
+            fight.Run(90f, phase: 1);
+
+            Assume.That(fight.IsActive("CounterPassivity") && fight.IsActive("CounterKiting"), "Adopted: " + fight.Timeline());
+            Assert.LessOrEqual(fight.Tuning.GetTarget(BossTuningParameter.Aggression), 1.05f);
+            Assert.Greater(fight.Tuning.GetTarget(BossTuningParameter.Aggression), 0.75f);
         }
 
     }
