@@ -44,6 +44,9 @@ namespace AdaptiveBossArena.Editor
             (AudioService.Cues.Block, @"^impactWood_heavy_\d+$", 1f),
             (AudioService.Cues.Deflect, @"^impactMetal_heavy_\d+$", 1f),
             (AudioService.Cues.Parry, @"^impactBell_heavy_\d+$", 1f),
+
+            // The same bell far down: a toll for the boss reading the player, never mistaken for a parry.
+            (AudioService.Cues.BossAdapt, @"^impactBell_heavy_\d+$", 0.55f),
             (AudioService.Cues.HitLight, @"^impactPunch_medium_\d+$", 1f),
             (AudioService.Cues.HitHeavy, @"^impactPunch_heavy_\d+$", 0.9f),
             (AudioService.Cues.PostureBreak, @"^impactPlate_heavy_\d+$", 0.85f),

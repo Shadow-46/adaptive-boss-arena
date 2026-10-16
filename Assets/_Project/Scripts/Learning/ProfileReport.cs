@@ -69,6 +69,33 @@ namespace AdaptiveBossArena.Learning
             return lines;
         }
 
+        /// <summary>
+        /// The habit as a short phrase, for naming what the boss remembers: "your raised guard".
+        /// </summary>
+        /// <param name="feature">The habit.</param>
+        /// <returns>The phrase.</returns>
+        public static string RememberedAs(BehaviorFeature feature) => feature switch
+        {
+            BehaviorFeature.AttackFrequency => "your hesitation",
+            BehaviorFeature.HeavyAttackRatio => "your heavy swings",
+            BehaviorFeature.PostDodgeAggression => "your swing after every roll",
+            BehaviorFeature.DashDirectionBias => "the way you roll",
+            BehaviorFeature.PreferredDistance => "the distance you keep",
+            BehaviorFeature.Aggression => "your pressure",
+            BehaviorFeature.WhiffRatio => "your wasted swings",
+            BehaviorFeature.HealFrequency => "your healing",
+            BehaviorFeature.DodgeTimingConsistency => "your timing",
+            BehaviorFeature.EvasionSuccess => "your footwork",
+            BehaviorFeature.GuardReliance => "your guard",
+            BehaviorFeature.DeflectSkill => "your deflects",
+            BehaviorFeature.DodgeEarliness => "your early roll",
+            BehaviorFeature.CirclingBias => "the way you circle",
+            BehaviorFeature.Crowding => "how close you stand",
+            BehaviorFeature.Turtling => "your raised guard",
+            BehaviorFeature.HealUnderPressure => "your healing within reach",
+            _ => feature.ToString()
+        };
+
         /// <summary>The player-facing sentence for a habit read at strength.</summary>
         /// <remarks>
         /// Each phrases the <em>high</em>-value meaning of its feature, because only strong readings

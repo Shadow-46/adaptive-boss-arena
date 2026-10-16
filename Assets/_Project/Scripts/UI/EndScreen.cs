@@ -116,7 +116,7 @@ namespace AdaptiveBossArena.UI
 
             if (_headline != null)
             {
-                _headline.text = won ? "T H E   B R U T E   F A L L S" : "Y O U   F A L L";
+                _headline.text = Core.Constants.BossIdentity.Spaced(won ? $"{Core.Constants.BossIdentity.Name} falls" : "You fall");
                 _headline.color = won ? VictoryColor : DefeatColor;
             }
 

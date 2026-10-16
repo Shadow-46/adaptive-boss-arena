@@ -559,7 +559,7 @@ namespace AdaptiveBossArena.Editor
             var audioDirector = Object.FindAnyObjectByType<CombatAudioDirector>();
             audioDirector?.Bind(
                 channels.Deflect, channels.PerfectDodge, channels.BossPhase, channels.PlayerFocus,
-                channels.Overbalance, channels.WeaponSwingCue);
+                channels.Overbalance, channels.WeaponSwingCue, channels.AdaptationAdopted);
 
             var effectsDirector = Object.FindAnyObjectByType<CombatEffectsDirector>();
             effectsDirector?.Bind(

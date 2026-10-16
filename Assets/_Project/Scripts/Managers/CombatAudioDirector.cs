@@ -43,6 +43,10 @@ namespace AdaptiveBossArena.Game
         [Tooltip("Carries the drawn weapon's swing cue, so each weapon sounds like itself.")]
         private StringEventChannel _weaponSwingCueChannel;
 
+        [SerializeField]
+        [Tooltip("Raised when the boss settles on an answer to one of the player's habits.")]
+        private StringEventChannel _adaptationChannel;
+
         /// <summary>The cue the player's current weapon swings with.</summary>
         /// <remarks>
         /// Latched rather than looked up, because the combat event that announces a swing carries no
@@ -100,6 +104,11 @@ namespace AdaptiveBossArena.Game
                 _overbalanceChannel.Raised += OnOverbalance;
             }
 
+            if (_adaptationChannel != null)
+            {
+                _adaptationChannel.Raised += OnAdaptation;
+            }
+
             _audio?.PlayMusic("music.bed");
 
             // The nave's own air under everything, so silence between blows is a stone hall rather than nothing.
@@ -142,10 +151,18 @@ namespace AdaptiveBossArena.Game
             {
                 _overbalanceChannel.Raised -= OnOverbalance;
             }
+
+            if (_adaptationChannel != null)
+            {
+                _adaptationChannel.Raised -= OnAdaptation;
+            }
         }
 
         /// <summary>Sounds the unsteady stagger the instant the boss overbalances, marking the opening.</summary>
         private void OnOverbalance() => _audio?.PlayCue2D(AudioService.Cues.Overbalance);
+
+        /// <summary>Tolls as the boss settles on an answer, so the read is heard as well as read.</summary>
+        private void OnAdaptation(string tell) => _audio?.PlayCue2D(AudioService.Cues.BossAdapt);
 
         /// <summary>Chimes once the instant focus fills, so the player hears the empowered special arm.</summary>
         private void OnFocusChanged(float normalized)
@@ -323,14 +340,18 @@ namespace AdaptiveBossArena.Game
         /// <param name="phase">Boss phase channel.</param>
         /// <param name="focus">Normalised player focus channel.</param>
         /// <param name="overbalance">Boss overbalance channel.</param>
+        /// <param name="weaponSwingCue">The drawn weapon's swing cue.</param>
+        /// <param name="adaptation">The boss settling on an answer to a habit.</param>
         public void Bind(
             VoidEventChannel deflect,
             VoidEventChannel perfectDodge,
             IntEventChannel phase,
             FloatEventChannel focus,
             VoidEventChannel overbalance,
-            StringEventChannel weaponSwingCue = null)
+            StringEventChannel weaponSwingCue = null,
+            StringEventChannel adaptation = null)
         {
+            _adaptationChannel = adaptation;
             _deflectChannel = deflect;
             _perfectDodgeChannel = perfectDodge;
             _phaseChannel = phase;

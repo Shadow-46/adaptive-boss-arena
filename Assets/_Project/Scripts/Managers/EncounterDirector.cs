@@ -405,7 +405,37 @@ namespace AdaptiveBossArena.Game
                 return;
             }
 
-            _roundIntro.Begin(OnIntroComplete);
+            _roundIntro.Begin(OnIntroComplete, RememberedLine());
+        }
+
+        /// <summary>How many remembered habits the retry names: enough to read in a breath.</summary>
+        private const int RememberedHabitsNamed = 2;
+
+        /// <summary>
+        /// The line under the retry's ready: what the boss carried over from the last attempt, if anything.
+        /// </summary>
+        /// <remarks>
+        /// The memory between attempts is only fair if the player knows it is there and what it holds, so they
+        /// can choose to keep their habits or break them. Named in the same plain words as the dossier.
+        /// </remarks>
+        /// <returns>The line, or null when the boss remembers nothing.</returns>
+        private static string RememberedLine()
+        {
+            System.Collections.Generic.IReadOnlyList<BehaviorFeature> habits = SessionMemory.RememberedHabits;
+
+            if (!SessionMemory.HasMemory || habits.Count == 0)
+            {
+                return null;
+            }
+
+            var named = new System.Collections.Generic.List<string>();
+
+            for (int i = 0; i < habits.Count && named.Count < RememberedHabitsNamed; i++)
+            {
+                named.Add(ProfileReport.RememberedAs(habits[i]));
+            }
+
+            return $"{BossIdentity.Name.ToUpperInvariant()} REMEMBERS {string.Join(" and ", named)}.";
         }
 
 
@@ -668,11 +698,15 @@ namespace AdaptiveBossArena.Game
 
             builder.AppendLine("<b>It answered with:</b>");
 
+            var active = new System.Collections.Generic.HashSet<CounterStrategy>(adaptation.ActiveStrategies);
+
             foreach (CounterStrategy strategy in adaptation.AdoptedStrategies)
             {
                 if (strategy != null && !string.IsNullOrWhiteSpace(strategy.TellMessage))
                 {
-                    builder.Append("• \"").Append(strategy.TellMessage).AppendLine("\"");
+                    // Whether the answer was still in force at the end says whether the player ever broke the habit.
+                    builder.Append("• \"").Append(strategy.TellMessage).Append("\"")
+                        .AppendLine(active.Contains(strategy) ? "  - to the end" : "  - until you changed");
                 }
             }
 

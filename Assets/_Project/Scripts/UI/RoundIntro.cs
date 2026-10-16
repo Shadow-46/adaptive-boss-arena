@@ -80,7 +80,21 @@ namespace AdaptiveBossArena.UI
 
         /// <summary>Starts the intro, calling back once it finishes.</summary>
         /// <param name="onComplete">Invoked when the fight should be released. Always called once.</param>
-        public void Begin(Action onComplete) => BeginEntrance(null, onComplete);
+        public void Begin(Action onComplete) => Begin(onComplete, null);
+
+        /// <summary>Plays the quick ready and fight with a line beneath the ready, such as what the boss remembers.</summary>
+        /// <param name="onComplete">Called when the fight should begin.</param>
+        /// <param name="subtitle">The line, or null for none.</param>
+        public void Begin(Action onComplete, string subtitle)
+        {
+            _subtitle = string.IsNullOrWhiteSpace(subtitle) ? null : subtitle;
+            BeginEntrance(null, onComplete);
+        }
+
+        /// <summary>Size of the line under the ready, against the cue's own size.</summary>
+        private const int SubtitleSize = 22;
+
+        private string _subtitle;
 
         /// <summary>
         /// Starts the intro opening on the boss's name, calling back once it finishes.
@@ -182,7 +196,7 @@ namespace AdaptiveBossArena.UI
 
                 _label.rectTransform.anchoredPosition = _title != null ? TitlePosition : _cuePosition;
 
-                _label.text = _title ?? "READY?";
+                _label.text = _title ?? (_subtitle != null ? $"READY?\n<size={SubtitleSize}>{_subtitle}</size>" : "READY?");
                 _label.color = ReadyColor;
                 _label.fontSize = _title != null ? TitleFontSize : _cueFontSize;
             }

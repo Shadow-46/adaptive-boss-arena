@@ -107,6 +107,7 @@ namespace AdaptiveBossArena.Game
             // The moments the fight turns on.
             { Cues.Deflect, 1f },
             { Cues.Parry, 1f },
+            { Cues.BossAdapt, 0.85f },
             { Cues.PostureBreak, 1f },
             { Cues.Execution, 1f },
             { Cues.Peril, 1f },
@@ -235,6 +236,15 @@ namespace AdaptiveBossArena.Game
 
             /// <summary>A menu button being highlighted.</summary>
             public const string UiHover = "ui.hover";
+
+            /// <summary>
+            /// The boss settling on an answer to one of the player's habits: a deep, slow toll.
+            /// </summary>
+            /// <remarks>
+            /// Every adaptation used to arrive as a line of text alone, easy to miss mid-fight. The parry's bell
+            /// pitched far down reads as the same family - the fight turning on a read - but never as a parry.
+            /// </remarks>
+            public const string BossAdapt = "boss.adapt";
         }
 
         /// <summary>
@@ -754,6 +764,7 @@ namespace AdaptiveBossArena.Game
             // the player most needs to know they got it exactly right.
             _clips[Cues.Deflect] = ToneGenerator.CreateMetallicRing("guard.deflect", 1180f, 0.45f, 0.85f);
             _clips[Cues.Parry] = ToneGenerator.CreateMetallicRing("player.parry", 1720f, 0.6f, 1f);
+            _clips[Cues.BossAdapt] = ToneGenerator.CreateMetallicRing("boss.adapt", 410f, 1.4f, 0.85f);
             _clips[Cues.PostureBreak] = ToneGenerator.CreateMetallicRing("guard.break", 320f, 0.9f, 0.9f);
             _clips[Cues.PerfectDodge] = ToneGenerator.CreateMetallicRing("dodge.perfect", 1560f, 0.3f, 0.72f);
 

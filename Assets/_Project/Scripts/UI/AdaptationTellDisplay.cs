@@ -32,7 +32,7 @@ namespace AdaptiveBossArena.UI
     public sealed class AdaptationTellDisplay : MonoBehaviour
     {
         /// <summary>Longest a queued tell waits before being shown, so it cannot arrive stale.</summary>
-        private const float MaxQueueAgeSeconds = 6f;
+        private const float MaxQueueAgeSeconds = 12f;
 
         [Header("Source")]
         [SerializeField]
