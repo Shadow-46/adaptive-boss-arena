@@ -225,6 +225,17 @@ namespace AdaptiveBossArena.Combat
         /// </remarks>
         public StrikerParts Strikers => _strikers;
 
+        [SerializeField]
+        [Tooltip("Boss only: the player habits this attack is the honest answer to. Learning weighs it toward them.")]
+        private HabitAnswer _answers;
+
+        /// <summary>The player habits this attack answers.</summary>
+        /// <remarks>
+        /// Written by the asset generator. A boss that has learned a habit weighs the attacks that answer it
+        /// above the rest, so what it has read in the player shows in what it chooses to throw.
+        /// </remarks>
+        public HabitAnswer Answers => _answers;
+
         /// <summary>The blows this one flows into when the boss strings a chain, or empty for any.</summary>
         /// <remarks>
         /// A swordsman's chains are drills, not dice: the sweep opens the guard the thrust goes through. An authored

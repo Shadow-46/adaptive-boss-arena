@@ -19,7 +19,7 @@ MonoBehaviour:
   _threshold: 0.55
   _minimumConfidence: 0.5
   _selectionWeight: 1.3
-  _minimumPhase: 2
+  _minimumPhase: 1
   _repeatable: 0
   _adjustments:
   - _parameter: 4

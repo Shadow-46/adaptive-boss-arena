@@ -469,6 +469,12 @@ namespace AdaptiveBossArena.AI
             _adaptation.Tick(
                 deltaTime, _time.CombatTime, transform.position, _context.Perceived, _context.PhaseIndex + 1);
 
+            _context.HabitualCirclingSide = _adaptation.CirclingSide;
+            _context.HasHabitualDodge = _adaptation.TryGetHabitualDodge(out Vector2 habitualDodge);
+            _context.HabitualDodge = habitualDodge;
+
+            WatchForOpenings();
+
             UpdatePhase();
             UpdateResolve(deltaTime);
 
@@ -569,6 +575,9 @@ namespace AdaptiveBossArena.AI
             {
                 return DamageResult.NoDamage(DamageOutcome.Ignored);
             }
+
+            // Any blow that reached the boss, landed or turned aside, means the swing it came from was no whiff.
+            _lastHurtAt = _time.CombatTime;
 
             // A successful parry refuses the hit and hands the punish window back to the boss. It is
             // only reachable inside the window the stance opens with - a moment later the same
@@ -855,7 +864,8 @@ namespace AdaptiveBossArena.AI
                 return false;
             }
 
-            if (context.Reaction.RollMissedOpportunity(context.Random))
+            if (context.Random.NextBool(MissedOpportunityChance(
+                    context.Reaction.MissedOpportunityChance, context.Tuning.Get(BossTuningParameter.Aggression))))
             {
                 context.BeginReactionDelay();
                 return false;
@@ -870,6 +880,149 @@ namespace AdaptiveBossArena.AI
 
             context.PendingAttack = attack;
             return true;
+        }
+
+        /// <summary>
+        /// How often the boss lets a ready opening pass, after learned aggression.
+        /// </summary>
+        /// <remarks>
+        /// A pressing boss hesitates less: at full aggression it lets only a third as many openings slip. The
+        /// fallibility never reaches zero, so even a boss pressing hardest still sometimes waits.
+        /// </remarks>
+        /// <param name="baseChance">The reaction profile's own chance.</param>
+        /// <param name="aggression">Learned aggression.</param>
+        /// <returns>The chance to let this opening pass.</returns>
+        public static float MissedOpportunityChance(float baseChance, float aggression) =>
+            Mathf.Clamp01(baseChance) *
+            Mathf.Lerp(1f, PressedMissShare, Mathf.InverseLerp(BossAttackState.NeutralAggression, 1f, aggression));
+
+        /// <summary>The share of openings a boss at full aggression still lets pass.</summary>
+        public const float PressedMissShare = 0.35f;
+
+        /// <summary>How long after seeing a swing end on nothing the boss treats it as an opening.</summary>
+        private const float WhiffOpeningSeconds = 0.6f;
+
+        /// <summary>The fastest the boss answers an opening it took: still a person's reaction, never instant.</summary>
+        private const float OpeningReactionSeconds = 0.12f;
+
+        private ObservableActionState _lastPerceivedState;
+        private float _lastPerceivedActionStart = float.NegativeInfinity;
+        private float _openingDecidedFor = float.NegativeInfinity;
+        private float _lastHurtAt = float.NegativeInfinity;
+
+        /// <summary>
+        /// Watches the delayed perception for an opening the player has given, and sometimes takes it.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Two openings: a heal begun within reach, and a swing seen to end on nothing. Both are things a
+        /// spectator could see, seen as late as the perception delay allows. Each opening is decided once - one
+        /// roll, as a person deciding whether to go - so a high chance is never compounded frame by frame.
+        /// </para>
+        /// <para>
+        /// The chances start low and learning raises them against a player who keeps giving the same opening.
+        /// Taken, the boss drops its cooldown, answers after a short human reaction and throws the quickest
+        /// blow that reaches.
+        /// </para>
+        /// </remarks>
+        private void WatchForOpenings()
+        {
+            PlayerObservation seen = _context.Perceived;
+
+            if (!seen.IsValid)
+            {
+                return;
+            }
+
+            bool wasAttacking = _lastPerceivedState == ObservableActionState.LightAttacking ||
+                                _lastPerceivedState == ObservableActionState.HeavyAttacking;
+            float swingStartedAt = _lastPerceivedActionStart;
+
+            _lastPerceivedState = seen.ActionState;
+            _lastPerceivedActionStart = seen.ActionStartedAt;
+
+            if (!CanTakeOpening())
+            {
+                // Interrupted - staggered, parrying, knocked about - before the opening was taken: it has passed.
+                if (_context.IsTakingOpening && !IsFreeToAct() && _machine.CurrentState != _attackState)
+                {
+                    _context.IsTakingOpening = false;
+                    _context.PendingAttack = null;
+                }
+
+                return;
+            }
+
+            if (seen.ActionState == ObservableActionState.Healing &&
+                _context.DistanceToPlayer <= ReachForOpenings())
+            {
+                TryTakeOpening(seen.ActionStartedAt, BossTuningParameter.PunishHealChance);
+                return;
+            }
+
+            bool swingJustEnded = wasAttacking && !seen.IsAttacking &&
+                                  _time.CombatTime - seen.ActionStartedAt <= WhiffOpeningSeconds;
+            bool swingTouchedNothing = _lastHurtAt < swingStartedAt;
+
+            if (swingJustEnded && swingTouchedNothing && _context.DistanceToPlayer <= ReachForOpenings())
+            {
+                TryTakeOpening(swingStartedAt, BossTuningParameter.PunishWhiffChance);
+            }
+        }
+
+        /// <summary>Whether the boss is free to take an opening: not mid-swing, staggered, parrying or done.</summary>
+        private bool CanTakeOpening() =>
+            IsFreeToAct() && !_context.IsOverbalanced && _context.PendingAttack == null;
+
+        /// <summary>Whether the boss is stalking, closing in or recovering - the states an opening can come from.</summary>
+        private bool IsFreeToAct()
+        {
+            IState<BossContext> state = _machine.CurrentState;
+            return state == _observeState || state == _approachState || state == _recoverState;
+        }
+
+        /// <summary>The furthest an opening is worth taking: the longest reach this phase owns.</summary>
+        private float ReachForOpenings()
+        {
+            float reach = 0f;
+
+            foreach (AttackDefinition attack in _context.CurrentPhase.Attacks ?? new AttackDefinition[0])
+            {
+                if (attack != null && !attack.Unblockable)
+                {
+                    reach = Mathf.Max(reach, attack.EffectiveReach);
+                }
+            }
+
+            return reach;
+        }
+
+        /// <summary>Rolls once for an opening, and on a hit commits to the quickest blow that reaches.</summary>
+        private void TryTakeOpening(float openingStartedAt, BossTuningParameter chance)
+        {
+            if (Mathf.Approximately(openingStartedAt, _openingDecidedFor))
+            {
+                return;
+            }
+
+            _openingDecidedFor = openingStartedAt;
+
+            if (!_context.Random.NextBool(Mathf.Clamp01(_context.Tuning.Get(chance))))
+            {
+                return;
+            }
+
+            AttackDefinition attack = _selector.SelectQuickestReaching(_context);
+
+            if (attack == null)
+            {
+                return;
+            }
+
+            _context.PendingAttack = attack;
+            _context.IsTakingOpening = true;
+            _context.AttackCooldownRemaining = 0f;
+            _context.ReactionReadyAt = Mathf.Min(_context.ReactionReadyAt, _time.CombatTime + OpeningReactionSeconds);
         }
 
         /// <summary>

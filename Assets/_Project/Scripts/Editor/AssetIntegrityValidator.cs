@@ -257,7 +257,9 @@ namespace AdaptiveBossArena.Editor
         /// Each entry corresponds to a real <c>Tuning.Get</c> call: attack cadence and combo length in
         /// <c>BossAttackState</c>, attack weighting in <c>BossAttackSelector</c>, held range in
         /// <c>BossContext</c>, parrying in <c>BossController</c>, dodge leading in the attack state,
-        /// and pressure in <c>BossPositioningStates</c>.
+        /// and pressure in <c>BossPositioningStates</c>. The habit answers are weighed in
+        /// <c>BossAttackSelector.AnswerBias</c>, the held wind-up in <c>BossAttackState</c>, the cut-off in the
+        /// stalk, and the openings taken in <c>BossController.TryTakeOpening</c>.
         /// </remarks>
         private static readonly HashSet<Learning.BossTuningParameter> ConsumedTuningParameters = new()
         {
@@ -270,7 +272,16 @@ namespace AdaptiveBossArena.Editor
             Learning.BossTuningParameter.ComboExtensionChance,
             Learning.BossTuningParameter.FeintChance,
             Learning.BossTuningParameter.AreaDenialWeight,
-            Learning.BossTuningParameter.UnblockableWeight
+            Learning.BossTuningParameter.UnblockableWeight,
+            Learning.BossTuningParameter.AnswerGuardWeight,
+            Learning.BossTuningParameter.AnswerEarlyDodgeWeight,
+            Learning.BossTuningParameter.AnswerCirclingWeight,
+            Learning.BossTuningParameter.AnswerCrowdingWeight,
+            Learning.BossTuningParameter.AnswerRetreatWeight,
+            Learning.BossTuningParameter.HoldWindupChance,
+            Learning.BossTuningParameter.CutOffStrength,
+            Learning.BossTuningParameter.PunishHealChance,
+            Learning.BossTuningParameter.PunishWhiffChance
         };
 
         /// <summary>Loads every asset of a type in the project.</summary>

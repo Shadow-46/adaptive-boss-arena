@@ -24,6 +24,8 @@ MonoBehaviour:
   _adjustments:
   - _parameter: 9
     _targetValue: 0.9
+  - _parameter: 10
+    _targetValue: 1.6
   _easeInSeconds: 6
   _tellMessage: It stops respecting your guard.
   _tellAudioCueId: 

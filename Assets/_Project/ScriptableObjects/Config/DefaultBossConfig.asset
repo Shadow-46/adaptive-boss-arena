@@ -44,6 +44,8 @@ MonoBehaviour:
     - {fileID: 11400000, guid: c36e1a4c0c2652e44a0844711735c22a, type: 2}
     - {fileID: 11400000, guid: 9a2b3bde94dd7424783e41b43ef210e0, type: 2}
     - {fileID: 11400000, guid: 2ffac267f222c6747b5a9093aa942059, type: 2}
+    - {fileID: 11400000, guid: 126f8a091d25e214590b283ab2bcce93, type: 2}
+    - {fileID: 11400000, guid: 8f337d6a7fb31bb4ca3ad885ceeed93a, type: 2}
     _signatureAttack: {fileID: 11400000, guid: 9a2b3bde94dd7424783e41b43ef210e0, type: 2}
     _moveSpeedMultiplier: 1
     _attackCooldownSeconds: 1.15
@@ -118,6 +120,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 512ff750d4dcd424c9b0e3a8363b95d6, type: 2}
   - {fileID: 11400000, guid: 76297d78d82e7214da95e9a3ddc43031, type: 2}
   - {fileID: 11400000, guid: 2ae8a9f071f609c4ea0f50d28fbbabb1, type: 2}
+  - {fileID: 11400000, guid: d435bcfb9aa17a24cbf62e7479799c26, type: 2}
+  - {fileID: 11400000, guid: 8b4950463e76ad14cbc864f29cf6386b, type: 2}
+  - {fileID: 11400000, guid: 22f54d785494a7b479a91b2653720028, type: 2}
+  - {fileID: 11400000, guid: 1adca327ee569ed409c8648c8b25cb6e, type: 2}
+  - {fileID: 11400000, guid: 28f2601331ba5e7438588070e7735d78, type: 2}
   _analysisIntervalSeconds: 2.5
   _minSecondsBetweenAdaptations: 12
   _memoryHalfLifeSeconds: 45

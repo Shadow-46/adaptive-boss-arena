@@ -24,6 +24,8 @@ MonoBehaviour:
   _adjustments:
   - _parameter: 3
     _targetValue: 0.8
+  - _parameter: 14
+    _targetValue: 1.8
   - _parameter: 1
     _targetValue: 1.8
   - _parameter: 5

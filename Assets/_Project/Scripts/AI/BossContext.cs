@@ -111,6 +111,12 @@ namespace AdaptiveBossArena.AI
         public AttackDefinition PendingAttack { get; set; }
 
         /// <summary>
+        /// True while the pending attack answers an opening the boss saw the player give, so stepping back into
+        /// the stalk keeps it rather than reconsidering.
+        /// </summary>
+        public bool IsTakingOpening { get; set; }
+
+        /// <summary>
         /// Whether the swing currently under way is a committed one — a lunge, an unblockable, or a
         /// combo follow-up — rather than a light poke.
         /// </summary>
@@ -234,6 +240,18 @@ namespace AdaptiveBossArena.AI
                 return delta.sqrMagnitude > Mathf.Epsilon ? delta.normalized : Transform.forward;
             }
         }
+
+        /// <summary>
+        /// Which way the player habitually circles: one to the boss's right, minus one to its left. Learned,
+        /// and so slow - it describes the player's habit, never their current step.
+        /// </summary>
+        public float HabitualCirclingSide { get; set; }
+
+        /// <summary>Whether the boss has seen enough rolls to know the player's favourite.</summary>
+        public bool HasHabitualDodge { get; set; }
+
+        /// <summary>The player's favourite roll, relative to the boss: across its right, along away from it.</summary>
+        public Vector2 HabitualDodge { get; set; }
 
         /// <summary>Distance the boss currently wants to hold, after adaptation.</summary>
         public float PreferredRange => Tuning.Get(BossTuningParameter.PreferredRange);

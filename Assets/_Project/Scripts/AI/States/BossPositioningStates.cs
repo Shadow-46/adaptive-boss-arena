@@ -43,6 +43,15 @@ namespace AdaptiveBossArena.AI.States
         /// <inheritdoc />
         protected override void OnEnter(BossContext context)
         {
+            // An opening the boss has already decided to take survives the step back into the stalk, with the
+            // short reaction it was given - waiting out a full delay here would let every opening close.
+            if (context.IsTakingOpening && context.PendingAttack != null)
+            {
+                return;
+            }
+
+            context.IsTakingOpening = false;
+
             // Entering this state means no attack is committed. Clearing here stops a choice made
             // before an interruption from being resurrected later, when the situation that justified
             // it has passed.
@@ -71,7 +80,9 @@ namespace AdaptiveBossArena.AI.States
             context.Motor.MoveInDirection(
                 BossPacing.Stalk(
                     context.DirectionToPlayer, context.DistanceToPlayer, context.PreferredRange,
-                    context.Config.StalkSpeedFraction),
+                    context.Config.StalkSpeedFraction,
+                    BossPacing.StrafeSideFor(
+                        context.Tuning.Get(BossTuningParameter.CutOffStrength), context.HabitualCirclingSide)),
                 deltaTime);
 
             context.Motor.Tick(deltaTime);

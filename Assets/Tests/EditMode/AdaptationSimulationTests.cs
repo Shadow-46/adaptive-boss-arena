@@ -328,5 +328,46 @@ namespace AdaptiveBossArena.Tests.EditMode
             Assert.Less(fight.Profile.Get(BehaviorFeature.HeavyAttackRatio).Value, 0.25f,
                 "The boss still read a habit the player dropped two minutes ago.");
         }
+
+        [Test]
+        public void ATurtleIsMetWithTheBlowsNoGuardStops()
+        {
+            var fight = new Fight(new Player { Answer = Answer.Guard, GuardsBetweenSwings = true });
+            fight.Run(60f, phase: 1);
+
+            Assert.Less(fight.FirstAdoptionOf("CounterTurtling"), 45f, "Adopted: " + fight.Timeline());
+            Assert.Greater(fight.Tuning.Get(BossTuningParameter.AnswerGuardWeight), 1f,
+                "The boss read the turtle but does not reach for the boot.");
+        }
+
+        [Test]
+        public void AnEarlyRollerIsMetWithAHeldBlade()
+        {
+            var fight = new Fight(new Player { Answer = Answer.DodgeEarly });
+            fight.Run(60f, phase: 1);
+
+            Assert.Less(fight.FirstAdoptionOf("CounterEarlyRoll"), 45f, "Adopted: " + fight.Timeline());
+            Assert.Greater(fight.Tuning.Get(BossTuningParameter.HoldWindupChance), 0.3f);
+        }
+
+        [Test]
+        public void ACirclerIsCutOff()
+        {
+            var fight = new Fight(new Player { CircleSpeed = -3f });
+            fight.Run(60f, phase: 1);
+
+            Assert.Less(fight.FirstAdoptionOf("CounterCircling"), 45f, "Adopted: " + fight.Timeline());
+            Assert.Greater(fight.Tuning.Get(BossTuningParameter.CutOffStrength), 0.5f);
+        }
+
+        [Test]
+        public void APlayerStandingInItsFaceIsThrownOff()
+        {
+            var fight = new Fight(new Player { Distance = 1.8f });
+            fight.Run(60f, phase: 1);
+
+            Assert.Less(fight.FirstAdoptionOf("CounterCrowding"), 45f, "Adopted: " + fight.Timeline());
+        }
+
     }
 }

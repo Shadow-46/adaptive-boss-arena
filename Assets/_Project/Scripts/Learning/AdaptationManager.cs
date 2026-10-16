@@ -94,6 +94,14 @@ namespace AdaptiveBossArena.Learning
         /// <summary>The boss's current picture of the player.</summary>
         public BehaviorProfile Profile => _profile;
 
+        /// <summary>Which way the player habitually circles the boss: one to its right, minus one to its left.</summary>
+        public float CirclingSide => _tracker.CirclingSide;
+
+        /// <summary>The way the player most often rolls, relative to the boss: across its right, along away.</summary>
+        /// <param name="direction">Receives the direction.</param>
+        /// <returns>False when there are too few rolls to say.</returns>
+        public bool TryGetHabitualDodge(out Vector2 direction) => _tracker.TryGetHabitualDodge(out direction);
+
         /// <summary>Strategies the boss has developed so far this fight.</summary>
         public IReadOnlyCollection<CounterStrategy> AdoptedStrategies => _adopted;
 

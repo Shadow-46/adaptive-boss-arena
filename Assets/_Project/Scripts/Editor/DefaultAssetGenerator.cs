@@ -253,6 +253,7 @@ namespace AdaptiveBossArena.Editor
 
             AssignRigs();
             AssignStrikers();
+            AssignAnswers();
         }
 
         /// <summary>Which attack state each of the player's attacks plays.</summary>
@@ -347,6 +348,52 @@ namespace AdaptiveBossArena.Editor
         /// Structural, so written on every run like the clip bindings, not only when an asset is created: an
         /// attack left on its volume after this table named a part would silently go on hurting at a distance.
         /// </remarks>
+        /// <summary>Which player habits each boss attack is the honest answer to.</summary>
+        /// <remarks>
+        /// <para>
+        /// References, not tuning, so they are written on every run. Each is a blow a fighter would reach for
+        /// against that habit: the boot, the seize and the perilous overhead break a guard; the held overhead
+        /// and the edict come after an early roll is spent; the spin and the sweep cover a circling flank; the
+        /// rebuke, the seize and the boot throw off a player standing in the boss's face; the thrust, the
+        /// charge and the leap close on one backing away.
+        /// </para>
+        /// <para>
+        /// Learning weighs these up as it reads the habit, so what the boss has seen shows in what it throws.
+        /// </para>
+        /// </remarks>
+        private static readonly (string Attack, HabitAnswer Answers)[] AnswerBindings =
+        {
+            ("BossKick", HabitAnswer.Guard | HabitAnswer.Crowding),
+            ("BossGrab", HabitAnswer.Guard | HabitAnswer.Crowding),
+            ("BossPerilousOverhead", HabitAnswer.Guard),
+            ("BossDelayedOverhead", HabitAnswer.EarlyDodge),
+            ("BossEdict", HabitAnswer.EarlyDodge | HabitAnswer.Crowding),
+            ("BossSpinCleave", HabitAnswer.Circling),
+            ("BossSweep", HabitAnswer.Circling),
+            ("BossRebuke", HabitAnswer.Crowding),
+            ("BossThrust", HabitAnswer.Retreat),
+            ("BossCharge", HabitAnswer.Retreat),
+            ("BossLeapSmash", HabitAnswer.Retreat)
+        };
+
+        private static void AssignAnswers()
+        {
+            foreach ((string attackName, HabitAnswer answers) in AnswerBindings)
+            {
+                var attack = AssetDatabase.LoadAssetAtPath<AttackDefinition>($"{AttackFolder}/{attackName}.asset");
+
+                if (attack == null)
+                {
+                    continue;
+                }
+
+                using (AssetAuthoring.AssetWriter writer = AssetAuthoring.Edit(attack))
+                {
+                    writer.Int("_answers", (int)answers);
+                }
+            }
+        }
+
         private static void AssignStrikers()
         {
             foreach ((string attackName, StrikerParts parts) in StrikerBindings)
@@ -819,6 +866,7 @@ namespace AdaptiveBossArena.Editor
                 phase: 1, weight: 1.2f,
                 tell: "It refuses to let you breathe.",
                 (BossTuningParameter.GapCloserWeight, 0.8f),
+                (BossTuningParameter.AnswerRetreatWeight, 1.8f),
                 (BossTuningParameter.PreferredRange, 1.8f),
                 (BossTuningParameter.Aggression, 0.75f));
 
@@ -832,7 +880,7 @@ namespace AdaptiveBossArena.Editor
             CounterStrategy predictDodge = CreateStrategy(
                 "CounterPredictableDodge",
                 BehaviorFeature.DashDirectionBias, FeatureComparison.AtOrAbove, threshold: 0.55f,
-                phase: 2, weight: 1.3f,
+                phase: 1, weight: 1.3f,
                 tell: "It knows which way you will roll.",
                 (BossTuningParameter.DodgePredictionStrength, 0.7f));
 
@@ -860,6 +908,7 @@ namespace AdaptiveBossArena.Editor
                 BehaviorFeature.HealFrequency, FeatureComparison.AtOrAbove, threshold: 0.5f,
                 phase: 1, weight: 1.1f,
                 tell: "It lunges the instant you falter.",
+                (BossTuningParameter.PunishHealChance, 0.8f),
                 (BossTuningParameter.Aggression, 0.8f),
                 (BossTuningParameter.GapCloserWeight, 0.6f));
 
@@ -884,6 +933,7 @@ namespace AdaptiveBossArena.Editor
                 BehaviorFeature.WhiffRatio, FeatureComparison.AtOrAbove, threshold: 0.5f,
                 phase: 1, weight: 1.2f,
                 tell: "It punishes your wasted swings.",
+                (BossTuningParameter.PunishWhiffChance, 0.75f),
                 (BossTuningParameter.Aggression, 0.8f),
                 (BossTuningParameter.GapCloserWeight, 0.7f),
                 (BossTuningParameter.ComboExtensionChance, 0.5f));
@@ -898,7 +948,8 @@ namespace AdaptiveBossArena.Editor
                 BehaviorFeature.GuardReliance, FeatureComparison.AtOrAbove, threshold: 0.55f,
                 phase: 1, weight: 1.3f,
                 tell: "It stops respecting your guard.",
-                (BossTuningParameter.UnblockableWeight, 0.9f));
+                (BossTuningParameter.UnblockableWeight, 0.9f),
+                (BossTuningParameter.AnswerGuardWeight, 1.6f));
 
             // The parry master is a different problem from the turtle. Their timing is the thing to
             // attack, so the boss shows blows it never throws and mixes in attacks the guard cannot
@@ -911,10 +962,58 @@ namespace AdaptiveBossArena.Editor
                 (BossTuningParameter.FeintChance, 0.55f),
                 (BossTuningParameter.UnblockableWeight, 0.6f));
 
+            // The habits the boss could only see once it watched movement and timing properly. Each answer is
+            // a blow or a step it already owns, reached for more often - and each is plainly visible, so the
+            // player can see what was read and change it.
+
+            // The turtle who raises the guard and waits: the boot and the seize, which no guard stops.
+            CounterStrategy breakTheGuard = CreateStrategy(
+                "CounterTurtling",
+                BehaviorFeature.Turtling, FeatureComparison.AtOrAbove, threshold: 0.5f,
+                phase: 1, weight: 1.35f,
+                tell: "It breaks the guard you hide behind.",
+                (BossTuningParameter.AnswerGuardWeight, 2.2f),
+                (BossTuningParameter.Aggression, 0.75f));
+
+            // The early roller: the raised blade held a beat, so the roll is spent before the blow comes.
+            CounterStrategy holdTheBlade = CreateStrategy(
+                "CounterEarlyRoll",
+                BehaviorFeature.DodgeEarliness, FeatureComparison.AtOrAbove, threshold: 0.55f,
+                phase: 1, weight: 1.5f,
+                tell: "It holds the blow until you have rolled.",
+                (BossTuningParameter.HoldWindupChance, 0.65f),
+                (BossTuningParameter.AnswerEarlyDodgeWeight, 1.6f));
+
+            // The circler: it steps the same way they go, into their path, and reaches for the flank.
+            CounterStrategy cutOffTheCircle = CreateStrategy(
+                "CounterCircling",
+                BehaviorFeature.CirclingBias, FeatureComparison.AtOrAbove, threshold: 0.6f,
+                phase: 1, weight: 1.3f,
+                tell: "It steps into your circle.",
+                (BossTuningParameter.CutOffStrength, 1f),
+                (BossTuningParameter.AnswerCirclingWeight, 1.6f));
+
+            // The player standing in its face: the blows that throw them off their feet.
+            CounterStrategy shoveAway = CreateStrategy(
+                "CounterCrowding",
+                BehaviorFeature.Crowding, FeatureComparison.AtOrAbove, threshold: 0.45f,
+                phase: 1, weight: 1.3f,
+                tell: "It throws you out of its reach.",
+                (BossTuningParameter.AnswerCrowdingWeight, 2f));
+
+            // Healing within reach is the plainest opening there is; it takes it.
+            CounterStrategy punishPressureHeals = CreateStrategy(
+                "CounterHealUnderPressure",
+                BehaviorFeature.HealUnderPressure, FeatureComparison.AtOrAbove, threshold: 0.5f,
+                phase: 1, weight: 1.4f,
+                tell: "It strikes the moment you drink.",
+                (BossTuningParameter.PunishHealChance, 0.95f));
+
             return new[]
             {
                 delayAttacks, closeDistance, parryHeavy, predictDodge, areaDenial, punishPassivity,
-                punishHealing, baitRhythmicDodge, punishWhiffing, punishTurtling, punishDeflectMastery
+                punishHealing, baitRhythmicDodge, punishWhiffing, punishTurtling, punishDeflectMastery,
+                breakTheGuard, holdTheBlade, cutOffTheCircle, shoveAway, punishPressureHeals
             };
         }
 
@@ -1356,7 +1455,9 @@ namespace AdaptiveBossArena.Editor
                     phases.GetArrayElementAtIndex(0), ShouldWriteTuning(created), "Measured", threshold: 1f,
                     moveMultiplier: 1f, cooldown: 1.15f, adaptationRate: 1f,
                     signature: attacks.Slam,
-                    attacks.Sweep, attacks.Slam, attacks.DelayedOverhead);
+                    // The jab and the boot from the first exchange, for every player: the opening counters need
+                    // something to reach for, and both are quick, plain blows that teach the guard and the roll.
+                    attacks.Sweep, attacks.Slam, attacks.DelayedOverhead, attacks.Jab, attacks.Kick);
 
                 WritePhase(
                     phases.GetArrayElementAtIndex(1), ShouldWriteTuning(created), "Pressing", threshold: 0.66f,

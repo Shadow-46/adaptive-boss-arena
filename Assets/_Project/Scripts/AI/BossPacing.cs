@@ -36,8 +36,13 @@ namespace AdaptiveBossArena.AI
         /// <param name="distance">Distance to the player.</param>
         /// <param name="preferredRange">Distance the boss wants to hold.</param>
         /// <param name="stalkFraction">Fraction of top speed the stalk walks at.</param>
+        /// <param name="strafeSide">
+        /// Which way to circle: one to the boss's right, minus one to its left. A boss that has learned which
+        /// way the player circles goes the same way, stepping into their path instead of chasing their back.
+        /// </param>
         /// <returns>Movement whose length is the fraction of top speed to move at.</returns>
-        public static Vector3 Stalk(Vector3 toPlayer, float distance, float preferredRange, float stalkFraction)
+        public static Vector3 Stalk(
+            Vector3 toPlayer, float distance, float preferredRange, float stalkFraction, float strafeSide = 1f)
         {
             toPlayer.y = 0f;
 
@@ -50,13 +55,30 @@ namespace AdaptiveBossArena.AI
 
             // Positive when too far, negative when too close, easing through zero at the preferred range.
             float pull = Mathf.Clamp((distance - preferredRange) / RangeBlendMetres, -1f, 1f);
-            Vector3 strafe = Vector3.Cross(Vector3.up, toPlayer) * StrafeWeight;
+            Vector3 strafe = Vector3.Cross(Vector3.up, toPlayer) * (StrafeWeight * Mathf.Clamp(strafeSide, -1f, 1f));
             Vector3 heading = toPlayer * pull + strafe;
 
             return heading.sqrMagnitude < Mathf.Epsilon
                 ? Vector3.zero
                 : heading.normalized * Mathf.Clamp01(stalkFraction);
         }
+
+        /// <summary>
+        /// Which way the stalk circles: the boss's own way, or with the player once it has learned their side.
+        /// </summary>
+        /// <param name="cutOffStrength">Learned willingness to cut the player off.</param>
+        /// <param name="habitualCirclingSide">The player's habitual side, one right, minus one left.</param>
+        /// <returns>The strafe side for <see cref="Stalk"/>.</returns>
+        public static float StrafeSideFor(float cutOffStrength, float habitualCirclingSide) =>
+            cutOffStrength >= CutOffThreshold && Mathf.Abs(habitualCirclingSide) >= CirclingSideThreshold
+                ? Mathf.Sign(habitualCirclingSide)
+                : 1f;
+
+        /// <summary>Learned cut-off strength past which the boss circles with the player.</summary>
+        public const float CutOffThreshold = 0.5f;
+
+        /// <summary>How one-sided the player's circling must be before there is a side to cut off.</summary>
+        public const float CirclingSideThreshold = 0.3f;
 
         /// <summary>
         /// Speed while closing in to attack, as a fraction of top speed.

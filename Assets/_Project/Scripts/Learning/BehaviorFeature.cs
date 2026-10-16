@@ -154,7 +154,48 @@ namespace AdaptiveBossArena.Learning
         /// capability the boss already had and merely reaches for more often, which is the line every
         /// adaptation here stays on — numbers, never new rules.
         /// </remarks>
-        UnblockableWeight = 9
+        UnblockableWeight = 9,
+
+        /// <summary>Weighting toward attacks that beat a raised guard.</summary>
+        AnswerGuardWeight = 10,
+
+        /// <summary>Weighting toward attacks that beat an early roll.</summary>
+        AnswerEarlyDodgeWeight = 11,
+
+        /// <summary>Weighting toward attacks that cover the flank of a circling player.</summary>
+        AnswerCirclingWeight = 12,
+
+        /// <summary>Weighting toward attacks that throw off a player standing inside the boss's reach.</summary>
+        AnswerCrowdingWeight = 13,
+
+        /// <summary>Weighting toward attacks that close on a retreating player.</summary>
+        AnswerRetreatWeight = 14,
+
+        /// <summary>
+        /// Likelihood of holding a raised blade a beat before the blow falls.
+        /// </summary>
+        /// <remarks>
+        /// The answer to the early roller. The pose is held in plain sight, so a player who waits for the
+        /// blade instead of the arms is never caught by it.
+        /// </remarks>
+        HoldWindupChance = 15,
+
+        /// <summary>
+        /// How readily the boss circles with the player to cut off their habitual side, rather than its own.
+        /// </summary>
+        CutOffStrength = 16,
+
+        /// <summary>
+        /// Likelihood of striking at once when it sees the player begin a heal within reach.
+        /// </summary>
+        /// <remarks>
+        /// Seen through the delayed perception like everything else: the boss reacts to a heal it watched
+        /// begin, no sooner than a person could.
+        /// </remarks>
+        PunishHealChance = 17,
+
+        /// <summary>Likelihood of stepping in at once when it sees a player's swing end on nothing.</summary>
+        PunishWhiffChance = 18
     }
 
     /// <summary>How a feature's value is compared against a strategy's threshold.</summary>

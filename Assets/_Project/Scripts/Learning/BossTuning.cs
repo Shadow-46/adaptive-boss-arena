@@ -37,6 +37,12 @@ namespace AdaptiveBossArena.Learning
         /// </summary>
         private const float CommitmentReferenceSum = 1.6f;
 
+        /// <summary>How often an unlearned boss holds a raised blade: seldom, but visibly, from the start.</summary>
+        public const float BaselineHoldWindupChance = 0.05f;
+
+        /// <summary>How often an unlearned boss takes an opening it sees: one in ten.</summary>
+        public const float BaselinePunishChance = 0.1f;
+
         private readonly float[] _current;
         private readonly float[] _target;
         private readonly float[] _baseline;
@@ -60,6 +66,12 @@ namespace AdaptiveBossArena.Learning
             SetBaseline(BossTuningParameter.PreferredRange, baselinePreferredRange);
             SetBaseline(BossTuningParameter.Aggression, baselineAggression);
             SetBaseline(BossTuningParameter.ParryChance, baselineParryChance);
+
+            // The reactive behaviours exist from the first second, rarely, so learning only ever makes the
+            // boss do more often what it was already seen to do.
+            SetBaseline(BossTuningParameter.HoldWindupChance, BaselineHoldWindupChance);
+            SetBaseline(BossTuningParameter.PunishHealChance, BaselinePunishChance);
+            SetBaseline(BossTuningParameter.PunishWhiffChance, BaselinePunishChance);
 
             // Everything else starts at zero: the boss begins the fight with the rest of its
             // counter-behaviours disengaged and has to earn each one.

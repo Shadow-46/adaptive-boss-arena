@@ -56,6 +56,25 @@ namespace AdaptiveBossArena.AI.States
         /// <summary>The swing just thrown, whose authored follow-ups the chain continues with.</summary>
         private AttackDefinition _lastSwing;
 
+        /// <summary>Share of a wind-up at which a held blow hangs, raised and plainly visible.</summary>
+        public const float HoldAtWindupShare = 0.65f;
+
+        /// <summary>How long a held blow hangs, as a share of its wind-up, within a floor and a ceiling.</summary>
+        /// <remarks>
+        /// Long enough that a roll begun when the arms went up is over before the blade comes; short enough
+        /// that a player who simply waits for the blade is never caught. Only wind-ups long enough to read are
+        /// ever held.
+        /// </remarks>
+        private const float HoldWindupShare = 0.45f;
+        private const float MinimumHoldSeconds = 0.25f;
+        private const float MaximumHoldSeconds = 0.5f;
+        private const float ShortestHeldWindup = 0.35f;
+
+        /// <summary>How far the boss leads a learned roll, in metres, at full prediction.</summary>
+        private const float HabitualRollLeadMetres = 1.4f;
+
+        private float _holdRemaining;
+
         /// <summary>
         /// True once the attack — and any combo it grew into — has run its course.
         /// </summary>
@@ -99,6 +118,14 @@ namespace AdaptiveBossArena.AI.States
 
             context.Motor.Halt();
             _lastSwing = attack;
+            context.IsTakingOpening = false;
+
+            // Decided at the start, like the feint, so the wind-up reads the same until the blade hangs.
+            _holdRemaining = !_isFeinting && attack.StartupSeconds >= ShortestHeldWindup &&
+                             context.Random.NextBool(Mathf.Clamp01(context.Tuning.Get(BossTuningParameter.HoldWindupChance)))
+                ? Mathf.Clamp(attack.StartupSeconds * HoldWindupShare, MinimumHoldSeconds, MaximumHoldSeconds)
+                : 0f;
+
             context.Attacks.Begin(attack, context.DistanceToPlayer);
         }
 
@@ -108,6 +135,11 @@ namespace AdaptiveBossArena.AI.States
             AttackDefinition attack = context.Attacks.CurrentAttack;
 
             if (TryCancelFeint(context, attack))
+            {
+                return;
+            }
+
+            if (TryHoldWindup(context, attack, deltaTime))
             {
                 return;
             }
@@ -157,9 +189,11 @@ namespace AdaptiveBossArena.AI.States
             context.AttackCooldownRemaining = AttackCooldownFor(
                 context.CurrentPhase.AttackCooldownSeconds,
                 context.Tuning.Get(BossTuningParameter.AttackDelay),
-                _isFeinting);
+                _isFeinting,
+                context.Tuning.Get(BossTuningParameter.Aggression));
 
             _isFeinting = false;
+            _holdRemaining = 0f;
             _comboRemaining = 0;
             context.PendingAttack = null;
         }
@@ -188,13 +222,50 @@ namespace AdaptiveBossArena.AI.States
         /// <param name="baseCooldownSeconds">The current phase's cooldown between attacks.</param>
         /// <param name="learnedDelaySeconds">Extra patience the boss has learned, in seconds.</param>
         /// <param name="isFeint">Whether the swing being recovered from was a feint.</param>
+        /// <param name="aggression">
+        /// Learned aggression. Above its neutral half it shortens the phase's rhythm, by up to
+        /// <see cref="PressuredCooldownShare"/> at its peak: a boss pressing a passive player swings more
+        /// often, not merely walks in faster.
+        /// </param>
         /// <returns>Seconds before the boss may attack again.</returns>
         public static float AttackCooldownFor(
-            float baseCooldownSeconds, float learnedDelaySeconds, bool isFeint)
+            float baseCooldownSeconds, float learnedDelaySeconds, bool isFeint, float aggression = NeutralAggression)
         {
             float cooldown = isFeint ? baseCooldownSeconds * FeintCooldownFraction : baseCooldownSeconds;
+            float pressure = Mathf.InverseLerp(NeutralAggression, 1f, aggression);
+            cooldown *= Mathf.Lerp(1f, PressuredCooldownShare, pressure);
 
             return cooldown + Mathf.Max(0f, learnedDelaySeconds);
+        }
+
+        /// <summary>Aggression at which the boss keeps the phase's own rhythm.</summary>
+        public const float NeutralAggression = 0.5f;
+
+        /// <summary>The share of its cooldown a boss at full aggression keeps.</summary>
+        public const float PressuredCooldownShare = 0.7f;
+
+        /// <summary>
+        /// Holds a raised blade a beat before it falls, re-aiming at the player while it hangs.
+        /// </summary>
+        /// <remarks>
+        /// The attack's own clock stops, so the scrubbed pose hangs in the air in plain sight; the boss keeps
+        /// turning to wherever it now sees the player. A roll spent when the arms went up is over by the time
+        /// the blow comes, while a player who waits for the blade dodges it as easily as ever.
+        /// </remarks>
+        /// <returns>True while holding, when the rest of the tick is skipped.</returns>
+        private bool TryHoldWindup(BossContext context, AttackDefinition attack, float deltaTime)
+        {
+            if (_holdRemaining <= 0f || attack == null || context.Attacks.Phase != AttackPhase.Startup ||
+                context.Attacks.ElapsedSeconds < attack.StartupSeconds * HoldAtWindupShare)
+            {
+                return false;
+            }
+
+            _holdRemaining -= deltaTime;
+            context.Motor.FaceDirection(ResolveAimDirection(context), deltaTime);
+            context.Motor.Decelerate(deltaTime);
+            context.Motor.Tick(deltaTime);
+            return true;
         }
 
         /// <summary>
@@ -357,6 +428,22 @@ namespace AdaptiveBossArena.AI.States
 
             Vector3 aimPoint = observation.Position +
                                observation.Velocity * (MaxLeadSeconds * predictionStrength);
+
+            // A boss that has learned the player's favourite roll leans its aim that way too, so the roll the
+            // player always takes is the one it is waiting for. Relative to the boss, as the habit was read.
+            if (context.HasHabitualDodge && predictionStrength > 0f)
+            {
+                Vector3 away = observation.Position - context.Transform.position;
+                away.y = 0f;
+
+                if (away.sqrMagnitude > Mathf.Epsilon)
+                {
+                    away.Normalize();
+                    Vector3 right = Vector3.Cross(Vector3.up, away);
+                    Vector3 roll = right * context.HabitualDodge.x + away * context.HabitualDodge.y;
+                    aimPoint += roll * (HabitualRollLeadMetres * predictionStrength);
+                }
+            }
 
             Vector3 direction = aimPoint - context.Transform.position;
             direction.y = 0f;

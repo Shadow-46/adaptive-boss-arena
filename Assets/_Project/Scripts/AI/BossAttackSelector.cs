@@ -96,6 +96,7 @@ namespace AdaptiveBossArena.AI
                 weight += gapCloserBias * GapCloserAffinity(attack);
                 weight += areaDenialBias * AreaCoverageAffinity(attack);
                 weight += unblockableBias * UnblockableAffinity(attack);
+                weight += AnswerBias(context.Tuning, attack.Answers);
 
                 if (signature != null && attack == signature)
                 {
@@ -125,6 +126,90 @@ namespace AdaptiveBossArena.AI
         }
 
         /// <summary>How much an attack behaves like a gap-closer.</summary>
+        /// <summary>
+        /// The weight learning adds to an attack for the habits it answers.
+        /// </summary>
+        /// <remarks>
+        /// Sized against the rest of the scoring, where an attack in range scores about one and the phase's
+        /// signature another one: a learned answer of two makes the blow that beats the player's habit the
+        /// likeliest pick without making it the only one, so the boss still reads as a fighter rather than a
+        /// lookup table.
+        /// </remarks>
+        /// <param name="tuning">The boss's learned tuning.</param>
+        /// <param name="answers">The habits the attack answers.</param>
+        /// <returns>The added weight.</returns>
+        public static float AnswerBias(BossTuning tuning, HabitAnswer answers)
+        {
+            if (answers == HabitAnswer.None)
+            {
+                return 0f;
+            }
+
+            float bias = 0f;
+
+            if ((answers & HabitAnswer.Guard) != 0)
+            {
+                bias += tuning.Get(BossTuningParameter.AnswerGuardWeight);
+            }
+
+            if ((answers & HabitAnswer.EarlyDodge) != 0)
+            {
+                bias += tuning.Get(BossTuningParameter.AnswerEarlyDodgeWeight);
+            }
+
+            if ((answers & HabitAnswer.Circling) != 0)
+            {
+                bias += tuning.Get(BossTuningParameter.AnswerCirclingWeight);
+            }
+
+            if ((answers & HabitAnswer.Crowding) != 0)
+            {
+                bias += tuning.Get(BossTuningParameter.AnswerCrowdingWeight);
+            }
+
+            if ((answers & HabitAnswer.Retreat) != 0)
+            {
+                bias += tuning.Get(BossTuningParameter.AnswerRetreatWeight);
+            }
+
+            return Mathf.Max(0f, bias);
+        }
+
+        /// <summary>
+        /// The quickest blow this phase owns that reaches the player from here, for taking an opening.
+        /// </summary>
+        /// <remarks>
+        /// An opening is short, so speed beats power: the fastest wind-up whose reach, lunge included, covers
+        /// the distance. Nothing in reach falls back to the ordinary choice.
+        /// </remarks>
+        /// <param name="context">The boss context.</param>
+        /// <returns>The attack, or null when the phase has none.</returns>
+        public AttackDefinition SelectQuickestReaching(BossContext context)
+        {
+            AttackDefinition[] catalogue = context.CurrentPhase.Attacks;
+            AttackDefinition best = null;
+
+            if (catalogue != null)
+            {
+                float distance = context.DistanceToPlayer;
+
+                foreach (AttackDefinition attack in catalogue)
+                {
+                    if (attack == null || attack.Unblockable || attack.EffectiveReach < distance)
+                    {
+                        continue;
+                    }
+
+                    if (best == null || attack.StartupSeconds < best.StartupSeconds)
+                    {
+                        best = attack;
+                    }
+                }
+            }
+
+            return best != null ? best : Select(context);
+        }
+
         private static float GapCloserAffinity(AttackDefinition attack) =>
             attack.LungeSpeed > 0f ? 1f : 0f;
 

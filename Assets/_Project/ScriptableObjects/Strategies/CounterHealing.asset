@@ -22,6 +22,8 @@ MonoBehaviour:
   _minimumPhase: 1
   _repeatable: 0
   _adjustments:
+  - _parameter: 17
+    _targetValue: 0.8
   - _parameter: 5
     _targetValue: 0.8
   - _parameter: 3
