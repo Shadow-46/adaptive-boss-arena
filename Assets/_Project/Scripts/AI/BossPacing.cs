@@ -80,6 +80,104 @@ namespace AdaptiveBossArena.AI
         /// <summary>How one-sided the player's circling must be before there is a side to cut off.</summary>
         public const float CirclingSideThreshold = 0.3f;
 
+        /// <summary>Angle from his facing past which the knight counts as behind him, in degrees.</summary>
+        public const float BehindAngleDegrees = 120f;
+
+        /// <summary>Distance inside which the knight is crowding him, in metres.</summary>
+        public const float CrowdedMetres = 1.8f;
+
+        /// <summary>
+        /// Chooses the next beat of the boss's footwork between blows.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// A duellist does not circle one way at one pace until it strikes: it circles, stops to measure, gives a
+        /// step of ground, changes direction, and answers a knight who crowds it or slips behind it. Each beat
+        /// lasts a second or two, so the rhythm changes as often as a watching player would notice.
+        /// </para>
+        /// <para>
+        /// Everything it reads was perceived, through the delay: the distance and the angle to the knight. A
+        /// knight behind him is answered with a turn; a crowding one with a hop or a step back. Otherwise the beat
+        /// is drawn by weight, with the last beat discouraged so no rhythm settles. Pure, so it can be tested.
+        /// </para>
+        /// </remarks>
+        /// <param name="distance">Perceived distance to the knight.</param>
+        /// <param name="preferredRange">The distance the boss wants to hold.</param>
+        /// <param name="angleToKnight">Perceived angle between his facing and the knight, in degrees.</param>
+        /// <param name="last">The beat just finished.</param>
+        /// <param name="roll">A uniform draw in [0, 1).</param>
+        /// <returns>The next beat.</returns>
+        public static PacingBeat NextBeat(
+            float distance, float preferredRange, float angleToKnight, PacingBeat last, float roll)
+        {
+            if (angleToKnight >= BehindAngleDegrees && last != PacingBeat.Turn)
+            {
+                return PacingBeat.Turn;
+            }
+
+            if (distance <= CrowdedMetres && last != PacingBeat.HopBack)
+            {
+                return roll < 0.5f ? PacingBeat.HopBack : PacingBeat.GiveGround;
+            }
+
+            float circle = 0.55f;
+            float pause = 0.25f;
+            float giveGround = distance < preferredRange ? 0.2f : 0f;
+
+            // The beat just played is discouraged, not ruled out: two circles running in opposite directions is
+            // still a change of rhythm the player sees.
+            switch (last)
+            {
+                case PacingBeat.Pause:
+                    pause *= 0.3f;
+                    break;
+                case PacingBeat.GiveGround:
+                    giveGround *= 0.3f;
+                    break;
+            }
+
+            float pick = Mathf.Clamp01(roll) * (circle + pause + giveGround);
+
+            return pick < circle ? PacingBeat.Circle
+                : pick < circle + pause ? PacingBeat.Pause
+                : PacingBeat.GiveGround;
+        }
+
+        /// <summary>How long a beat lasts, in seconds, from a uniform draw.</summary>
+        /// <param name="beat">The beat.</param>
+        /// <param name="roll">A uniform draw in [0, 1).</param>
+        /// <returns>The beat's length.</returns>
+        public static float BeatSeconds(PacingBeat beat, float roll)
+        {
+            roll = Mathf.Clamp01(roll);
+
+            switch (beat)
+            {
+                case PacingBeat.Pause:
+                    return Mathf.Lerp(0.5f, 1.1f, roll);
+                case PacingBeat.GiveGround:
+                    return Mathf.Lerp(0.8f, 1.4f, roll);
+                case PacingBeat.HopBack:
+                    return HopBackSeconds;
+                case PacingBeat.Turn:
+                    return TurnSeconds;
+                default:
+                    return Mathf.Lerp(1.2f, 2.6f, roll);
+            }
+        }
+
+        /// <summary>How long the hop back takes, airborne travel and landing together.</summary>
+        public const float HopBackSeconds = 0.6f;
+
+        /// <summary>The share of the hop spent travelling; the rest is the landing.</summary>
+        public const float HopBackTravelShare = 0.6f;
+
+        /// <summary>Speed of the hop's travel, in metres per second: about two metres of ground.</summary>
+        public const float HopBackSpeed = 5.5f;
+
+        /// <summary>How long the turn on the spot takes.</summary>
+        public const float TurnSeconds = 0.65f;
+
         /// <summary>
         /// Speed while closing in to attack, as a fraction of top speed.
         /// </summary>
@@ -99,5 +197,24 @@ namespace AdaptiveBossArena.AI
 
             return speed * Mathf.Lerp(0.8f, 1f, Mathf.Clamp01(aggression));
         }
+    }
+
+    /// <summary>One beat of the boss's footwork between blows.</summary>
+    public enum PacingBeat
+    {
+        /// <summary>Circling the knight, one way or the other.</summary>
+        Circle,
+
+        /// <summary>Standing still, measuring.</summary>
+        Pause,
+
+        /// <summary>Walking a step or two back while still facing the knight.</summary>
+        GiveGround,
+
+        /// <summary>A quick hop back out of a crowding knight's reach.</summary>
+        HopBack,
+
+        /// <summary>A turn on the spot toward a knight who has got behind him.</summary>
+        Turn
     }
 }

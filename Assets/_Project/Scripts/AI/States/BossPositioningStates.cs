@@ -43,6 +43,9 @@ namespace AdaptiveBossArena.AI.States
         /// <inheritdoc />
         protected override void OnEnter(BossContext context)
         {
+            // Every return to the stalk begins a fresh beat of footwork, read from where the knight is now.
+            _beatElapsed = _beatSeconds;
+
             // An opening the boss has already decided to take survives the step back into the stalk, with the
             // short reaction it was given - waiting out a full delay here would let every opening close.
             if (context.IsTakingOpening && context.PendingAttack != null)
@@ -74,18 +77,130 @@ namespace AdaptiveBossArena.AI.States
                 return;
             }
 
-            context.Motor.FaceDirection(context.DirectionToPlayer, deltaTime);
+            _beatElapsed += deltaTime;
 
-            // A slow, circling stalk that eases between closing and giving ground; see BossPacing.
-            context.Motor.MoveInDirection(
-                BossPacing.Stalk(
-                    context.DirectionToPlayer, context.DistanceToPlayer, context.PreferredRange,
-                    context.Config.StalkSpeedFraction,
-                    BossPacing.StrafeSideFor(
-                        context.Tuning.Get(BossTuningParameter.CutOffStrength), context.HabitualCirclingSide)),
-                deltaTime);
+            if (_beatElapsed >= _beatSeconds)
+            {
+                StartBeat(context);
+            }
+
+            Vector3 toPlayer = context.DirectionToPlayer;
+
+            switch (_beat)
+            {
+                case PacingBeat.Turn:
+                    // Brought round faster than the stalk turns, with the turn clip carrying the legs.
+                    context.Motor.FaceDirection(toPlayer, deltaTime * TurnRateBoost);
+                    context.Motor.Decelerate(deltaTime);
+                    break;
+
+                case PacingBeat.HopBack:
+                    context.Motor.FaceDirection(toPlayer, deltaTime);
+
+                    if (_beatElapsed < BossPacing.HopBackSeconds * BossPacing.HopBackTravelShare)
+                    {
+                        context.Motor.SetPlanarVelocity(-toPlayer.normalized * BossPacing.HopBackSpeed);
+                    }
+                    else
+                    {
+                        context.Motor.Brake(context.Config.LungeBrakeDeceleration, deltaTime);
+                    }
+
+                    break;
+
+                case PacingBeat.Pause:
+                    context.Motor.FaceDirection(toPlayer, deltaTime);
+                    context.Motor.Decelerate(deltaTime);
+                    break;
+
+                case PacingBeat.GiveGround:
+                    context.Motor.FaceDirection(toPlayer, deltaTime);
+                    context.Motor.MoveInDirection(
+                        BossPacing.Stalk(
+                            toPlayer, context.DistanceToPlayer, context.PreferredRange + GiveGroundMetres,
+                            context.Config.StalkSpeedFraction, 0f),
+                        deltaTime);
+                    break;
+
+                default:
+                    context.Motor.FaceDirection(toPlayer, deltaTime);
+
+                    // A slow, circling stalk that eases between closing and giving ground; see BossPacing.
+                    context.Motor.MoveInDirection(
+                        BossPacing.Stalk(
+                            toPlayer, context.DistanceToPlayer, context.PreferredRange,
+                            context.Config.StalkSpeedFraction, _strafeSide),
+                        deltaTime);
+                    break;
+            }
 
             context.Motor.Tick(deltaTime);
+
+            context.IsMidFootwork = (_beat == PacingBeat.HopBack || _beat == PacingBeat.Turn) &&
+                                    _beatElapsed < _beatSeconds;
+        }
+
+        /// <inheritdoc />
+        protected override void OnExit(BossContext context)
+        {
+            context.IsMidFootwork = false;
+        }
+
+        /// <summary>How much faster than the stalk the boss turns while turning on the spot.</summary>
+        private const float TurnRateBoost = 3f;
+
+        /// <summary>How far past its preferred range the boss gives ground, in metres.</summary>
+        private const float GiveGroundMetres = 2f;
+
+        /// <summary>Chance a new circle runs the other way, while he has learned no side to cut off.</summary>
+        private const float CircleReverseChance = 0.6f;
+
+        private PacingBeat _beat = PacingBeat.Circle;
+        private float _beatSeconds;
+        private float _beatElapsed;
+        private float _strafeSide = 1f;
+
+        /// <summary>Picks and begins the next beat of footwork, from what the boss perceives.</summary>
+        private void StartBeat(BossContext context)
+        {
+            Vector3 toPlayer = context.DirectionToPlayer;
+            toPlayer.y = 0f;
+            float angle = toPlayer.sqrMagnitude > Mathf.Epsilon ? Vector3.Angle(context.Motor.Facing, toPlayer) : 0f;
+
+            _beat = BossPacing.NextBeat(
+                context.DistanceToPlayer, context.PreferredRange, angle, _beat, context.Random.NextFloat(0f, 1f));
+            _beatSeconds = BossPacing.BeatSeconds(_beat, context.Random.NextFloat(0f, 1f));
+            _beatElapsed = 0f;
+
+            switch (_beat)
+            {
+                case PacingBeat.Circle:
+                    _strafeSide = CircleSide(context, _strafeSide);
+                    break;
+                case PacingBeat.HopBack:
+                    context.RequestGesture(Combat.Feel.CharacterAnimatorParameters.HopBackState, _beatSeconds);
+                    break;
+                case PacingBeat.Turn:
+                    context.RequestGesture(Combat.Feel.CharacterAnimatorParameters.TurnState, _beatSeconds);
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Which way a new circle runs: with the knight once he has learned their side, otherwise mostly the
+        /// other way from the last circle, so the stalk does not lean one way all fight.
+        /// </summary>
+        private static float CircleSide(BossContext context, float lastSide)
+        {
+            float cutOff = context.Tuning.Get(BossTuningParameter.CutOffStrength);
+
+            if (cutOff >= BossPacing.CutOffThreshold &&
+                Mathf.Abs(context.HabitualCirclingSide) >= BossPacing.CirclingSideThreshold)
+            {
+                return BossPacing.StrafeSideFor(cutOff, context.HabitualCirclingSide);
+            }
+
+            return context.Random.NextBool(CircleReverseChance) ? -lastSide : lastSide;
         }
     }
 

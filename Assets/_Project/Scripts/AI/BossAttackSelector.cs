@@ -31,15 +31,26 @@ namespace AdaptiveBossArena.AI
         private const float IdealRangeWeight = 1f;
 
         /// <summary>How sharply weight falls away as an attack's reach mismatches the distance.</summary>
-        private const float RangeFalloff = 0.6f;
+        /// <remarks>
+        /// Gentle, with a plateau around the ideal reach, so at any distance two to four blows genuinely
+        /// compete. A steep falloff handed each distance to a single move, which is how the boss came to throw
+        /// the same blow again and again.
+        /// </remarks>
+        private const float RangeFalloff = 0.35f;
+
+        /// <summary>Mismatch, in metres, within which an attack counts as perfectly in range.</summary>
+        private const float RangePlateauMetres = 0.75f;
 
         /// <summary>Extra weight the phase's signature attack carries, so each phase has a face.</summary>
         /// <remarks>
         /// A bonus rather than an override: the signature is markedly more likely but never certain,
         /// so it reads as this phase's threat without becoming a rhythm the player can set a metronome
         /// to. Its distinct telegraph is what makes the raised frequency land as "here it comes".
+        /// Trimmed from 1.1 once players reported the boss throwing the same blow again and again: at long range
+        /// the opening phase's leaping slam, being both the signature and the only blow that reaches, came up in
+        /// nearly half of all picks.
         /// </remarks>
-        private const float SignatureWeightBonus = 1.1f;
+        private const float SignatureWeightBonus = 0.85f;
 
         private readonly IRandomProvider _random;
         private float[] _weights = new float[8];
@@ -53,10 +64,31 @@ namespace AdaptiveBossArena.AI
         /// </summary>
         /// <param name="context">Boss context supplying distance, tuning and the current phase.</param>
         /// <returns>The chosen attack, or null when the phase has no usable attacks.</returns>
-        public AttackDefinition Select(BossContext context)
-        {
-            AttackDefinition[] catalogue = context.CurrentPhase.Attacks;
+        public AttackDefinition Select(BossContext context) =>
+            Select(
+                context.CurrentPhase.Attacks,
+                context.CurrentPhase.SignatureAttack,
+                context.DistanceToPlayer,
+                context.Tuning,
+                context.RecentMoves);
 
+        /// <summary>
+        /// Picks an attack from a catalogue, given everything the choice depends on.
+        /// </summary>
+        /// <remarks>
+        /// Free of the boss context so the mix of blows the boss throws can be pinned by an edit-mode test
+        /// rather than judged by watching it fight.
+        /// </remarks>
+        /// <param name="catalogue">The phase's moves.</param>
+        /// <param name="signature">The phase's signature move, or null.</param>
+        /// <param name="distance">Perceived distance to the player, in metres.</param>
+        /// <param name="tuning">The boss's learned tuning.</param>
+        /// <param name="recent">The blows thrown lately.</param>
+        /// <returns>The chosen attack, or null when the catalogue is empty.</returns>
+        public AttackDefinition Select(
+            AttackDefinition[] catalogue, AttackDefinition signature, float distance, BossTuning tuning,
+            RecentMoves recent)
+        {
             if (catalogue == null || catalogue.Length == 0)
             {
                 return null;
@@ -64,7 +96,7 @@ namespace AdaptiveBossArena.AI
 
             EnsureWeightCapacity(catalogue.Length);
 
-            float totalWeight = ScoreCatalogue(context, catalogue);
+            float totalWeight = ScoreCatalogue(catalogue, signature, distance, tuning, recent);
 
             return totalWeight <= 0f
                 ? catalogue[_random.NextInt(0, catalogue.Length)]
@@ -72,13 +104,13 @@ namespace AdaptiveBossArena.AI
         }
 
         /// <summary>Scores every attack in the catalogue and returns the total weight.</summary>
-        private float ScoreCatalogue(BossContext context, AttackDefinition[] catalogue)
+        private float ScoreCatalogue(
+            AttackDefinition[] catalogue, AttackDefinition signature, float distance, BossTuning tuning,
+            RecentMoves recent)
         {
-            float distance = context.DistanceToPlayer;
-            float gapCloserBias = context.Tuning.Get(BossTuningParameter.GapCloserWeight);
-            float areaDenialBias = context.Tuning.Get(BossTuningParameter.AreaDenialWeight);
-            float unblockableBias = context.Tuning.Get(BossTuningParameter.UnblockableWeight);
-            AttackDefinition signature = context.CurrentPhase.SignatureAttack;
+            float gapCloserBias = tuning.Get(BossTuningParameter.GapCloserWeight);
+            float areaDenialBias = tuning.Get(BossTuningParameter.AreaDenialWeight);
+            float unblockableBias = tuning.Get(BossTuningParameter.UnblockableWeight);
 
             float total = 0f;
 
@@ -96,14 +128,17 @@ namespace AdaptiveBossArena.AI
                 weight += gapCloserBias * GapCloserAffinity(attack);
                 weight += areaDenialBias * AreaCoverageAffinity(attack);
                 weight += unblockableBias * UnblockableAffinity(attack);
-                weight += AnswerBias(context.Tuning, attack.Answers);
+                weight += AnswerBias(tuning, attack.Answers);
 
                 if (signature != null && attack == signature)
                 {
                     weight += SignatureWeightBonus;
                 }
 
-                _weights[i] = Mathf.Max(MinimumWeight, weight);
+                // Recency is applied last, to the whole score, so a learned answer is cut along with
+                // everything else when it was just thrown: still the likeliest pick over a few blows, never
+                // the only one. Only a move thrown twice running drops to nothing.
+                _weights[i] = Mathf.Max(MinimumWeight, weight) * (recent?.WeightFor(attack) ?? 1f);
                 total += _weights[i];
             }
 
@@ -120,7 +155,7 @@ namespace AdaptiveBossArena.AI
         private static float RangeSuitability(AttackDefinition attack, float distance)
         {
             float effectiveReach = attack.EffectiveReach;
-            float mismatch = Mathf.Abs(effectiveReach - distance);
+            float mismatch = Mathf.Max(0f, Mathf.Abs(effectiveReach - distance) - RangePlateauMetres);
 
             return Mathf.Max(0f, IdealRangeWeight - mismatch * RangeFalloff);
         }
@@ -195,7 +230,8 @@ namespace AdaptiveBossArena.AI
 
                 foreach (AttackDefinition attack in catalogue)
                 {
-                    if (attack == null || attack.Unblockable || attack.EffectiveReach < distance)
+                    if (attack == null || attack.Unblockable || attack.EffectiveReach < distance ||
+                        context.RecentMoves.IsThirdInARow(attack))
                     {
                         continue;
                     }

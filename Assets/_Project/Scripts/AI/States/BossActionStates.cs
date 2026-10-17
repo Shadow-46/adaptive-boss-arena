@@ -99,8 +99,10 @@ namespace AdaptiveBossArena.AI.States
 
             // Decided before the swing begins, so the telegraph is genuinely indistinguishable from
             // a real one. Deciding partway through would let a careful player read the difference.
-            _isFeinting = context.Random.NextBool(
-                Mathf.Clamp01(context.Tuning.Get(BossTuningParameter.FeintChance)));
+            // Never on the phase shockwave, which is a set piece rather than a blow, nor on an opening being
+            // taken, whose whole point is to land before the player recovers.
+            _isFeinting = attack != context.Config.PhaseShockwave && !context.IsTakingOpening &&
+                          context.Random.NextBool(Mathf.Clamp01(context.Tuning.Get(BossTuningParameter.FeintChance)));
 
             // A feint is a single beat by definition; only a committed opener grows into a chain. A
             // boss that has learned to press its combos strings more of them together.
@@ -127,6 +129,7 @@ namespace AdaptiveBossArena.AI.States
                 : 0f;
 
             context.Attacks.Begin(attack, context.DistanceToPlayer);
+            context.RecentMoves.Record(attack);
         }
 
         /// <inheritdoc />
@@ -318,7 +321,8 @@ namespace AdaptiveBossArena.AI.States
                 return;
             }
 
-            AttackDefinition next = PickFollowUp(_lastSwing, context.CurrentPhase.Attacks, context.Random);
+            AttackDefinition next = PickFollowUp(
+                _lastSwing, context.CurrentPhase.Attacks, context.Random, context.RecentMoves);
             bool inReach = next != null && context.HasPerceivedPlayer &&
                            context.DistanceToPlayer <= next.EffectiveReach;
 
@@ -335,6 +339,7 @@ namespace AdaptiveBossArena.AI.States
             context.LastAttackWasCommitted = true;
             _lastSwing = next;
             context.Attacks.Begin(next, context.DistanceToPlayer);
+            context.RecentMoves.Record(next);
         }
 
         /// <summary>
@@ -348,9 +353,13 @@ namespace AdaptiveBossArena.AI.States
         /// <param name="lastSwing">The swing just thrown, or null.</param>
         /// <param name="moveset">The current phase's moves.</param>
         /// <param name="random">The seeded random source.</param>
+        /// <param name="recent">
+        /// The blows thrown lately, or null. A chain is a string of different blows: a move just thrown is
+        /// weighed down, and the same move never comes a third time running while anything else is possible.
+        /// </param>
         /// <returns>The follow-up, or null for an empty moveset.</returns>
         public static AttackDefinition PickFollowUp(
-            AttackDefinition lastSwing, AttackDefinition[] moveset, IRandomProvider random)
+            AttackDefinition lastSwing, AttackDefinition[] moveset, IRandomProvider random, RecentMoves recent = null)
         {
             if (moveset == null || moveset.Length == 0)
             {
@@ -364,11 +373,59 @@ namespace AdaptiveBossArena.AI.States
 
                 if (drilled.Length > 0)
                 {
-                    return drilled[random.NextInt(0, drilled.Length)];
+                    return PickByRecency(drilled, random, recent);
                 }
             }
 
-            return moveset[random.NextInt(0, moveset.Length)];
+            return PickByRecency(moveset, random, recent);
+        }
+
+        /// <summary>
+        /// Draws one of the candidates, each weighted by how lately it was thrown.
+        /// </summary>
+        /// <remarks>
+        /// With no history, or when every candidate was ruled out, every candidate is equally likely, as
+        /// before: a single drilled follow-up is still always the one thrown.
+        /// </remarks>
+        private static AttackDefinition PickByRecency(
+            AttackDefinition[] candidates, IRandomProvider random, RecentMoves recent)
+        {
+            float total = 0f;
+
+            if (recent != null)
+            {
+                foreach (AttackDefinition candidate in candidates)
+                {
+                    total += candidate != null ? recent.WeightFor(candidate) : 0f;
+                }
+            }
+
+            if (total <= 0f)
+            {
+                return candidates[random.NextInt(0, candidates.Length)];
+            }
+
+            float roll = random.NextFloat(0f, total);
+
+            foreach (AttackDefinition candidate in candidates)
+            {
+                float weight = candidate != null ? recent.WeightFor(candidate) : 0f;
+
+                if (weight <= 0f)
+                {
+                    continue;
+                }
+
+                roll -= weight;
+
+                if (roll <= 0f)
+                {
+                    return candidate;
+                }
+            }
+
+            // Floating-point accumulation can leave the roll marginally past the total.
+            return System.Array.FindLast(candidates, candidate => candidate != null && recent.WeightFor(candidate) > 0f);
         }
 
         /// <summary>

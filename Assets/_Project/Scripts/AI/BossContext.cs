@@ -111,6 +111,48 @@ namespace AdaptiveBossArena.AI
         public AttackDefinition PendingAttack { get; set; }
 
         /// <summary>
+        /// The blows thrown lately, which both the opener and the chain consult so the boss mixes its moves.
+        /// </summary>
+        public RecentMoves RecentMoves { get; } = new RecentMoves();
+
+        /// <summary>
+        /// True while a hop or a turn is under way: a body in the air or halfway round cannot strike, so no
+        /// attack is chosen until the footwork lands.
+        /// </summary>
+        public bool IsMidFootwork { get; set; }
+
+        /// <summary>A whole-body gesture the AI asked the presentation to play, or null.</summary>
+        /// <remarks>
+        /// The AI does not reach for the animator; it states what the body is doing, and the controller forwards
+        /// it once, the same way it derives every other visible state.
+        /// </remarks>
+        public string PendingGesture { get; private set; }
+
+        /// <summary>How long the pending gesture plays for.</summary>
+        public float PendingGestureSeconds { get; private set; }
+
+        /// <summary>Asks the presentation to play a gesture once.</summary>
+        /// <param name="state">The scrubbed animator state.</param>
+        /// <param name="seconds">How long it plays.</param>
+        public void RequestGesture(string state, float seconds)
+        {
+            PendingGesture = state;
+            PendingGestureSeconds = seconds;
+        }
+
+        /// <summary>Hands over the pending gesture, if any, and clears it.</summary>
+        /// <param name="state">The gesture's state.</param>
+        /// <param name="seconds">How long it plays.</param>
+        /// <returns>True when there was one.</returns>
+        public bool TakeGesture(out string state, out float seconds)
+        {
+            state = PendingGesture;
+            seconds = PendingGestureSeconds;
+            PendingGesture = null;
+            return state != null;
+        }
+
+        /// <summary>
         /// True while the pending attack answers an opening the boss saw the player give, so stepping back into
         /// the stalk keeps it rather than reconsidering.
         /// </summary>

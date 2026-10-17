@@ -173,6 +173,12 @@ namespace AdaptiveBossArena.Combat.Feel
             _bridge?.Flourish(seconds > 0f ? seconds : _config != null ? _config.FlourishDurationSeconds : 0f);
         }
 
+        /// <summary>Plays a piece of footwork or another whole-body gesture once across the time given.</summary>
+        /// <param name="state">The scrubbed state, such as <see cref="CharacterAnimatorParameters.HopBackState"/>.</param>
+        /// <param name="seconds">How long it plays for.</param>
+        /// <returns>True when a rig is playing it; a primitive body has none and keeps moving as it was.</returns>
+        public bool Gesture(string state, float seconds) => _bridge != null && _bridge.Gesture(state, seconds);
+
         /// <summary>Snaps the pose back to rest and clears any impulses, for a retry.</summary>
         public void ResetPose()
         {

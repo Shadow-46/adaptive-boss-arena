@@ -533,6 +533,11 @@ namespace AdaptiveBossArena.AI
             float topSpeed = _context.Motor.CurrentTopSpeed;
             float speed01 = topSpeed > 0f ? _context.Motor.Speed / topSpeed : 0f;
 
+            if (_context.TakeGesture(out string gesture, out float gestureSeconds))
+            {
+                _animator.Gesture(gesture, gestureSeconds);
+            }
+
             _animator.SetTopSpeed(topSpeed);
             _animator.SetMotionState(
                 state, _context.Attacks.Phase, speed01,
@@ -731,6 +736,7 @@ namespace AdaptiveBossArena.AI
             _lastConsideredSwingStart = float.NegativeInfinity;
             _parryThisSwing = false;
             _context.PendingAttack = null;
+            _context.RecentMoves.Clear();
             _context.Attacks.Cancel();
             _context.Motor.Teleport(spawnPosition);
             _adaptation.Reset();
@@ -803,7 +809,9 @@ namespace AdaptiveBossArena.AI
         {
             // Not while transforming: the roar is the beat, and a swing out of it would be thrown by a body
             // that is visibly still roaring. Checked before selection, so no random draw is spent on it.
-            if (_phaseTransitionInvulnRemaining > 0f)
+            // Nor out of a hop or a turn: the body is in the air or halfway round, and a blow thrown from there
+            // would have no wind-up the knight could read.
+            if (_phaseTransitionInvulnRemaining > 0f || context.IsMidFootwork)
             {
                 return false;
             }
@@ -855,7 +863,8 @@ namespace AdaptiveBossArena.AI
         }
 
         /// <summary>Closes the distance toward an attack the boss has already committed to.</summary>
-        private static bool WantsToApproach(BossContext context) => context.PendingAttack != null;
+        private static bool WantsToApproach(BossContext context) =>
+            context.PendingAttack != null && !context.IsMidFootwork;
 
         /// <summary>
         /// Decides whether to commit to an attack, and picks one if so.

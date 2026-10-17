@@ -52,6 +52,12 @@ namespace AdaptiveBossArena.Combat.Feel
         /// <summary>The roar a phase transition plays, scrubbed across the transformation.</summary>
         public const string RoarState = "Roar";
 
+        /// <summary>A hop backwards out of reach, the boss's footwork when the knight crowds him.</summary>
+        public const string HopBackState = "HopBack";
+
+        /// <summary>A turn on the spot, for the knight who has got behind him.</summary>
+        public const string TurnState = "Turn";
+
         /// <summary>
         /// Suffix of each attack state's identical twin, which a repeated swing blends into.
         /// </summary>

@@ -34,10 +34,20 @@ namespace AdaptiveBossArena.Editor.Art
 
             // The execution, which used to borrow a passing slash. The parry stance is not here: it is
             // cross-faded as a state by the bridge, not scrubbed by an attack's timeline.
-            "Riposte"
+            "Riposte",
+
+            // The boss's footwork between blows: a hop back out of a crowding knight's reach, and a turn on the
+            // spot for one who has got behind him. Scrubbed like the roar, timed by the code that moves the body.
+            "HopBack", "Turn"
         };
 
         private const string Mixamo = LicensedArtPostprocessor.MixamoFolder;
+
+        /// <summary>
+        /// The one footwork clip the boss borrows from the knight's set: a clean dodge backwards, listed last so
+        /// nothing of the boss's own is ever shadowed by a name it shares.
+        /// </summary>
+        private const string BossDodgeBack = Mixamo + "Animations/Knight/Warrok W Kurniawan@Standing Dodge Backward.fbx";
         private const string QuaterniusLibrary1 = "Assets/_Project/Art/ThirdParty/Quaternius/UniversalAnimationLibrary/UAL1_Standard.fbx";
         private const string QuaterniusLibrary2 = "Assets/_Project/Art/ThirdParty/Quaternius/UniversalAnimationLibrary2/UAL2_Standard.fbx";
 
@@ -132,7 +142,7 @@ namespace AdaptiveBossArena.Editor.Art
             "BruteController",
             LicensedArtPostprocessor.BossBody,
             LicensedArtPostprocessor.BossBodyScale,
-            new[] { Mixamo + "Animations/Boss", Mixamo + "Animations/Shared", QuaterniusLibrary1 },
+            new[] { Mixamo + "Animations/Boss", Mixamo + "Animations/Shared", QuaterniusLibrary1, BossDodgeBack },
             new[]
             {
                 (0f, "great sword idle"),
@@ -187,7 +197,10 @@ namespace AdaptiveBossArena.Editor.Art
                 // Iron Rebuke: kick (2) jabs the point, then plants a boot.
                 ["Rebuke"] = "great sword kick (2)",
                 // Blood-Red Edict: power up raises the blade upright and gathers before it is cried out.
-                ["Edict"] = "great sword power up"
+                ["Edict"] = "great sword power up",
+                // Footwork: a dodge backwards out of reach, and the great sword turned through half a circle.
+                ["HopBack"] = "Standing Dodge Backward",
+                ["Turn"] = "great sword 180 turn"
             },
             // walk (2) steps back; strafe (2) and (4) step right, strafe and (3) left.
             new[]
@@ -218,7 +231,7 @@ namespace AdaptiveBossArena.Editor.Art
             "BruteFrenzyController",
             LicensedArtPostprocessor.BossBody,
             LicensedArtPostprocessor.BossBodyScale,
-            new[] { Mixamo + "Animations/Boss", Mixamo + "Animations/Shared", QuaterniusLibrary1 },
+            new[] { Mixamo + "Animations/Boss", Mixamo + "Animations/Shared", QuaterniusLibrary1, BossDodgeBack },
             new[]
             {
                 (0f, "great sword idle"),
@@ -258,7 +271,10 @@ namespace AdaptiveBossArena.Editor.Art
                 ["Roar"] = "Standing Taunt Battlecry",
                 ["Thrust"] = "great sword slash (2)",
                 ["Rebuke"] = "great sword kick (2)",
-                ["Edict"] = "great sword power up"
+                ["Edict"] = "great sword power up",
+                // Footwork: a dodge backwards out of reach, and the great sword turned through half a circle.
+                ["HopBack"] = "Standing Dodge Backward",
+                ["Turn"] = "great sword 180 turn"
             },
             new[]
             {
@@ -278,7 +294,7 @@ namespace AdaptiveBossArena.Editor.Art
             "BruteFrenzyController",
             LicensedArtPostprocessor.BossBody,
             LicensedArtPostprocessor.BossBodyScale,
-            new[] { Mixamo + "Animations/Boss", Mixamo + "Animations/Shared", QuaterniusLibrary1 },
+            new[] { Mixamo + "Animations/Boss", Mixamo + "Animations/Shared", QuaterniusLibrary1, BossDodgeBack },
             new[]
             {
                 // It never truly stands still in the frenzy: the slowest it gets is the hunched flex.
@@ -317,7 +333,11 @@ namespace AdaptiveBossArena.Editor.Art
                 ["Roar"] = "Mutant Roaring",
                 ["Thrust"] = "Mutant Jump Attack",
                 ["Rebuke"] = "Mutant Punch",
-                ["Edict"] = "Mutant Roaring"
+                ["Edict"] = "Mutant Roaring",
+                // Bare-handed, he still hops out of reach, and turns on the spot as the armed form does: the frenzy
+                // must be able to play every state the armed body can.
+                ["HopBack"] = "Standing Dodge Backward",
+                ["Turn"] = "great sword 180 turn"
             },
             dropsWeapon: true);
 

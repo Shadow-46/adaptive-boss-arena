@@ -43,6 +43,13 @@ namespace AdaptiveBossArena.Learning
         /// <summary>How often an unlearned boss takes an opening it sees: one in ten.</summary>
         public const float BaselinePunishChance = 0.1f;
 
+        /// <summary>
+        /// How often an unlearned boss feints: about one blow in fifteen, so the mixup is part of how it fights
+        /// from the first exchange, and learning only makes it more frequent against a player who answers
+        /// wind-ups on rhythm.
+        /// </summary>
+        public const float BaselineFeintChance = 0.07f;
+
         private readonly float[] _current;
         private readonly float[] _target;
         private readonly float[] _baseline;
@@ -72,6 +79,7 @@ namespace AdaptiveBossArena.Learning
             SetBaseline(BossTuningParameter.HoldWindupChance, BaselineHoldWindupChance);
             SetBaseline(BossTuningParameter.PunishHealChance, BaselinePunishChance);
             SetBaseline(BossTuningParameter.PunishWhiffChance, BaselinePunishChance);
+            SetBaseline(BossTuningParameter.FeintChance, BaselineFeintChance);
 
             // Everything else starts at zero: the boss begins the fight with the rest of its
             // counter-behaviours disengaged and has to earn each one.

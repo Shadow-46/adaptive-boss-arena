@@ -228,7 +228,7 @@ namespace AdaptiveBossArena.Combat.Feel
 
             if (roaring)
             {
-                target = CharacterAnimatorParameters.RoarState;
+                target = _flourishState;
                 _animator.SetFloat(AttackTimeParam, 1f - _flourishRemaining / Mathf.Max(0.01f, _flourishLength));
             }
 
@@ -273,17 +273,35 @@ namespace AdaptiveBossArena.Combat.Feel
         /// across the time given, however long the clip is. A fighter without one keeps whatever it was doing.
         /// </remarks>
         /// <param name="seconds">How long to roar.</param>
-        public void Flourish(float seconds)
+        public void Flourish(float seconds) => Gesture(CharacterAnimatorParameters.RoarState, seconds);
+
+        /// <summary>
+        /// Plays a whole-body gesture once across the time given: the roar, a hop back, a turn on the spot.
+        /// </summary>
+        /// <remarks>
+        /// The footwork between blows is what makes a duellist read as one, and each piece of it is a scrubbed
+        /// state exactly like the roar, timed by the controller that moves the body, so the legs and the travel
+        /// agree however long the clip is. A rig without the state keeps walking, which is what it did before.
+        /// </remarks>
+        /// <param name="state">The scrubbed state to play.</param>
+        /// <param name="seconds">How long it plays for.</param>
+        /// <returns>True when the rig has the state and is playing it.</returns>
+        public bool Gesture(string state, float seconds)
         {
-            if (!HasSkeleton || seconds <= 0f ||
-                !_animator.HasState(0, Animator.StringToHash(CharacterAnimatorParameters.RoarState)))
+            if (!HasSkeleton || seconds <= 0f || string.IsNullOrEmpty(state) ||
+                !_animator.HasState(0, Animator.StringToHash(state)))
             {
-                return;
+                return false;
             }
 
+            _flourishState = state;
             _flourishLength = seconds;
             _flourishRemaining = seconds;
+            return true;
         }
+
+        /// <summary>The gesture playing, the roar unless footwork asked for another.</summary>
+        private string _flourishState = CharacterAnimatorParameters.RoarState;
 
         /// <summary>Seconds of roar left, or zero.</summary>
         private float _flourishRemaining;
