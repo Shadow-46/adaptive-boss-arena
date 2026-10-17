@@ -46,7 +46,8 @@ namespace AdaptiveBossArena.Editor
             Slider master = LabelledSlider(panel.transform, "Master Volume", ref y);
             Slider music = LabelledSlider(panel.transform, "Music Volume", ref y);
             Slider effects = LabelledSlider(panel.transform, "Effects Volume", ref y);
-            Slider shake = LabelledSlider(panel.transform, "Screen Shake", ref y);
+            // One slider for both kinds of physical feedback: camera shake and controller vibration.
+            Slider shake = LabelledSlider(panel.transform, "Shake & Vibration", ref y);
             Toggle reducedFlashing = LabelledToggle(panel.transform, "Reduced Flashing", ref y);
             Toggle extendedTell = LabelledToggle(panel.transform, "Longer Boss Tells", ref y);
 

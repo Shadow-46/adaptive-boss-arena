@@ -76,6 +76,15 @@ namespace AdaptiveBossArena.Game
         private float _punch;
         private float _fovKick;
 
+        /// <summary>The camera's current knock along a blow's direction, in its own frame.</summary>
+        private Vector3 _kick;
+
+        /// <summary>The furthest a kick can throw the camera, in metres, however many blows land at once.</summary>
+        private const float MaxKick = 0.3f;
+
+        /// <summary>How fast a kick springs back, per second.</summary>
+        private const float KickDecayPerSecond = 9f;
+
         private void Awake()
         {
             _shake = new TraumaShake(_decayPerSecond, _frequency);
@@ -99,6 +108,9 @@ namespace AdaptiveBossArena.Game
             _shake.Tick(deltaTime);
             _punch = Mathf.Max(0f, _punch - _punchDecayPerSecond * deltaTime);
 
+            // Springs back proportionally, so a big knock snaps home fast and a small one settles gently.
+            _kick = Vector3.MoveTowards(_kick, Vector3.zero, KickDecayPerSecond * (_kick.magnitude + 0.05f) * deltaTime);
+
             // The field-of-view kick springs back toward zero from either side — faster when large,
             // with a floor so it settles exactly at rest rather than asymptotically hovering off it.
             _fovKick = Mathf.MoveTowards(
@@ -109,7 +121,7 @@ namespace AdaptiveBossArena.Game
                 _camera.fieldOfView = _baseFieldOfView + _fovKick * _userIntensity;
             }
 
-            if (!_shake.IsShaking && _punch <= 0f)
+            if (!_shake.IsShaking && _punch <= 0f && _kick == Vector3.zero)
             {
                 // Snapping back rather than easing avoids leaving a permanent sub-pixel offset that
                 // accumulates across a long fight.
@@ -135,7 +147,8 @@ namespace AdaptiveBossArena.Game
             // accessibility slider quiets both.
             float punch = _punch * _userIntensity;
 
-            transform.localPosition = _restLocalPosition + new Vector3(translation.x, translation.y, punch);
+            transform.localPosition =
+                _restLocalPosition + new Vector3(translation.x, translation.y, punch) + _kick * _userIntensity;
             transform.localRotation = Quaternion.Euler(0f, 0f, rollDegrees);
         }
 
@@ -175,11 +188,35 @@ namespace AdaptiveBossArena.Game
         }
 
         /// <inheritdoc />
+        public void Kick(Vector3 worldDirection, float amount)
+        {
+            if (_userIntensity <= 0f || amount <= 0f)
+            {
+                return;
+            }
+
+            // Into the camera's own frame and flattened onto its view plane: a kick throws the picture sideways
+            // or up and down, never toward the lens, which the punch already owns.
+            Vector3 local = transform.parent != null
+                ? transform.parent.InverseTransformDirection(worldDirection)
+                : worldDirection;
+            local.z = 0f;
+
+            if (local.sqrMagnitude < Mathf.Epsilon)
+            {
+                return;
+            }
+
+            _kick = Vector3.ClampMagnitude(_kick + local.normalized * amount, MaxKick);
+        }
+
+        /// <inheritdoc />
         public void ClearTrauma()
         {
             _shake.Reset();
             _punch = 0f;
             _fovKick = 0f;
+            _kick = Vector3.zero;
 
             if (_camera != null)
             {

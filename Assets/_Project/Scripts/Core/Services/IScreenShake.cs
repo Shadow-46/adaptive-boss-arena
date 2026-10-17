@@ -43,6 +43,18 @@ namespace AdaptiveBossArena.Core.Services
         void PunchFov(float degrees);
 
         /// <summary>
+        /// Knocks the camera a short way along a blow's direction, then springs it back.
+        /// </summary>
+        /// <remarks>
+        /// Shake says something happened; a kick says which way it went. A heavy cut that throws the frame
+        /// the way the blade travelled is most of what makes a hit feel like it carried weight. Rides the
+        /// same accessibility intensity as the rest of camera motion.
+        /// </remarks>
+        /// <param name="worldDirection">The way the blow travelled, in world space.</param>
+        /// <param name="amount">Strength, in metres of camera travel at full intensity.</param>
+        void Kick(UnityEngine.Vector3 worldDirection, float amount);
+
+        /// <summary>
         /// Scales all shake and punch, for the accessibility setting.
         /// </summary>
         /// <remarks>

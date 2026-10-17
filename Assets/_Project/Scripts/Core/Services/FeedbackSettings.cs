@@ -37,5 +37,14 @@ namespace AdaptiveBossArena.Core.Services
         /// the setting is invisible until deliberately changed.
         /// </remarks>
         public static float TellHoldMultiplier { get; set; } = 1f;
+
+        /// <summary>
+        /// Scale on controller vibration, zero (off) to one.
+        /// </summary>
+        /// <remarks>
+        /// Follows the shake slider: both are physical feedback on the same blows, and a player who needs the
+        /// camera still usually wants the hands still too. One setting, honoured in two places.
+        /// </remarks>
+        public static float VibrationIntensity { get; set; } = 1f;
     }
 }

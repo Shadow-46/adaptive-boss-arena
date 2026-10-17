@@ -445,6 +445,8 @@ namespace AdaptiveBossArena.UI
 
         private void ApplyShake()
         {
+            FeedbackSettings.VibrationIntensity = Mathf.Clamp01(_settings.ScreenShakeIntensity);
+
             if (ServiceRegistry.Current.TryGet(out IScreenShake shake))
             {
                 shake.SetUserIntensity(_settings.ScreenShakeIntensity);

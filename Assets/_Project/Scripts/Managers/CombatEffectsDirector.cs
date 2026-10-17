@@ -125,6 +125,9 @@ namespace AdaptiveBossArena.Game
             _bursts = gameObject.AddComponent<ImpactBurstPool>();
             _bursts.Construct(_impactMaterial, _matterMaterial);
 
+            // The controller's share of the same beats, added here because it listens to the same bus.
+            gameObject.AddComponent<RumbleDirector>();
+
             if (_bloodMaterial != null)
             {
                 _blood = new GameObject("BloodDecals").AddComponent<BloodDecalPool>();
@@ -216,6 +219,10 @@ namespace AdaptiveBossArena.Game
                     _blood?.Place(combatEvent.Position, combatEvent.Direction,
                         flavour == ImpactFlavour.Heavy ? HeavyBloodSize : LightBloodSize);
 
+                    // The frame is thrown the way the blade travelled: hardest when the knight is the one struck,
+                    // a firm nudge on a heavy that lands, a flick on a light one.
+                    _shake?.Kick(combatEvent.Direction, KickFor(combatEvent.Actor, flavour));
+
                     // A heavy blow draws the view in as well as shaking it - weight felt, not only seen - and on
                     // High the colour fringes for an instant, the deflect's pulse at a lower pitch.
                     if (flavour == ImpactFlavour.Heavy)
@@ -285,6 +292,24 @@ namespace AdaptiveBossArena.Game
         /// <returns>The burst's position.</returns>
         public static Vector3 BurstPosition(Vector3 reported) =>
             reported.y < FeetHeight ? reported + Vector3.up * ImpactHeight : reported;
+
+        /// <summary>How far a landed blow knocks the camera, in metres.</summary>
+        /// <param name="attacker">Who struck.</param>
+        /// <param name="flavour">How heavy the blow was.</param>
+        /// <returns>The kick's strength.</returns>
+        public static float KickFor(CombatantTeam attacker, ImpactFlavour flavour) =>
+            attacker != CombatantTeam.Player ? BlowTakenKick
+            : flavour == ImpactFlavour.Heavy ? HeavyBlowLandedKick
+            : LightBlowLandedKick;
+
+        /// <summary>Camera knock when the knight is struck: the biggest, because it is the blow that matters most.</summary>
+        private const float BlowTakenKick = 0.16f;
+
+        /// <summary>Camera knock when the knight lands a heavy blow.</summary>
+        private const float HeavyBlowLandedKick = 0.09f;
+
+        /// <summary>Camera knock when the knight lands a light blow: just enough to feel the contact.</summary>
+        private const float LightBlowLandedKick = 0.035f;
 
         /// <summary>Heavier attacks throw a bigger, slower burst so weight is visible as well as audible.</summary>
         private static ImpactFlavour FlavourFor(DamageType damageType)
