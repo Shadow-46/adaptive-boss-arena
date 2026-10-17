@@ -224,7 +224,11 @@ namespace AdaptiveBossArena.Combat.Feel
 
             // Counted on game time, so a hit-stop holds the roar with everything else.
             _flourishRemaining = Mathf.Max(0f, _flourishRemaining - Time.deltaTime);
-            bool roaring = !attacking && _flourishRemaining > 0f && CanRoarOver(state);
+            // The kneel is the one gesture that plays over a stagger: it is how the beaten body is staggered.
+            bool roaring = !attacking && _flourishRemaining > 0f &&
+                           (CanRoarOver(state) ||
+                            (state == ObservableActionState.Staggered &&
+                             _flourishState == CharacterAnimatorParameters.KneelState));
 
             if (roaring)
             {

@@ -223,6 +223,25 @@ namespace AdaptiveBossArena.AI
         /// <summary>Seconds of phase-transition invulnerability remaining. For debug tooling.</summary>
         public float PhaseTransitionInvulnRemaining => _phaseTransitionInvulnRemaining;
 
+        /// <summary>
+        /// True while the boss is down on one knee after the blow that should have killed him, waiting for the
+        /// knight's last one.
+        /// </summary>
+        public bool AwaitingFinalBlow => _awaitingFinalBlow;
+
+        /// <summary>How long he kneels for the last blow before he falls on his own.</summary>
+        /// <remarks>
+        /// Long enough to walk in from anywhere near and press attack; short enough that a player who does not
+        /// know the finisher is coming is never left wondering why the fight has not ended.
+        /// </remarks>
+        public const float FinalKneelSeconds = 4f;
+
+        /// <summary>The health the kneel leaves him, so the last blow is the one that kills.</summary>
+        private const float FinalBlowHealthFloor = 1f;
+
+        private bool _awaitingFinalBlow;
+        private float _finalBlowRemaining;
+
         private void Awake()
         {
             _characterController = GetComponent<CharacterController>();
@@ -456,6 +475,7 @@ namespace AdaptiveBossArena.AI
             }
 
             _phaseTransitionInvulnRemaining = Mathf.Max(0f, _phaseTransitionInvulnRemaining - deltaTime);
+            TickFinalBlow(deltaTime);
             _context.OverbalanceSeconds = Mathf.Max(0f, _context.OverbalanceSeconds - deltaTime);
 
             // The boss's only window onto the player, refreshed once per frame and served back
@@ -605,6 +625,13 @@ namespace AdaptiveBossArena.AI
                 return DamageResult.NoDamage(DamageOutcome.Invulnerable);
             }
 
+            // The killing blow is always an execution. A blow that would end a standing boss brings him to
+            // his knee instead, broken; the knight's next blow - the riposte the broken guard offers - ends it.
+            if (!_awaitingFinalBlow && !_poise.IsBroken && damage.Amount >= _health.Current)
+            {
+                return KneelForFinalBlow(damage);
+            }
+
             float applied = _health.Reduce(damage.Amount, damage);
             _hitFlash?.Play();
             _animator?.Recoil(damage.HitDirection);
@@ -621,6 +648,60 @@ namespace AdaptiveBossArena.AI
             ApplyKnockback(damage);
 
             return DamageResult.Applied(applied, !_health.IsAlive);
+        }
+
+        /// <summary>
+        /// Takes the blow that should have killed a standing boss, and brings him to his knee instead.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The big action games end their bosses on a finisher, not on a health bar reaching zero: the beaten
+        /// body drops, the prompt comes up, and the player delivers the last blow in a slowed, framed moment.
+        /// The execution was already here - a riposte on a broken guard, with the finisher camera and the
+        /// deepest slow-motion - but most fights ended on an ordinary hit and never showed it.
+        /// </para>
+        /// <para>
+        /// So the blow is taken down to one point of health, the stance is broken for the length of the kneel,
+        /// and the riposte the broken guard offers is the end. It is nothing the boss does: he is beaten, and
+        /// cannot act until the kneel ends, at which point he falls on his own.
+        /// </para>
+        /// </remarks>
+        private DamageResult KneelForFinalBlow(in DamageInfo damage)
+        {
+            float applied = _health.Reduce(Mathf.Max(0f, _health.Current - FinalBlowHealthFloor), damage);
+            _hitFlash?.Play();
+            _animator?.Recoil(damage.HitDirection);
+
+            _awaitingFinalBlow = true;
+            _finalBlowRemaining = FinalKneelSeconds;
+            _poise.ForceBreak(FinalKneelSeconds);
+            _context.Attacks.Cancel();
+            _context.RequestStagger(FinalKneelSeconds, StaggerReason.PoiseBreak);
+            _context.RequestGesture(CharacterAnimatorParameters.KneelState, FinalKneelSeconds);
+
+            return DamageResult.Applied(applied, false);
+        }
+
+        /// <summary>Counts down the kneel; unanswered, the boss falls on his own.</summary>
+        private void TickFinalBlow(float deltaTime)
+        {
+            if (!_awaitingFinalBlow || !_health.IsAlive)
+            {
+                return;
+            }
+
+            _finalBlowRemaining -= deltaTime;
+
+            if (_finalBlowRemaining > 0f)
+            {
+                return;
+            }
+
+            // Credited to the knight: it was their blow that beat him, the kneel only held the moment open.
+            _awaitingFinalBlow = false;
+            _health.Reduce(
+                _health.Current,
+                DamageInfo.Create(_health.Current, DamageType.Heavy, CombatantTeam.Player, 0));
         }
 
         /// <summary>Pushes the boss along a blow, by as much as its stance lets through.</summary>
@@ -737,6 +818,8 @@ namespace AdaptiveBossArena.AI
             _parryThisSwing = false;
             _context.PendingAttack = null;
             _context.RecentMoves.Clear();
+            _awaitingFinalBlow = false;
+            _finalBlowRemaining = 0f;
             _context.Attacks.Cancel();
             _context.Motor.Teleport(spawnPosition);
             _adaptation.Reset();

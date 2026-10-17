@@ -41,7 +41,10 @@ namespace AdaptiveBossArena.Editor.Art
             "HopBack", "Turn",
 
             // The blood rite, gathered and driven into the floor, and the hilt punched into a crowding knight.
-            "Rite", "Pommel"
+            "Rite", "Pommel",
+
+            // Down on one knee at the end, beaten, waiting for the knight's last blow.
+            "Kneel"
         };
 
         private const string Mixamo = LicensedArtPostprocessor.MixamoFolder;
@@ -209,7 +212,8 @@ namespace AdaptiveBossArena.Editor.Art
                 ["Turn"] = "great sword 180 turn",
                 // The rite: the blade raised and gathered, then driven down. The pommel: a short punch of the hilt.
                 ["Rite"] = "great sword casting",
-                ["Pommel"] = "Standing Melee Punch"
+                ["Pommel"] = "Standing Melee Punch",
+                ["Kneel"] = "Kneeling Idle"
             },
             // walk (2) steps back; strafe (2) and (4) step right, strafe and (3) left.
             new[]
@@ -286,7 +290,8 @@ namespace AdaptiveBossArena.Editor.Art
                 ["Turn"] = "great sword 180 turn",
                 // The rite: the blade raised and gathered, then driven down. The pommel: a short punch of the hilt.
                 ["Rite"] = "great sword casting",
-                ["Pommel"] = "Standing Melee Punch"
+                ["Pommel"] = "Standing Melee Punch",
+                ["Kneel"] = "Kneeling Idle"
             },
             new[]
             {
@@ -352,7 +357,8 @@ namespace AdaptiveBossArena.Editor.Art
                 ["Turn"] = "great sword 180 turn",
                 // The rite: the blade raised and gathered, then driven down. The pommel: a short punch of the hilt.
                 ["Rite"] = "great sword casting",
-                ["Pommel"] = "Standing Melee Punch"
+                ["Pommel"] = "Standing Melee Punch",
+                ["Kneel"] = "Kneeling Idle"
             },
             dropsWeapon: true);
 

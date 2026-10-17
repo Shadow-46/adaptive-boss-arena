@@ -58,6 +58,9 @@ namespace AdaptiveBossArena.Combat.Feel
         /// <summary>A turn on the spot, for the knight who has got behind him.</summary>
         public const string TurnState = "Turn";
 
+        /// <summary>Down on one knee, beaten, waiting for the last blow.</summary>
+        public const string KneelState = "Kneel";
+
         /// <summary>
         /// Suffix of each attack state's identical twin, which a repeated swing blends into.
         /// </summary>

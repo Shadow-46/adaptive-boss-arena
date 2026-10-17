@@ -121,6 +121,34 @@ namespace AdaptiveBossArena.Combat.Vitals
             }
         }
 
+        /// <summary>
+        /// Breaks the stance outright for a set time, whatever is left of it.
+        /// </summary>
+        /// <remarks>
+        /// For the moments the fight itself decides the guard is gone rather than a blow wearing it down: the
+        /// boss brought to his knee by the blow that should have killed him, waiting for the last one.
+        /// </remarks>
+        /// <param name="seconds">How long the break lasts.</param>
+        public void ForceBreak(float seconds)
+        {
+            if (seconds <= 0f)
+            {
+                return;
+            }
+
+            bool wasBroken = IsBroken;
+            float previous = _current;
+            _current = 0f;
+            _brokenFor = Mathf.Max(_brokenFor, seconds);
+
+            Changed?.Invoke(ResourceChangedArgs.Create(previous, _current, _maximum));
+
+            if (!wasBroken)
+            {
+                Broken?.Invoke();
+            }
+        }
+
         /// <summary>Restores full poise and clears any break, for use when a fight restarts.</summary>
         public void ResetToFull()
         {

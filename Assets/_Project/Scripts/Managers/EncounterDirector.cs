@@ -190,6 +190,28 @@ namespace AdaptiveBossArena.Game
         [Tooltip("Shown while the boss kneels within reach. Assigned by the interface generator.")]
         private GameObject _ripostePrompt;
 
+        /// <summary>The prompt's words for an ordinary riposte, as the HUD builder wrote them.</summary>
+        private const string RipostePrompt = "RIPOSTE";
+
+        /// <summary>The prompt's words when the riposte is the blow that ends the fight.</summary>
+        private const string FinalBlowPrompt = "EXECUTE";
+
+        private UnityEngine.UI.Text _ripostePromptText;
+
+        /// <summary>Sets the prompt's words, only when they change.</summary>
+        private void SetPromptText(string words)
+        {
+            if (_ripostePromptText == null)
+            {
+                _ripostePromptText = _ripostePrompt.GetComponentInChildren<UnityEngine.UI.Text>(true);
+            }
+
+            if (_ripostePromptText != null && _ripostePromptText.text != words)
+            {
+                _ripostePromptText.text = words;
+            }
+        }
+
         private void Start()
         {
             ServiceRegistry.Current.TryGet(out _time);
@@ -234,6 +256,12 @@ namespace AdaptiveBossArena.Game
             if (_ripostePrompt != null && _ripostePrompt.activeSelf != _player.RiposteOffered)
             {
                 _ripostePrompt.SetActive(_player.RiposteOffered);
+            }
+
+            // On his knee at the end, the same offer is the last blow, and it is named for what it is.
+            if (_ripostePrompt != null && _ripostePrompt.activeSelf)
+            {
+                SetPromptText(_boss.AwaitingFinalBlow ? FinalBlowPrompt : RipostePrompt);
             }
 
             // The camera is the only thing that knows whether the player asked to lock on.
