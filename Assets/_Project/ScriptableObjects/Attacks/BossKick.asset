@@ -47,6 +47,8 @@ MonoBehaviour:
   _showTelegraph: 0
   _comboWindowStart: 0.1
   _comboWindowEnd: 0.85
-  _followUps: []
+  _followUps:
+  - {fileID: 11400000, guid: 2ffac267f222c6747b5a9093aa942059, type: 2}
+  - {fileID: 11400000, guid: 2dabd91a87aa93a4b84e8ac31ab32081, type: 2}
   _strikers: 8
   _answers: 9

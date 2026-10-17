@@ -46,6 +46,8 @@ MonoBehaviour:
     - {fileID: 11400000, guid: 2ffac267f222c6747b5a9093aa942059, type: 2}
     - {fileID: 11400000, guid: 126f8a091d25e214590b283ab2bcce93, type: 2}
     - {fileID: 11400000, guid: 8f337d6a7fb31bb4ca3ad885ceeed93a, type: 2}
+    - {fileID: 11400000, guid: 2dabd91a87aa93a4b84e8ac31ab32081, type: 2}
+    - {fileID: 11400000, guid: b6368b928fe20374fa4a33bc3cf30226, type: 2}
     _signatureAttack: {fileID: 11400000, guid: 9a2b3bde94dd7424783e41b43ef210e0, type: 2}
     _moveSpeedMultiplier: 1
     _attackCooldownSeconds: 1.15
@@ -62,6 +64,8 @@ MonoBehaviour:
     - {fileID: 11400000, guid: a2f4db4a340166947994341b802d5a33, type: 2}
     - {fileID: 11400000, guid: 8f337d6a7fb31bb4ca3ad885ceeed93a, type: 2}
     - {fileID: 11400000, guid: 2dabd91a87aa93a4b84e8ac31ab32081, type: 2}
+    - {fileID: 11400000, guid: b6368b928fe20374fa4a33bc3cf30226, type: 2}
+    - {fileID: 11400000, guid: 60a63dc986375024c9b1c32e4247c407, type: 2}
     _signatureAttack: {fileID: 11400000, guid: 5c47ed3ac6dcb0648801a9e6e503bc50, type: 2}
     _moveSpeedMultiplier: 1.15
     _attackCooldownSeconds: 0.85
@@ -82,6 +86,8 @@ MonoBehaviour:
     - {fileID: 11400000, guid: a1128dd1475eb5a4993c2f2db26ddc4a, type: 2}
     - {fileID: 11400000, guid: 2dabd91a87aa93a4b84e8ac31ab32081, type: 2}
     - {fileID: 11400000, guid: 5106b539c15b48e43b661f9d557ed432, type: 2}
+    - {fileID: 11400000, guid: b6368b928fe20374fa4a33bc3cf30226, type: 2}
+    - {fileID: 11400000, guid: 60a63dc986375024c9b1c32e4247c407, type: 2}
     _signatureAttack: {fileID: 11400000, guid: a85d1e6c062cdc148afac1575b1b5abb, type: 2}
     _moveSpeedMultiplier: 1.3
     _attackCooldownSeconds: 0.6
@@ -103,6 +109,8 @@ MonoBehaviour:
     - {fileID: 11400000, guid: 2dabd91a87aa93a4b84e8ac31ab32081, type: 2}
     - {fileID: 11400000, guid: 5106b539c15b48e43b661f9d557ed432, type: 2}
     - {fileID: 11400000, guid: 6608e108f6ac25047aa241c56aee51fe, type: 2}
+    - {fileID: 11400000, guid: b6368b928fe20374fa4a33bc3cf30226, type: 2}
+    - {fileID: 11400000, guid: 60a63dc986375024c9b1c32e4247c407, type: 2}
     _signatureAttack: {fileID: 11400000, guid: 6608e108f6ac25047aa241c56aee51fe, type: 2}
     _moveSpeedMultiplier: 1.55
     _attackCooldownSeconds: 0.4

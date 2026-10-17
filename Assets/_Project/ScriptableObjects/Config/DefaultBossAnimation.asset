@@ -81,6 +81,14 @@ MonoBehaviour:
     _state: Edict
     _contactFraction: 0.78723407
     _frenzyContactFraction: 0.78723407
+  - _attack: {fileID: 11400000, guid: 60a63dc986375024c9b1c32e4247c407, type: 2}
+    _state: Rite
+    _contactFraction: 0.4893617
+    _frenzyContactFraction: 0.4893617
+  - _attack: {fileID: 11400000, guid: b6368b928fe20374fa4a33bc3cf30226, type: 2}
+    _state: Pommel
+    _contactFraction: 0.29787233
+    _frenzyContactFraction: 0.29787233
   _clipContactFraction: 0.45
   _idleBobAmplitude: 0.04
   _idleBobFrequency: 1

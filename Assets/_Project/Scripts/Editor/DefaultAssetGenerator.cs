@@ -155,7 +155,9 @@ namespace AdaptiveBossArena.Editor
                 AttackDefinition leap,
                 AttackDefinition thrust,
                 AttackDefinition rebuke,
-                AttackDefinition edict)
+                AttackDefinition edict,
+                AttackDefinition bloodRite,
+                AttackDefinition pommel)
             {
                 Sweep = sweep;
                 Slam = slam;
@@ -172,6 +174,8 @@ namespace AdaptiveBossArena.Editor
                 Thrust = thrust;
                 Rebuke = rebuke;
                 Edict = edict;
+                BloodRite = bloodRite;
+                Pommel = pommel;
             }
 
             public AttackDefinition Sweep { get; }
@@ -213,6 +217,12 @@ namespace AdaptiveBossArena.Editor
 
             /// <summary>The war cry that drives back everything near the knight, the Last Stand's signature.</summary>
             public AttackDefinition Edict { get; }
+
+            /// <summary>The wave of blood sent along the ground, for the knight who keeps just out of reach.</summary>
+            public AttackDefinition BloodRite { get; }
+
+            /// <summary>The hilt punched into a knight who crowds him.</summary>
+            public AttackDefinition Pommel { get; }
         }
 
         private static ReactionProfile CreateReactionProfile()
@@ -291,7 +301,10 @@ namespace AdaptiveBossArena.Editor
             ("BossGrab", "Grab"), ("BossLeapSmash", "Leap"),
 
             // The commander's moves, each on a clip of its own.
-            ("BossThrust", "Thrust"), ("BossRebuke", "Rebuke"), ("BossEdict", "Edict")
+            ("BossThrust", "Thrust"), ("BossRebuke", "Rebuke"), ("BossEdict", "Edict"),
+
+            // The rite is gathered with the blade raised and driven down; the pommel is a short punch of the hilt.
+            ("BossBloodRite", "Rite"), ("BossPommel", "Pommel")
         };
 
         /// <summary>Which parts of the body each attack strikes with.</summary>
@@ -324,7 +337,8 @@ namespace AdaptiveBossArena.Editor
             ("BossKick", StrikerParts.RightFoot),
             ("BossGrab", StrikerParts.RightHand | StrikerParts.LeftHand),
             ("BossLeapSmash", StrikerParts.Body),
-            ("BossThrust", StrikerParts.Weapon), ("BossRebuke", StrikerParts.Weapon)
+            ("BossThrust", StrikerParts.Weapon), ("BossRebuke", StrikerParts.Weapon),
+            ("BossPommel", StrikerParts.RightHand)
         };
 
         /// <summary>The parts an attack strikes with, by asset name; none for one not in the table.</summary>
@@ -373,7 +387,9 @@ namespace AdaptiveBossArena.Editor
             ("BossRebuke", HabitAnswer.Crowding),
             ("BossThrust", HabitAnswer.Retreat),
             ("BossCharge", HabitAnswer.Retreat),
-            ("BossLeapSmash", HabitAnswer.Retreat)
+            ("BossLeapSmash", HabitAnswer.Retreat),
+            ("BossBloodRite", HabitAnswer.Retreat),
+            ("BossPommel", HabitAnswer.Crowding)
         };
 
         private static void AssignAnswers()
@@ -717,9 +733,30 @@ namespace AdaptiveBossArena.Editor
                 shape: AttackShape.Sphere, telegraph: true, unblockable: true, blockedByCover: true,
                 overlayColor: new Color(0.85f, 0.05f, 0.05f, 0.6f), reaction: ImpactReaction.Knockback);
 
+            // Blood Rite: the blade driven into the floor sends a wave of blood along the ground in a narrow line.
+            // The answer to keeping just out of sword reach: it reaches six metres, but only straight ahead, and the
+            // drawn wedge and the long gather say where. A step aside beats it, and the pool it leaves is the cost
+            // of standing in the line.
+            AttackDefinition bloodRite = CreateAttack(
+                "BossBloodRite", "Blood Rite", DamageType.BossProjectile,
+                damage: 16f, startup: 0.9f, active: 0.22f, recovery: 0.75f,
+                range: 6f, arc: 34f, poise: 30f, knockback: 6f, hitStop: 0.09f, trauma: 0.42f,
+                stagger: StaggerStrength.Interrupt, telegraph: true,
+                overlayColor: new Color(0.75f, 0.04f, 0.04f, 0.55f),
+                leavesHazard: true, hazardRadius: 1.3f, hazardOffset: 4f, hazardDamagePerTick: 3f,
+                hazardDuration: 3f, reaction: ImpactReaction.Knockdown);
+
+            // Pommel Strike: the hilt punched into a knight who stands in his face. Quick, short and light on
+            // damage, it costs stance more than health, so crowding him stops being free without becoming lethal.
+            AttackDefinition pommel = CreateAttack(
+                "BossPommel", "Pommel Strike", DamageType.BossMelee,
+                damage: 7f, startup: 0.36f, active: 0.08f, recovery: 0.4f,
+                range: 2.2f, arc: 60f, poise: 24f, knockback: 4f, hitStop: 0.06f, trauma: 0.22f,
+                telegraph: false, reaction: ImpactReaction.Knockback);
+
             return new BossAttacks(
                 sweep, slam, charge, shockwave, jab, perilous, phaseShockwave,
-                delayedOverhead, spin, kick, grab, leap, thrust, rebuke, edict);
+                delayedOverhead, spin, kick, grab, leap, thrust, rebuke, edict, bloodRite, pommel);
         }
 
         /// <summary>
@@ -733,9 +770,18 @@ namespace AdaptiveBossArena.Editor
         /// </remarks>
         private static void AssignFollowUps(BossAttacks attacks)
         {
-            WriteFollowUps(attacks.Sweep, attacks.Thrust, attacks.Jab);
+            WriteFollowUps(attacks.Sweep, attacks.Thrust, attacks.Jab, attacks.Pommel);
             WriteFollowUps(attacks.Thrust, attacks.Rebuke, attacks.Spin);
-            WriteFollowUps(attacks.Jab, attacks.Sweep, attacks.Thrust);
+            WriteFollowUps(attacks.Jab, attacks.Sweep, attacks.Thrust, attacks.Kick);
+
+            // The boot opens a guard for the heavy blow or the thrust; the hilt for the sweep or the boot; the spin
+            // closes on the quick cut; the rebuke throws the knight off and the thrust or the sweep follows them;
+            // the charge carries into a cut. Every drill is a string of different blows.
+            WriteFollowUps(attacks.Kick, attacks.DelayedOverhead, attacks.Thrust);
+            WriteFollowUps(attacks.Pommel, attacks.Sweep, attacks.Kick);
+            WriteFollowUps(attacks.Spin, attacks.Jab, attacks.Pommel);
+            WriteFollowUps(attacks.Rebuke, attacks.Thrust, attacks.Sweep);
+            WriteFollowUps(attacks.Charge, attacks.Spin, attacks.Sweep);
         }
 
         private static void WriteFollowUps(AttackDefinition attack, params AttackDefinition[] followUps)
@@ -1458,15 +1504,18 @@ namespace AdaptiveBossArena.Editor
                     moveMultiplier: 1f, cooldown: 1.15f, adaptationRate: 1f,
                     signature: attacks.Slam,
                     // The jab and the boot from the first exchange, for every player: the opening counters need
-                    // something to reach for, and both are quick, plain blows that teach the guard and the roll.
-                    attacks.Sweep, attacks.Slam, attacks.DelayedOverhead, attacks.Jab, attacks.Kick);
+                    // something to reach for, and both are quick, plain blows that teach the guard and the roll. The
+                    // thrust and the hilt widen it, so at every distance more than one blow is his to choose.
+                    attacks.Sweep, attacks.Slam, attacks.DelayedOverhead, attacks.Jab, attacks.Kick, attacks.Thrust,
+                    attacks.Pommel);
 
                 WritePhase(
                     phases.GetArrayElementAtIndex(1), ShouldWriteTuning(created), "Pressing", threshold: 0.66f,
                     moveMultiplier: 1.15f, cooldown: 0.85f, adaptationRate: 1.4f,
                     signature: attacks.Charge,
                     attacks.Sweep, attacks.Slam, attacks.Charge, attacks.Jab, attacks.Perilous,
-                    attacks.DelayedOverhead, attacks.Spin, attacks.Kick, attacks.Thrust);
+                    attacks.DelayedOverhead, attacks.Spin, attacks.Kick, attacks.Thrust, attacks.Pommel,
+                    attacks.BloodRite);
 
                 WritePhase(
                     phases.GetArrayElementAtIndex(2), ShouldWriteTuning(created), "Relentless", threshold: 0.45f,
@@ -1474,7 +1523,7 @@ namespace AdaptiveBossArena.Editor
                     signature: attacks.Shockwave,
                     attacks.Sweep, attacks.Slam, attacks.Charge, attacks.Shockwave, attacks.Jab, attacks.Perilous,
                     attacks.DelayedOverhead, attacks.Spin, attacks.Kick, attacks.Grab, attacks.Leap, attacks.Thrust,
-                    attacks.Rebuke);
+                    attacks.Rebuke, attacks.Pommel, attacks.BloodRite);
 
                 // Last Stand: the desperation phase. It flows through the same escalation beat as the
                 // others — roar, shockwave, invulnerable rear-up — but arrives with the fullest
@@ -1489,7 +1538,7 @@ namespace AdaptiveBossArena.Editor
                     signature: attacks.Edict,
                     attacks.Sweep, attacks.Slam, attacks.Charge, attacks.Shockwave, attacks.Jab, attacks.Perilous,
                     attacks.DelayedOverhead, attacks.Spin, attacks.Kick, attacks.Grab, attacks.Leap, attacks.Thrust,
-                    attacks.Rebuke, attacks.Edict);
+                    attacks.Rebuke, attacks.Edict, attacks.Pommel, attacks.BloodRite);
             }
         }
 

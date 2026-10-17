@@ -38,7 +38,10 @@ namespace AdaptiveBossArena.Editor.Art
 
             // The boss's footwork between blows: a hop back out of a crowding knight's reach, and a turn on the
             // spot for one who has got behind him. Scrubbed like the roar, timed by the code that moves the body.
-            "HopBack", "Turn"
+            "HopBack", "Turn",
+
+            // The blood rite, gathered and driven into the floor, and the hilt punched into a crowding knight.
+            "Rite", "Pommel"
         };
 
         private const string Mixamo = LicensedArtPostprocessor.MixamoFolder;
@@ -48,6 +51,9 @@ namespace AdaptiveBossArena.Editor.Art
         /// nothing of the boss's own is ever shadowed by a name it shares.
         /// </summary>
         private const string BossDodgeBack = Mixamo + "Animations/Knight/Warrok W Kurniawan@Standing Dodge Backward.fbx";
+
+        /// <summary>The knight set's short punch, which the boss throws with his sword hand as a pommel strike.</summary>
+        private const string BossPunch = Mixamo + "Animations/Knight/Warrok W Kurniawan@Standing Melee Punch.fbx";
         private const string QuaterniusLibrary1 = "Assets/_Project/Art/ThirdParty/Quaternius/UniversalAnimationLibrary/UAL1_Standard.fbx";
         private const string QuaterniusLibrary2 = "Assets/_Project/Art/ThirdParty/Quaternius/UniversalAnimationLibrary2/UAL2_Standard.fbx";
 
@@ -142,7 +148,7 @@ namespace AdaptiveBossArena.Editor.Art
             "BruteController",
             LicensedArtPostprocessor.BossBody,
             LicensedArtPostprocessor.BossBodyScale,
-            new[] { Mixamo + "Animations/Boss", Mixamo + "Animations/Shared", QuaterniusLibrary1, BossDodgeBack },
+            new[] { Mixamo + "Animations/Boss", Mixamo + "Animations/Shared", QuaterniusLibrary1, BossDodgeBack, BossPunch },
             new[]
             {
                 (0f, "great sword idle"),
@@ -200,7 +206,10 @@ namespace AdaptiveBossArena.Editor.Art
                 ["Edict"] = "great sword power up",
                 // Footwork: a dodge backwards out of reach, and the great sword turned through half a circle.
                 ["HopBack"] = "Standing Dodge Backward",
-                ["Turn"] = "great sword 180 turn"
+                ["Turn"] = "great sword 180 turn",
+                // The rite: the blade raised and gathered, then driven down. The pommel: a short punch of the hilt.
+                ["Rite"] = "great sword casting",
+                ["Pommel"] = "Standing Melee Punch"
             },
             // walk (2) steps back; strafe (2) and (4) step right, strafe and (3) left.
             new[]
@@ -231,7 +240,7 @@ namespace AdaptiveBossArena.Editor.Art
             "BruteFrenzyController",
             LicensedArtPostprocessor.BossBody,
             LicensedArtPostprocessor.BossBodyScale,
-            new[] { Mixamo + "Animations/Boss", Mixamo + "Animations/Shared", QuaterniusLibrary1, BossDodgeBack },
+            new[] { Mixamo + "Animations/Boss", Mixamo + "Animations/Shared", QuaterniusLibrary1, BossDodgeBack, BossPunch },
             new[]
             {
                 (0f, "great sword idle"),
@@ -274,7 +283,10 @@ namespace AdaptiveBossArena.Editor.Art
                 ["Edict"] = "great sword power up",
                 // Footwork: a dodge backwards out of reach, and the great sword turned through half a circle.
                 ["HopBack"] = "Standing Dodge Backward",
-                ["Turn"] = "great sword 180 turn"
+                ["Turn"] = "great sword 180 turn",
+                // The rite: the blade raised and gathered, then driven down. The pommel: a short punch of the hilt.
+                ["Rite"] = "great sword casting",
+                ["Pommel"] = "Standing Melee Punch"
             },
             new[]
             {
@@ -294,7 +306,7 @@ namespace AdaptiveBossArena.Editor.Art
             "BruteFrenzyController",
             LicensedArtPostprocessor.BossBody,
             LicensedArtPostprocessor.BossBodyScale,
-            new[] { Mixamo + "Animations/Boss", Mixamo + "Animations/Shared", QuaterniusLibrary1, BossDodgeBack },
+            new[] { Mixamo + "Animations/Boss", Mixamo + "Animations/Shared", QuaterniusLibrary1, BossDodgeBack, BossPunch },
             new[]
             {
                 // It never truly stands still in the frenzy: the slowest it gets is the hunched flex.
@@ -337,7 +349,10 @@ namespace AdaptiveBossArena.Editor.Art
                 // Bare-handed, he still hops out of reach, and turns on the spot as the armed form does: the frenzy
                 // must be able to play every state the armed body can.
                 ["HopBack"] = "Standing Dodge Backward",
-                ["Turn"] = "great sword 180 turn"
+                ["Turn"] = "great sword 180 turn",
+                // The rite: the blade raised and gathered, then driven down. The pommel: a short punch of the hilt.
+                ["Rite"] = "great sword casting",
+                ["Pommel"] = "Standing Melee Punch"
             },
             dropsWeapon: true);
 
