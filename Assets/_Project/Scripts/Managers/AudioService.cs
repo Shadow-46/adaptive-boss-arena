@@ -258,6 +258,9 @@ namespace AdaptiveBossArena.Game
 
             /// <summary>Steel biting plate: laid under the boss's blows on the armoured knight.</summary>
             public const string HitArmour = "hit.armour";
+
+            /// <summary>The thunderclap over the arena in the Last Stand.</summary>
+            public const string Thunder = "env.thunder";
         }
 
         /// <summary>
@@ -896,6 +899,7 @@ namespace AdaptiveBossArena.Game
             // The room: wind through the stone, embers in the braziers, something huge shifting far off. It
             // replaced a cathedral recording players found wrong for the arena; a downloaded room still wins.
             _clips[Cues.Ambience] = ScoreGenerator.CreateAmbience(Cues.Ambience);
+            _clips[Cues.Thunder] = ScoreGenerator.CreateThunder(Cues.Thunder);
 
             // Layers under a landed blow: the body's low thump, and plate taking the edge.
             _clips[Cues.HitThump] = ToneGenerator.CreateWeightedImpact(

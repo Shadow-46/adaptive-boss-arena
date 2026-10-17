@@ -46,6 +46,26 @@ namespace AdaptiveBossArena.Game
         private float _baseIntensity;
         private Vector3 _baseScale;
 
+        /// <summary>The extra brightness of a flare, decaying to nothing.</summary>
+        private float _flare;
+
+        /// <summary>How fast a flare dies back, per second.</summary>
+        private float _flareDecay;
+
+        /// <summary>
+        /// Makes the fire flare up and die back, as a gust or a blast through the room would.
+        /// </summary>
+        /// <remarks>
+        /// Every brazier in the arena flares together when the boss turns into his next form: the room answers him.
+        /// </remarks>
+        /// <param name="multiplier">Peak brightness as a multiple of the fire's own, above one.</param>
+        /// <param name="seconds">How long it takes to die back.</param>
+        public void Flare(float multiplier, float seconds)
+        {
+            _flare = Mathf.Max(_flare, multiplier - 1f);
+            _flareDecay = seconds > 0f ? _flare / seconds : _flare;
+        }
+
         /// <summary>Assigns the light and seed. Used by the scene generator.</summary>
         /// <param name="fireLight">The fire's light, or null for a flame alone.</param>
         /// <param name="seed">Where this fire's noise starts.</param>
@@ -68,13 +88,15 @@ namespace AdaptiveBossArena.Game
             float fine = Mathf.PerlinNoise(t * FineOctave, _seed + 17f) * 2f - 1f;
             float waver = Mathf.Lerp(slow, fine, FineShare);
 
+            _flare = Mathf.Max(0f, _flare - _flareDecay * Time.unscaledDeltaTime);
+
             if (_light != null)
             {
-                _light.intensity = _baseIntensity * (1f + waver * LightDepth);
+                _light.intensity = _baseIntensity * (1f + waver * LightDepth) * (1f + _flare);
             }
 
             // Taller as it flares, a touch narrower, the way a flame draws up.
-            float stretch = 1f + waver * FlameDepth;
+            float stretch = (1f + waver * FlameDepth) * (1f + _flare * 0.35f);
             transform.localScale = new Vector3(
                 _baseScale.x / Mathf.Sqrt(stretch), _baseScale.y * stretch, _baseScale.z / Mathf.Sqrt(stretch));
         }

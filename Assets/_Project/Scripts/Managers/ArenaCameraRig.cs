@@ -393,6 +393,18 @@ namespace AdaptiveBossArena.Game
                 return;
             }
 
+            // Unscaled, like the finisher, so the phase's slow motion does not hold the cut on screen longer.
+            if (_phaseShotRemaining > 0f && _finisherRemaining <= 0f)
+            {
+                _phaseShotRemaining -= Time.unscaledDeltaTime;
+
+                if (_secondaryTarget != null)
+                {
+                    FramePhaseShot(Time.unscaledDeltaTime);
+                    return;
+                }
+            }
+
             // Unscaled: the finisher plays through its own slow motion, and the cut must not crawl with it.
             if (_finisherRemaining > 0f)
             {
@@ -439,7 +451,48 @@ namespace AdaptiveBossArena.Game
         /// Opens on the boss: a low shot from in front of it, easing back behind the knight as the fight begins.
         /// </summary>
         /// <param name="seconds">How long the whole entrance lasts, blend included.</param>
-        public void PlayEntrance(float seconds) => _entranceRemaining = Mathf.Max(0f, seconds);
+        public void PlayEntrance(float seconds)
+        {
+            _entranceRemaining = Mathf.Max(0f, seconds);
+            _entranceTotal = _entranceRemaining;
+        }
+
+        /// <summary>
+        /// Cuts to the boss for a turn of the fight: low and in front of him as he roars into his next form.
+        /// </summary>
+        /// <remarks>
+        /// Short, and held inside the boss's own transformation, during which he cannot strike: the camera is back
+        /// behind the knight before the phase's shockwave can be read, so the cut costs the player nothing.
+        /// </remarks>
+        /// <param name="seconds">How long to hold the shot.</param>
+        public void PlayPhaseShot(float seconds) => _phaseShotRemaining = Mathf.Max(_phaseShotRemaining, seconds);
+
+        /// <summary>The whole length of the entrance in progress, to place each of its shots.</summary>
+        private float _entranceTotal;
+
+        /// <summary>Seconds of the phase shot left.</summary>
+        private float _phaseShotRemaining;
+
+        /// <summary>The share of an entrance spent on the wide opening sweep before the low shot.</summary>
+        private const float WideShotShare = 0.42f;
+
+        /// <summary>How long an entrance must be to open wide; a quick one goes straight to the low shot.</summary>
+        private const float ShortestWideEntrance = 2f;
+
+        /// <summary>The wide shot's distance from the boss, from the start of the sweep to its end.</summary>
+        private const float WideShotFarDistance = 11f;
+        private const float WideShotNearDistance = 7f;
+
+        /// <summary>The wide shot's height above the floor, falling as it sweeps in.</summary>
+        private const float WideShotHighHeight = 6f;
+        private const float WideShotLowHeight = 3.2f;
+
+        /// <summary>The wide shot's angle off the boss's front, in degrees, swinging round as it sweeps in.</summary>
+        private const float WideShotStartAngle = 75f;
+        private const float WideShotEndAngle = 18f;
+
+        /// <summary>How quickly the phase shot settles: quick enough to read as a cut.</summary>
+        private const float PhaseShotHalfLife = 0.08f;
 
         /// <summary>Stops the entrance now, leaving the camera at its ordinary framing.</summary>
         public void EndEntrance()
@@ -745,6 +798,28 @@ namespace AdaptiveBossArena.Game
                 _config.Radius - WallClearance, out float _);
             Quaternion shotRotation = Quaternion.LookRotation(chest - shotPosition, Vector3.up);
 
+            // A long entrance opens wide: high and far off his flank, sweeping in and down toward the low shot, so
+            // the arena and the size of him are seen before his face is.
+            if (_entranceTotal >= ShortestWideEntrance)
+            {
+                float progress = 1f - Mathf.Clamp01(_entranceRemaining / _entranceTotal);
+                float sweep = Mathf.Clamp01(progress / WideShotShare);
+                float easedSweep = sweep * sweep * (3f - 2f * sweep);
+
+                float angle = Mathf.Lerp(WideShotStartAngle, WideShotEndAngle, easedSweep);
+                Vector3 offAxis = Quaternion.AngleAxis(angle, Vector3.up) * front;
+                Vector3 wide = _secondaryTarget.position + offAxis * Mathf.Lerp(WideShotFarDistance, WideShotNearDistance, easedSweep) +
+                               Vector3.up * Mathf.Lerp(WideShotHighHeight, WideShotLowHeight, easedSweep);
+                wide = ConfineToArena(wide, chest, _config.Radius - WallClearance, out float _);
+                Quaternion wideRotation = Quaternion.LookRotation(chest - wide, Vector3.up);
+
+                // The last stretch of the sweep hands over to the low shot rather than cutting to it.
+                float toLow = Mathf.InverseLerp(WideShotShare - 0.14f, WideShotShare, progress);
+                toLow = toLow * toLow * (3f - 2f * toLow);
+                shotPosition = Vector3.Lerp(wide, shotPosition, toLow);
+                shotRotation = Quaternion.Slerp(wideRotation, shotRotation, toLow);
+            }
+
             // The ordinary framing, computed as a snap would, so the blend lands on it exactly.
             _anchor = _primaryTarget.position;
             Vector3 normalPosition = DesiredPosition();
@@ -781,6 +856,30 @@ namespace AdaptiveBossArena.Game
                 transform.rotation = Quaternion.Slerp(
                     transform.rotation, Quaternion.LookRotation(toMiddle, Vector3.up),
                     DampFactor(FinisherHalfLife, deltaTime));
+            }
+        }
+
+        /// <summary>Holds the boss in frame from low in front of him, as the entrance's low shot does.</summary>
+        private void FramePhaseShot(float deltaTime)
+        {
+            Vector3 chest = _secondaryTarget.position + Vector3.up * EntranceHeight;
+            Vector3 toKnight = _primaryTarget.position - _secondaryTarget.position;
+            toKnight.y = 0f;
+
+            // From the knight's side of him, so the cut back to the ordinary shot is a short move, not a reversal.
+            Vector3 front = toKnight.sqrMagnitude > Mathf.Epsilon ? toKnight.normalized : _secondaryTarget.forward;
+            Vector3 desired = ConfineToArena(
+                chest + front * EntranceDistance - Vector3.up * EntranceLensDrop, chest,
+                _config.Radius - WallClearance, out float _);
+
+            transform.position = MathUtil.Damp(transform.position, desired, PhaseShotHalfLife, deltaTime);
+
+            Vector3 look = chest - transform.position;
+
+            if (look.sqrMagnitude > Mathf.Epsilon)
+            {
+                transform.rotation = Quaternion.Slerp(
+                    transform.rotation, Quaternion.LookRotation(look, Vector3.up), DampFactor(PhaseShotHalfLife, deltaTime));
             }
         }
 

@@ -51,7 +51,75 @@ namespace AdaptiveBossArena.UI
         private static readonly Color FightColor = new Color(0.72f, 0.12f, 0.07f);
 
         /// <summary>How long the boss's name holds on the first attempt, before the fight is released.</summary>
-        private const float TitleSeconds = 2.6f;
+        /// <summary>
+        /// How long the boss's name holds: long enough for the camera's wide sweep and the low shot under it.
+        /// </summary>
+        private const float TitleSeconds = 3.8f;
+
+        /// <summary>Seconds left on a title flashed mid-fight, such as a phase's name.</summary>
+        private float _flashRemaining;
+
+        /// <summary>The whole length of the flash, to fade it across.</summary>
+        private float _flashLength;
+
+        /// <summary>
+        /// Shows a title over the fight for a moment and fades it: a phase's name as the boss turns into it.
+        /// </summary>
+        /// <remarks>
+        /// Uses the banner the ready cue uses, so it reads in the same lettering, and never interrupts an intro in
+        /// progress. Runs on unscaled time, so the phase's slow motion does not hold it on screen.
+        /// </remarks>
+        /// <param name="text">The title.</param>
+        /// <param name="seconds">How long it stays, fade included.</param>
+        public void Flash(string text, float seconds)
+        {
+            if (_isRunning || _label == null || seconds <= 0f)
+            {
+                return;
+            }
+
+            if (_cueFontSize == 0)
+            {
+                _cueFontSize = _label.fontSize;
+                _cuePosition = _label.rectTransform.anchoredPosition;
+            }
+
+            _label.text = text;
+            _label.color = FightColor;
+            _label.fontSize = TitleFontSize;
+            _label.rectTransform.anchoredPosition = TitlePosition;
+
+            if (_panel != null)
+            {
+                _panel.SetActive(true);
+            }
+
+            _flashLength = seconds;
+            _flashRemaining = seconds;
+        }
+
+        /// <summary>Fades a flashed title out over its last half, then puts the banner away.</summary>
+        private void TickFlash()
+        {
+            _flashRemaining -= Time.unscaledDeltaTime;
+
+            if (_group != null)
+            {
+                _group.alpha = Mathf.Clamp01(_flashRemaining / (_flashLength * 0.5f));
+            }
+
+            if (_flashRemaining <= 0f)
+            {
+                _flashRemaining = 0f;
+                Hide();
+
+                if (_label != null && _cueFontSize != 0)
+                {
+                    _label.fontSize = _cueFontSize;
+                    _label.rectTransform.anchoredPosition = _cuePosition;
+                }
+            }
+        }
 
         /// <summary>Size of the boss's name: smaller than the cue, so the widely spaced letters fit the screen.</summary>
         private const int TitleFontSize = 60;
@@ -125,6 +193,11 @@ namespace AdaptiveBossArena.UI
         {
             if (!_isRunning)
             {
+                if (_flashRemaining > 0f)
+                {
+                    TickFlash();
+                }
+
                 return;
             }
 

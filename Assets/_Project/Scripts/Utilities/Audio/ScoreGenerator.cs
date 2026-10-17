@@ -105,6 +105,43 @@ namespace AdaptiveBossArena.Utilities.Audio
         public static AudioClip CreateAmbience(string name, float peak = 0.5f) =>
             Finish(name, RenderAmbience(), peak);
 
+        /// <summary>A thunderclap: the crack of the strike, then a long roll dying away.</summary>
+        /// <param name="name">Clip name.</param>
+        /// <param name="peak">Loudness, zero to one.</param>
+        /// <returns>The one-shot clip.</returns>
+        public static AudioClip CreateThunder(string name, float peak = 0.85f) =>
+            Finish(name, RenderThunder(), peak);
+
+        /// <summary>Renders the thunderclap.</summary>
+        /// <returns>The samples.</returns>
+        public static float[] RenderThunder()
+        {
+            int length = Mathf.RoundToInt(4.5f * ScoreSampleRate);
+            float[] buffer = new float[length];
+            var random = new System.Random(0x7DD7);
+            float roll = 0f;
+
+            for (int i = 0; i < length; i++)
+            {
+                float t = i / (float)ScoreSampleRate;
+                float white = (float)random.NextDouble() * 2f - 1f;
+
+                // The roll: noise smoothed heavily, swelling a moment after the crack and dying over seconds,
+                // with its rumbles bunched the way thunder breaks over hills.
+                roll = Mathf.Lerp(roll, white, 0.02f);
+                float swell = Mathf.Clamp01(t / 0.25f) * Mathf.Exp(-t * 0.9f);
+                float bunching = 0.6f + 0.4f * Mathf.Sin(t * 7.3f) * Mathf.Sin(t * 2.1f + 0.5f);
+
+                // The crack: a bright burst in the first instant.
+                float crack = white * Mathf.Exp(-t * 30f) * 0.9f;
+
+                buffer[i] = roll * 6f * swell * bunching + crack;
+            }
+
+            LowPass(buffer, 2600f, circular: false);
+            return buffer;
+        }
+
         /// <summary>Renders the choir stem.</summary>
         /// <returns>One loop of samples.</returns>
         public static float[] RenderChoir()

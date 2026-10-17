@@ -201,8 +201,84 @@ namespace AdaptiveBossArena.Game
             Apply();
         }
 
+        /// <summary>The phase from which lightning cracks over the arena: the Last Stand.</summary>
+        public const int LightningPhase = 3;
+
+        /// <summary>The shortest and longest wait between strikes, in seconds of fight.</summary>
+        private const float LightningMinimumGap = 5f;
+        private const float LightningMaximumGap = 11f;
+
+        /// <summary>How much brighter the key light flashes at a strike's peak.</summary>
+        private const float LightningBoost = 3.2f;
+
+        /// <summary>How quickly each flash of a strike dies, per second.</summary>
+        private const float LightningDecay = 16f;
+
+        /// <summary>When the strike's second flash comes, after the first: lightning flickers.</summary>
+        private const float LightningRestrikeSeconds = 0.13f;
+
+        /// <summary>The flash's colour: the cold white of lightning, not the room's red.</summary>
+        private static readonly Color LightningColor = new Color(0.82f, 0.88f, 1f);
+
+        private readonly XorShiftRandomProvider _lightningRandom = new XorShiftRandomProvider(0x7A11u);
+        private float _nextStrikeIn = LightningMinimumGap;
+        private float _sinceStrike = float.PositiveInfinity;
+
+        /// <summary>
+        /// Counts down to the next strike in the Last Stand, and plays it: a double flash and a thunderclap.
+        /// </summary>
+        /// <remarks>
+        /// On the fight's clock, so a paused game holds the storm. A player who has asked for reduced flashing
+        /// hears the thunder without the flash.
+        /// </remarks>
+        private void TickLightning()
+        {
+            _sinceStrike += Time.deltaTime;
+
+            if (_targetPhase < LightningPhase)
+            {
+                _nextStrikeIn = LightningMinimumGap * 0.5f;
+                return;
+            }
+
+            _nextStrikeIn -= Time.deltaTime;
+
+            if (_nextStrikeIn > 0f)
+            {
+                return;
+            }
+
+            _nextStrikeIn = _lightningRandom.NextFloat(LightningMinimumGap, LightningMaximumGap);
+            _sinceStrike = 0f;
+
+            if (ServiceRegistry.Current != null && ServiceRegistry.Current.TryGet(out IAudioService audio))
+            {
+                audio.PlayCue2D(AudioService.Cues.Thunder);
+            }
+        }
+
+        /// <summary>The strike's flash now, zero to one: two quick flashes, each dying fast.</summary>
+        /// <param name="sinceStrike">Seconds since the strike.</param>
+        /// <returns>The flash.</returns>
+        public static float LightningFlash(float sinceStrike)
+        {
+            if (sinceStrike < 0f || float.IsInfinity(sinceStrike))
+            {
+                return 0f;
+            }
+
+            float first = Mathf.Exp(-sinceStrike * LightningDecay);
+            float second = sinceStrike >= LightningRestrikeSeconds
+                ? 0.75f * Mathf.Exp(-(sinceStrike - LightningRestrikeSeconds) * LightningDecay)
+                : 0f;
+
+            return Mathf.Clamp01(first + second);
+        }
+
         private void Update()
         {
+            TickLightning();
+
             Profile target = Profiles[Mathf.Clamp(_targetPhase, 0, Profiles.Length - 1)];
             float t = 1f - Mathf.Exp(-Time.unscaledDeltaTime / Mathf.Max(0.0001f, TransitionHalfLife));
 
@@ -295,8 +371,9 @@ namespace AdaptiveBossArena.Game
         {
             if (_directionalLight != null)
             {
-                _directionalLight.color = _lightColor;
-                _directionalLight.intensity = _lightIntensity;
+                float flash = FeedbackSettings.ReducedFlashing ? 0f : LightningFlash(_sinceStrike);
+                _directionalLight.color = Color.Lerp(_lightColor, LightningColor, flash);
+                _directionalLight.intensity = _lightIntensity * (1f + flash * LightningBoost);
             }
 
             // Read every frame rather than on the quality's change event, so a step down mid-fight lifts the room

@@ -369,13 +369,155 @@ namespace AdaptiveBossArena.Game
         /// </remarks>
         private void OnBossPhaseChanged(int phaseIndex)
         {
-            if (phaseIndex <= 0 || _bossTransform == null)
+            bool escalation = phaseIndex > _lastPhase;
+            _lastPhase = phaseIndex;
+
+            if (phaseIndex <= 0 || _bossTransform == null || !escalation)
             {
                 return;
             }
 
             _bursts.Play(
                 _bossTransform.position + Vector3.up * ShockwaveHeight, Vector3.up, ImpactFlavour.PostureBreak);
+
+            PlayPhaseBeat(phaseIndex);
+        }
+
+        /// <summary>The last phase seen, so a reset to the opening is not taken for an escalation.</summary>
+        private int _lastPhase;
+
+        /// <summary>How long the camera holds on the boss as he turns: inside his transformation, never past it.</summary>
+        public const float PhaseShotSeconds = 1.1f;
+
+        /// <summary>The world's speed through the turn, and for how long.</summary>
+        private const float PhaseSlowMotionScale = 0.5f;
+        private const float PhaseSlowMotionSeconds = 0.5f;
+
+        /// <summary>Shake as the room answers the boss.</summary>
+        private const float PhaseTrauma = 0.45f;
+
+        /// <summary>How long the phase's name stays on screen.</summary>
+        private const float PhaseTitleSeconds = 2.4f;
+
+        /// <summary>How bright the braziers flare, as a multiple of their own light, and how fast they settle.</summary>
+        private const float BrazierFlare = 2.6f;
+        private const float BrazierFlareSeconds = 1.8f;
+
+        /// <summary>Stones shaken loose from the vault above, on a web build and on a desktop one.</summary>
+        private const int WebDebrisPieces = 8;
+        private const int DesktopDebrisPieces = 16;
+
+        private ArenaCameraRig _cameraRig;
+        private UI.RoundIntro _intro;
+        private FireFlicker[] _fires;
+        private DebrisPool _debris;
+        private AI.BossController _boss;
+        private readonly XorShiftRandomProvider _debrisRandom = new XorShiftRandomProvider(0xDEB1u);
+
+        /// <summary>
+        /// Plays a turn of the fight as the set piece it is in the big action games.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The camera cuts to the boss as he roars into his next form, the world slows for a breath, the phase's
+        /// name comes up over him, every brazier in the room flares, and stones shake loose from the vault. The
+        /// light's turn toward red was already the arena's; this is the moment it happens in.
+        /// </para>
+        /// <para>
+        /// Fair by construction: the boss is invulnerable and cannot strike through his transformation, and the
+        /// camera is back behind the knight before it ends, so the phase's shockwave is always seen winding up.
+        /// </para>
+        /// </remarks>
+        private void PlayPhaseBeat(int phaseIndex)
+        {
+            ResolvePhaseActors();
+
+            _cameraRig?.PlayPhaseShot(PhaseShotSeconds);
+            _time?.RequestSlowMotion(PhaseSlowMotionScale, PhaseSlowMotionSeconds);
+            _shake?.AddTrauma(PhaseTrauma);
+            _intro?.Flash(PhaseTitle(phaseIndex, _boss != null ? _boss.PhaseNameOf(phaseIndex) : string.Empty),
+                PhaseTitleSeconds);
+
+            if (_fires != null)
+            {
+                foreach (FireFlicker fire in _fires)
+                {
+                    if (fire != null)
+                    {
+                        fire.Flare(BrazierFlare, BrazierFlareSeconds);
+                    }
+                }
+            }
+
+            RainDebris();
+        }
+
+        /// <summary>A phase's title: its numeral and its name, as "II · PRESSING".</summary>
+        /// <param name="phaseIndex">Zero-based phase.</param>
+        /// <param name="name">The phase's name.</param>
+        /// <returns>The title.</returns>
+        public static string PhaseTitle(int phaseIndex, string name)
+        {
+            string[] numerals = { "I", "II", "III", "IV", "V", "VI" };
+            string numeral = phaseIndex >= 0 && phaseIndex < numerals.Length
+                ? numerals[phaseIndex]
+                : (phaseIndex + 1).ToString();
+
+            return string.IsNullOrEmpty(name) ? numeral : $"{numeral} \u00B7 {name.ToUpperInvariant()}";
+        }
+
+        /// <summary>Finds the camera, the banner, the fires, the rubble and the boss once, at the first turn.</summary>
+        private void ResolvePhaseActors()
+        {
+            if (_cameraRig == null)
+            {
+                _cameraRig = FindAnyObjectByType<ArenaCameraRig>();
+            }
+
+            if (_intro == null)
+            {
+                _intro = FindAnyObjectByType<UI.RoundIntro>(FindObjectsInactive.Include);
+            }
+
+            _fires ??= FindObjectsByType<FireFlicker>(FindObjectsSortMode.None);
+
+            if (_debris == null)
+            {
+                _debris = FindAnyObjectByType<DebrisPool>();
+            }
+
+            if (_boss == null)
+            {
+                _boss = FindAnyObjectByType<AI.BossController>();
+            }
+        }
+
+        /// <summary>Shakes stones loose from the vault, to fall around the two of them.</summary>
+        private void RainDebris()
+        {
+            if (_debris == null || _bossTransform == null)
+            {
+                return;
+            }
+
+            int pieces = Application.platform == RuntimePlatform.WebGLPlayer ? WebDebrisPieces : DesktopDebrisPieces;
+            Vector3 centre = _bossTransform.position;
+
+            for (int i = 0; i < pieces; i++)
+            {
+                float angle = _debrisRandom.NextFloat(0f, 360f);
+                float distance = _debrisRandom.NextFloat(2.5f, 8f);
+                Vector3 position = centre + Quaternion.AngleAxis(angle, Vector3.up) * Vector3.forward * distance +
+                                   Vector3.up * _debrisRandom.NextFloat(7f, 10f);
+                float size = _debrisRandom.NextFloat(0.15f, 0.45f);
+
+                _debris.Launch(
+                    position,
+                    Quaternion.Euler(_debrisRandom.NextFloat(0f, 360f), _debrisRandom.NextFloat(0f, 360f), 0f),
+                    new Vector3(size, size * _debrisRandom.NextFloat(0.6f, 1f), size * _debrisRandom.NextFloat(0.6f, 1.2f)),
+                    new Vector3(_debrisRandom.NextFloat(-1f, 1f), -_debrisRandom.NextFloat(1f, 3f), _debrisRandom.NextFloat(-1f, 1f)),
+                    new Vector3(_debrisRandom.NextFloat(-6f, 6f), _debrisRandom.NextFloat(-6f, 6f), _debrisRandom.NextFloat(-6f, 6f)));
+            }
         }
 
         private void OnPerfectDodge()

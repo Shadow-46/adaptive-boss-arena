@@ -207,6 +207,14 @@ namespace AdaptiveBossArena.AI
         /// <summary>Zero-based index of the phase currently in effect.</summary>
         public int PhaseIndex => _context?.PhaseIndex ?? 0;
 
+        /// <summary>A phase's name as configured, for its title as the boss turns into it.</summary>
+        /// <param name="index">Zero-based phase.</param>
+        /// <returns>The name, or empty when there is no such phase.</returns>
+        public string PhaseNameOf(int index) =>
+            _config != null && _config.Phases != null && index >= 0 && index < _config.Phases.Length
+                ? _config.Phases[index].Name ?? string.Empty
+                : string.Empty;
+
         /// <summary>Name of the state the boss currently occupies. For debug tooling.</summary>
         public string CurrentStateName => _machine?.CurrentState?.Name ?? "Uninitialised";
 
