@@ -58,7 +58,8 @@ nothing.
   - 507470 Several low fast swooshes - Danjocross (the great sword's swings)
   - 317849 Whoosh Swipe Fight Sounds Sword Air - benniknop (the knight's sword swings)
   - 471097 Knife/sword swing - spycrah (the knight's sword swings)
-  - 174279 Cathedral Ambience 1 (XY Stereo) - Quistard (the arena's room sound)
+  - 174279 Cathedral Ambience 1 (XY Stereo) - Quistard (kept in the repository; no longer played since the
+    room sound became the generated wind and embers)
 - Source: https://freesound.org/people/<author>/sounds/<id>/
 
 ## Sketchfab - "Igris-Boss (Solo Leveling Arsie)" (the boss)

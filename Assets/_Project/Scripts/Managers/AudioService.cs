@@ -245,6 +245,19 @@ namespace AdaptiveBossArena.Game
             /// pitched far down reads as the same family - the fight turning on a read - but never as a parry.
             /// </remarks>
             public const string BossAdapt = "boss.adapt";
+
+            /// <summary>
+            /// A deep drum under a choir swell, marking a turn of the fight: each phase, and the last blow.
+            /// </summary>
+            public const string MusicStinger = "music.stinger";
+
+            /// <summary>
+            /// The low body thump under a heavy blow, so a great sword landing is felt in the chest as well as heard.
+            /// </summary>
+            public const string HitThump = "hit.thump";
+
+            /// <summary>Steel biting plate: laid under the boss's blows on the armoured knight.</summary>
+            public const string HitArmour = "hit.armour";
         }
 
         /// <summary>
@@ -371,11 +384,45 @@ namespace AdaptiveBossArena.Game
             }
 
             int clamped = Mathf.Clamp(level, 0, IntensityTargets.Length - 1);
+            int recorded = RecordedLayerFor(clamped);
 
             for (int i = 0; i < _musicTargets.Length; i++)
             {
-                _musicTargets[i] = IntensityTargets[clamped][i];
+                // Recorded music is whole tracks, not stems: one plays at a time and the next crossfades in.
+                _musicTargets[i] = recorded >= 0
+                    ? (i == recorded ? 1f : 0f)
+                    : IntensityTargets[clamped][i];
             }
+        }
+
+        /// <summary>
+        /// The recorded track to play at an intensity, or minus one when the score is the written stems.
+        /// </summary>
+        /// <remarks>
+        /// The most intense recording at or below the level, so a calmer track carries the opening and the full
+        /// theme the end; with only one track downloaded, it plays throughout.
+        /// </remarks>
+        private int RecordedLayerFor(int level)
+        {
+            int below = -1;
+            int any = -1;
+
+            for (int i = 0; i < MusicLayerClips.Length; i++)
+            {
+                if (!_synthesised.ContainsKey(MusicLayerClips[i]))
+                {
+                    continue;
+                }
+
+                any = any < 0 ? i : any;
+
+                if (i <= level)
+                {
+                    below = i;
+                }
+            }
+
+            return below >= 0 ? below : any;
         }
 
         /// <inheritdoc />
@@ -597,7 +644,7 @@ namespace AdaptiveBossArena.Game
                     continue;
                 }
 
-                if (!_clips.ContainsKey(replacement.CueId) && replacement.CueId != Cues.Ambience)
+                if (!_clips.ContainsKey(replacement.CueId))
                 {
                     Debug.LogWarning(
                         $"[Adaptive Boss Arena] Audio override names '{replacement.CueId}', which is " +
@@ -838,11 +885,22 @@ namespace AdaptiveBossArena.Game
             _clips[Cues.UiClick] = ToneGenerator.CreateMetallicRing("ui.click", 1320f, 0.12f, 0.4f);
             _clips[Cues.UiHover] = ToneGenerator.CreateMetallicRing("ui.hover", 1760f, 0.07f, 0.22f);
 
-            // Three stacked loops, harmonically related so they layer without dissonance: a low bed,
-            // a fifth above it for tension, and a rhythmic pulse an octave up for the final phase.
-            _clips[MusicLayerClips[0]] = ToneGenerator.CreateDrone(MusicLayerClips[0], 55f);
-            _clips[MusicLayerClips[1]] = ToneGenerator.CreateDrone(MusicLayerClips[1], 82.5f);
-            _clips[MusicLayerClips[2]] = ToneGenerator.CreatePulse(MusicLayerClips[2], 110f, 120f, 8);
+            // The score, written as three stems of the same four bars so they lock together: the choir alone in
+            // the opening, war drums under it as the fight presses, the brass driving over both at the end. It
+            // replaced two sine drones and a beeping pulse that players heard as a hum.
+            _clips[MusicLayerClips[0]] = ScoreGenerator.CreateChoir(MusicLayerClips[0]);
+            _clips[MusicLayerClips[1]] = ScoreGenerator.CreateDrums(MusicLayerClips[1]);
+            _clips[MusicLayerClips[2]] = ScoreGenerator.CreateBrass(MusicLayerClips[2]);
+            _clips[Cues.MusicStinger] = ScoreGenerator.CreateStinger(Cues.MusicStinger);
+
+            // The room: wind through the stone, embers in the braziers, something huge shifting far off. It
+            // replaced a cathedral recording players found wrong for the arena; a downloaded room still wins.
+            _clips[Cues.Ambience] = ScoreGenerator.CreateAmbience(Cues.Ambience);
+
+            // Layers under a landed blow: the body's low thump, and plate taking the edge.
+            _clips[Cues.HitThump] = ToneGenerator.CreateWeightedImpact(
+                Cues.HitThump, bodyHz: 52f, lowPassHz: 380f, durationSeconds: 0.45f, peak: 0.9f, roomAmount: 0.35f);
+            _clips[Cues.HitArmour] = ToneGenerator.CreateMetallicRing(Cues.HitArmour, 690f, 0.35f, 0.55f);
         }
 
         /// <summary>Combines a bus level with the master level.</summary>

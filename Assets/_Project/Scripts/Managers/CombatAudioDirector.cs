@@ -162,7 +162,16 @@ namespace AdaptiveBossArena.Game
         private void OnOverbalance() => _audio?.PlayCue2D(AudioService.Cues.Overbalance);
 
         /// <summary>Tolls as the boss settles on an answer, so the read is heard as well as read.</summary>
-        private void OnAdaptation(string tell) => _audio?.PlayCue2D(AudioService.Cues.BossAdapt);
+        private void OnAdaptation(string tell)
+        {
+            _audio?.PlayCue2D(AudioService.Cues.BossAdapt);
+
+            // And a low growl from Igris himself, the sound of him deciding he has you read.
+            _audio?.PlayCue2D(AudioService.Cues.BossGrunt);
+        }
+
+        /// <summary>How fast the score falls away under a death.</summary>
+        private const float MusicCutSeconds = 0.4f;
 
         /// <summary>Chimes once the instant focus fills, so the player hears the empowered special arm.</summary>
         private void OnFocusChanged(float normalized)
@@ -210,6 +219,19 @@ namespace AdaptiveBossArena.Game
 
                 case CombatEventKind.AttackLanded:
                     _audio.PlayCue(ImpactCueFor(combatEvent.DamageType), combatEvent.Position);
+
+                    // A heavy blow is three sounds at once, as it is in the big action games: the impact, the
+                    // body's low thump under it, and - when the boss's steel finds the knight - plate taking the edge.
+                    if (ImpactCueFor(combatEvent.DamageType) == AudioService.Cues.HitHeavy)
+                    {
+                        _audio.PlayCue(AudioService.Cues.HitThump, combatEvent.Position);
+                    }
+
+                    if (combatEvent.Actor == CombatantTeam.Boss)
+                    {
+                        _audio.PlayCue(AudioService.Cues.HitArmour, combatEvent.Position);
+                    }
+
                     break;
 
                 case CombatEventKind.Blocked:
@@ -236,6 +258,13 @@ namespace AdaptiveBossArena.Game
 
                 case CombatEventKind.PoiseBroken:
                     _audio.PlayCue(AudioService.Cues.PostureBreak, combatEvent.Position);
+
+                    // Igris cries out as his guard goes: the break is heard in him, not only in the steel.
+                    if (combatEvent.Actor == CombatantTeam.Boss)
+                    {
+                        _audio.PlayCue(AudioService.Cues.BossGrunt, combatEvent.Position);
+                    }
+
                     break;
 
                 case CombatEventKind.DodgePerformed:
@@ -272,6 +301,11 @@ namespace AdaptiveBossArena.Game
                     break;
 
                 case CombatEventKind.Defeated:
+                    // The score drops out under the death, so the last blow lands in silence and the stinger tolls
+                    // over it. A reset brings the music back with the opening phase.
+                    _audio.PlayMusic(null, MusicCutSeconds);
+                    _audio.PlayCue2D(AudioService.Cues.MusicStinger);
+
                     // The most important moment in the fight, and it used to happen in silence.
                     _audio.PlayCue(
                         combatEvent.Actor == CombatantTeam.Player
@@ -324,12 +358,15 @@ namespace AdaptiveBossArena.Game
 
         private void OnPhaseChanged(int phaseIndex)
         {
-            // The music thickens with every phase, including the drop back to the bed on a reset.
+            // The music thickens with every phase, including the drop back to the bed on a reset - which is
+            // also what brings it back after a death faded it out.
+            _audio?.PlayMusic("music.bed");
             _audio?.SetMusicIntensity(phaseIndex);
 
             // The opening phase is not an escalation, so it gets no roar.
             if (phaseIndex > 0)
             {
+                _audio?.PlayCue2D(AudioService.Cues.MusicStinger);
                 _audio?.PlayCue2D(AudioService.Cues.BossRoar);
             }
         }

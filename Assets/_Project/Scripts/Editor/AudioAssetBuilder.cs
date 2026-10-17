@@ -29,6 +29,12 @@ namespace AdaptiveBossArena.Editor
         /// <summary>Where the downloaded sounds are kept.</summary>
         public const string SoundFolder = "Assets/_Project/Audio/ThirdParty";
 
+        /// <summary>
+        /// Where licensed downloads that are not committed are kept: music and packs too large for the repository,
+        /// or under a licence that asks for credit. Scanned like the folder above, and git-ignored.
+        /// </summary>
+        public const string LicensedSoundFolder = "Assets/_Project/Art/Licensed/Audio";
+
         private static readonly string[] SoundExtensions = { ".ogg", ".wav", ".mp3", ".aif", ".aiff", ".flac" };
 
         /// <summary>
@@ -66,18 +72,25 @@ namespace AdaptiveBossArena.Editor
             (AudioService.Cues.SwingBlade, @"^(317849|471097)_take\d+$", 1f),
             (AudioService.Cues.Whoosh, @"^(317849|471097)_take\d+$", 1.1f),
             (AudioService.Cues.BossGrunt, @"^(125405|869056)_take\d+$", 0.9f),
-            (AudioService.Cues.Ambience, @"^174279_loop$", 1f)
+
+            // The downloads offered for the sound pass, matched loosely by the words in their file names because
+            // packs name their files their own way. Listed after the cues they replace, so a download wins. The
+            // cathedral loop is gone: players found it wrong for the arena, and the written room replaces it.
+            ("music.layer0", @"(qazijamjam|orchestral.?battle|music.?phase.?1)", 1f),
+            ("music.layer1", @"(determined|pursuit|music.?phase.?2)", 1f),
+            ("music.layer2", @"(colossal|blackmoor|boss.?battle|music.?phase.?3)", 1f),
+            (AudioService.Cues.Ambience, @"^(?!174279)(.*(dungeon|cavern).*|ambience.?arena.*)$", 1f),
+            (AudioService.Cues.Deflect, @"^(?!impact).*clash", 1f),
+            (AudioService.Cues.HitHeavy, @"(meat|flesh|gore|splat)", 0.9f),
+            (AudioService.Cues.BossRoar, @"^(?!\d+__).*(beast|monster).*(roar|growl)", 0.8f)
         };
 
         /// <summary>Every sound file in the downloads folder, by file name without extension.</summary>
         private static List<(string Name, string Path)> Sounds()
         {
-            if (!Directory.Exists(SoundFolder))
-            {
-                return new List<(string, string)>();
-            }
-
-            return Directory.GetFiles(SoundFolder, "*.*", SearchOption.AllDirectories)
+            return new[] { SoundFolder, LicensedSoundFolder }
+                .Where(Directory.Exists)
+                .SelectMany(folder => Directory.GetFiles(folder, "*.*", SearchOption.AllDirectories))
                 .Where(path => SoundExtensions.Contains(Path.GetExtension(path).ToLowerInvariant()))
                 .Select(path => (Path.GetFileNameWithoutExtension(path), path.Replace('\\', '/')))
                 .OrderBy(sound => sound.Item1)
