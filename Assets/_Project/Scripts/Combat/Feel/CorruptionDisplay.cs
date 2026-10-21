@@ -26,25 +26,30 @@ namespace AdaptiveBossArena.Combat.Feel
         private static readonly int EmissionMapId = Shader.PropertyToID("_EmissionMap");
 
         /// <summary>How hot the seams burn in each phase, as a multiple of the opening glow.</summary>
-        private static readonly float[] SeamHeatByPhase = { 1f, 1.5f, 2.2f, 3.2f };
+        /// <remarks>
+        /// The Last Stand was 3.2, with the blade at 2, 32 embers a second and a 2.5 flare on top: under bloom his
+        /// whole body read as a white glare, and the wind-ups the knight must read were lost inside it. Seen in a
+        /// scripted capture of the set pieces; tempered so the cracks still blaze and the body still reads.
+        /// </remarks>
+        private static readonly float[] SeamHeatByPhase = { 1f, 1.5f, 2.2f, 2.4f };
 
         /// <summary>How hot the blade burns in each phase, as a multiple of the ember: cold steel at the start.</summary>
-        private static readonly float[] BladeHeatByPhase = { 0f, 0.5f, 1.2f, 2f };
+        private static readonly float[] BladeHeatByPhase = { 0f, 0.5f, 1.2f, 1.5f };
 
         /// <summary>How fast the glow breathes in each phase, in pulses a second: slow, then labouring.</summary>
         private static readonly float[] BreathRateByPhase = { 0.5f, 0.8f, 1.3f, 2f };
 
         /// <summary>Embers shed off the armour each second in each phase.</summary>
-        private static readonly float[] EmbersPerSecondByPhase = { 0f, 6f, 16f, 32f };
+        private static readonly float[] EmbersPerSecondByPhase = { 0f, 6f, 16f, 20f };
 
         /// <summary>Plumes of heat rising off the armour each second in each phase: none until the fire is loose.</summary>
-        private static readonly float[] HazePerSecondByPhase = { 0f, 0f, 7f, 14f };
+        private static readonly float[] HazePerSecondByPhase = { 0f, 0f, 7f, 9f };
 
         /// <summary>How far the breath swings the glow either side of its level.</summary>
         private const float BreathDepth = 0.18f;
 
         /// <summary>The flare a phase change adds on top, as a multiple of the glow, and how fast it dies.</summary>
-        private const float TransitionFlare = 2.5f;
+        private const float TransitionFlare = 1.8f;
         private const float FlareDecayPerSecond = 1.6f;
 
         /// <summary>Half-life of the glow easing to a new phase's heat.</summary>

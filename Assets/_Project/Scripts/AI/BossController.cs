@@ -1215,6 +1215,14 @@ namespace AdaptiveBossArena.AI
         /// <summary>Escalates the boss when its health crosses a phase threshold.</summary>
         private void UpdatePhase()
         {
+            // A beaten boss does not transform. The blow that brings him to his knee can cross every remaining
+            // threshold at once, and the transformation it started made him invulnerable and roaring over the kneel,
+            // so the last blow was swallowed - found by driving the shipped scene, not by any unit test.
+            if (_awaitingFinalBlow)
+            {
+                return;
+            }
+
             int resolved = _config.ResolvePhaseIndex(_health.Normalized);
 
             if (resolved != _context.PhaseIndex)

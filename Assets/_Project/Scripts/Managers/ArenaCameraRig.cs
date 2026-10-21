@@ -226,6 +226,16 @@ namespace AdaptiveBossArena.Game
         /// <summary>True while the camera is holding the boss in frame.</summary>
         public bool IsLockedOn => _isLockedOn && _secondaryTarget != null;
 
+        /// <summary>
+        /// Locks the view onto the boss or releases it, as the lock-on key does.
+        /// </summary>
+        /// <remarks>
+        /// For an unattended capture: nobody is at the mouse to turn the view, and a real player keeps the boss in
+        /// frame, so the showcase locks on the way a player pressing the key would.
+        /// </remarks>
+        /// <param name="locked">True to lock on.</param>
+        public void SetLockedOn(bool locked) => _isLockedOn = locked;
+
         private void Start()
         {
             if (_config == null)
@@ -445,7 +455,15 @@ namespace AdaptiveBossArena.Game
         /// rather than over the knight's shoulder like every other second of the fight.
         /// </remarks>
         /// <param name="seconds">How long to hold the shot.</param>
-        public void PlayFinisher(float seconds) => _finisherRemaining = Mathf.Max(_finisherRemaining, seconds);
+        public void PlayFinisher(float seconds)
+        {
+            if (_finisherRemaining <= 0f)
+            {
+                _finisherSide = 0f;
+            }
+
+            _finisherRemaining = Mathf.Max(_finisherRemaining, seconds);
+        }
 
         /// <summary>
         /// Opens on the boss: a low shot from in front of it, easing back behind the knight as the fight begins.
@@ -466,6 +484,12 @@ namespace AdaptiveBossArena.Game
         /// </remarks>
         /// <param name="seconds">How long to hold the shot.</param>
         public void PlayPhaseShot(float seconds) => _phaseShotRemaining = Mathf.Max(_phaseShotRemaining, seconds);
+
+        /// <summary>True while the phase change's shot of the boss holds the camera. For tests and debug tooling.</summary>
+        public bool IsPlayingPhaseShot => _phaseShotRemaining > 0f;
+
+        /// <summary>True while the finisher's two-shot holds the camera. For tests and debug tooling.</summary>
+        public bool IsPlayingFinisher => _finisherRemaining > 0f;
 
         /// <summary>The whole length of the entrance in progress, to place each of its shots.</summary>
         private float _entranceTotal;
@@ -493,6 +517,12 @@ namespace AdaptiveBossArena.Game
 
         /// <summary>How quickly the phase shot settles: quick enough to read as a cut.</summary>
         private const float PhaseShotHalfLife = 0.08f;
+
+        /// <summary>How far from the boss the phase shot sits: the whole of him in frame, not his glowing chest.</summary>
+        private const float PhaseShotDistance = 7f;
+
+        /// <summary>How far the phase shot swings off the line to the knight, so the knight does not block it.</summary>
+        private const float PhaseShotSwingDegrees = 40f;
 
         /// <summary>Stops the entrance now, leaving the camera at its ordinary framing.</summary>
         public void EndEntrance()
@@ -619,12 +649,19 @@ namespace AdaptiveBossArena.Game
                 default:
                     Vector3 pivot = _anchor + Vector3.up * Mathf.Lerp(_pivotHeight, DownPivotHeight, _downBlend);
                     Quaternion view = OrbitRotation(OrbitForward(), _orbitPitchDegrees);
-                    Vector3 desired = ShoulderPosition(pivot, view, BoomLength(pivot, view), _shoulderOffset);
+                    float boom = BoomLength(pivot, view);
+                    Vector3 desired = ShoulderPosition(pivot, view, boom, _shoulderOffset);
 
                     // Knockback and wall shoves pin the player against the ring all the time, and the boom
                     // then put the camera outside it, looking at the back of the wall. Kept inside, it rises
                     // for what it lost and looks over the player instead.
-                    Vector3 confined = ConfineToArena(desired, pivot, _config.Radius - WallClearance, out _boomLoss);
+                    Vector3 confined = ConfineToArena(desired, pivot, _config.Radius - WallClearance, out float confineLoss);
+
+                    // The ring's own collider shortens the boom before the confinement ever sees it, so counting only
+                    // the confinement's loss left a knight pinned to the wall with the lens in the back of his head,
+                    // looking at the floor: the rise and the look-over never came. Found in a scripted capture where
+                    // the phase shockwave threw the knight against the wall.
+                    _boomLoss = Mathf.Max(0f, CurrentDistance - boom) + confineLoss;
                     confined.y += _boomLoss * RisePerLostMetre;
 
                     return confined;
@@ -844,7 +881,15 @@ namespace AdaptiveBossArena.Game
                 ? Vector3.Cross(Vector3.up, between.normalized)
                 : Vector3.right;
 
-            Vector3 desired = middle + side * FinisherDistance;
+            // The side is chosen once, on the shot's first frame, and held: the one with the open floor and a clear
+            // line to the pair. Always the same side put the lens in the wall or behind fallen stone whenever the
+            // kill happened against the ring, which is where knockback leaves most kills.
+            if (_finisherSide == 0f)
+            {
+                _finisherSide = ClearerSide(middle, side);
+            }
+
+            Vector3 desired = middle + side * (FinisherDistance * _finisherSide);
             Vector3 confined = ConfineToArena(desired, middle, _config.Radius - WallClearance, out float _);
 
             transform.position = MathUtil.Damp(transform.position, confined, FinisherHalfLife, deltaTime);
@@ -866,10 +911,13 @@ namespace AdaptiveBossArena.Game
             Vector3 toKnight = _primaryTarget.position - _secondaryTarget.position;
             toKnight.y = 0f;
 
-            // From the knight's side of him, so the cut back to the ordinary shot is a short move, not a reversal.
+            // From the knight's side of him, so the cut back to the ordinary shot is a short move, not a reversal - but
+            // swung off the line between them, or the knight stands in the frame between the lens and the boss. Far
+            // enough back that his blazing later forms and the burst at his chest do not fill the lens with white.
             Vector3 front = toKnight.sqrMagnitude > Mathf.Epsilon ? toKnight.normalized : _secondaryTarget.forward;
+            front = Quaternion.AngleAxis(PhaseShotSwingDegrees, Vector3.up) * front;
             Vector3 desired = ConfineToArena(
-                chest + front * EntranceDistance - Vector3.up * EntranceLensDrop, chest,
+                chest + front * PhaseShotDistance - Vector3.up * EntranceLensDrop * 0.5f, chest,
                 _config.Radius - WallClearance, out float _);
 
             transform.position = MathUtil.Damp(transform.position, desired, PhaseShotHalfLife, deltaTime);
@@ -881,6 +929,41 @@ namespace AdaptiveBossArena.Game
                 transform.rotation = Quaternion.Slerp(
                     transform.rotation, Quaternion.LookRotation(look, Vector3.up), DampFactor(PhaseShotHalfLife, deltaTime));
             }
+        }
+
+        /// <summary>Which side of the pair the finishing shot holds: one, minus one, or zero until chosen.</summary>
+        private float _finisherSide;
+
+        /// <summary>
+        /// The side of the pair to film the finisher from: the one whose shot has a clear line to them and stays
+        /// furthest from the ring's wall.
+        /// </summary>
+        private float ClearerSide(Vector3 middle, Vector3 side)
+        {
+            float best = 1f;
+            float bestScore = float.MaxValue;
+
+            foreach (float sign in new[] { 1f, -1f })
+            {
+                Vector3 shot = middle + side * (FinisherDistance * sign);
+                Vector3 toPair = middle - shot;
+
+                // Fallen stone and columns block on the arena layer; a blocked side is a last resort.
+                bool blocked = Physics.SphereCast(
+                    shot, BoomProbeRadius, toPair.normalized, out RaycastHit _, toPair.magnitude,
+                    (1 << Core.Constants.Layers.Arena) | (1 << Core.Constants.Layers.Debris),
+                    QueryTriggerInteraction.Ignore);
+
+                float score = new Vector2(shot.x, shot.z).magnitude + (blocked ? 1000f : 0f);
+
+                if (score < bestScore)
+                {
+                    bestScore = score;
+                    best = sign;
+                }
+            }
+
+            return best;
         }
 
         /// <summary>How far to the side of the pair the finishing shot sits.</summary>
