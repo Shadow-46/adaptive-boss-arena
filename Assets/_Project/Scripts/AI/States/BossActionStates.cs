@@ -47,6 +47,18 @@ namespace AdaptiveBossArena.AI.States
         /// </remarks>
         public const float BaseComboContinueChance = 0.6f;
 
+        /// <summary>How often an opening-phase attack grows a second blow, before learning.</summary>
+        public const float OpeningChainChance = 0.25f;
+
+        /// <summary>The most often the opening phase strings two blows, however hard the boss has learned to press.</summary>
+        public const float OpeningChainCeiling = 0.45f;
+
+        /// <summary>
+        /// The longest wind-up a follow-up may have in the opening phase: only the quick blows follow there, never the
+        /// held overhead, so an opening string is a flurry the knight can read rather than a trap.
+        /// </summary>
+        public const float OpeningFollowUpLongestWindup = 0.5f;
+
         /// <summary>Share of a full cooldown a feint costs, since nothing was committed.</summary>
         private const float FeintCooldownFraction = 0.45f;
 
@@ -275,7 +287,7 @@ namespace AdaptiveBossArena.AI.States
         /// Decides how many extra hits a committed attack strings together.
         /// </summary>
         /// <remarks>
-        /// The opening phase throws single, readable strikes. Each later phase adds one to the ceiling
+        /// The opening phase throws mostly single, readable strikes, now and then a pair. Each later phase adds one to the ceiling
         /// on extra hits, and each additional hit is a fresh coin-flip, so a two-hit string is common
         /// by phase two and a three-hit flurry is a rare, dangerous escalation rather than the norm.
         /// It draws from the same seeded stream as every other boss decision, so a replay is exact —
@@ -289,9 +301,18 @@ namespace AdaptiveBossArena.AI.States
         /// press its combos actually presses them — the behaviour
         /// <see cref="BossTuningParameter.ComboExtensionChance"/> exists to change.
         /// </param>
-        /// <returns>Extra hits to chain, from zero to <paramref name="phaseIndex"/>.</returns>
+        /// <returns>Extra hits to chain: zero or one in the opening phase, otherwise zero to <paramref name="phaseIndex"/>.</returns>
         public static int ComboLength(int phaseIndex, IRandomProvider random, float continueChance)
         {
+            // The opening phase strings two blows now and then - about one attack in four - so its rhythm is not a
+            // metronome of single strikes, but never more than two: it is still where the knight learns to read him.
+            // Learning to press raises the chance by half what it raises the later phases', up to a ceiling.
+            if (phaseIndex <= 0)
+            {
+                float learned = Mathf.Max(0f, continueChance - BaseComboContinueChance) * 0.5f;
+                return random.NextBool(Mathf.Clamp(OpeningChainChance + learned, 0f, OpeningChainCeiling)) ? 1 : 0;
+            }
+
             int maxExtra = Mathf.Max(0, phaseIndex);
             float chance = Mathf.Clamp01(continueChance);
             int extra = 0;
@@ -321,8 +342,13 @@ namespace AdaptiveBossArena.AI.States
                 return;
             }
 
-            AttackDefinition next = PickFollowUp(
-                _lastSwing, context.CurrentPhase.Attacks, context.Random, context.RecentMoves);
+            AttackDefinition[] moveset = context.PhaseIndex <= 0
+                ? System.Array.FindAll(
+                    context.CurrentPhase.Attacks,
+                    attack => attack != null && attack.StartupSeconds <= OpeningFollowUpLongestWindup)
+                : context.CurrentPhase.Attacks;
+
+            AttackDefinition next = PickFollowUp(_lastSwing, moveset, context.Random, context.RecentMoves);
             bool inReach = next != null && context.HasPerceivedPlayer &&
                            context.DistanceToPlayer <= next.EffectiveReach;
 

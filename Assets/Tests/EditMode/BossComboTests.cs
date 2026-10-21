@@ -45,10 +45,42 @@ namespace AdaptiveBossArena.Tests.EditMode
         }
 
         [Test]
-        public void OpeningPhaseNeverChains()
+        public void OpeningPhaseChainsAtMostOnce_AndRarely()
         {
-            // Even with a source that always says "continue", phase zero throws a single strike.
-            Assert.AreEqual(0, BossAttackState.ComboLength(0, new FixedBoolRandom(true), Baseline));
+            // Even with a source that always says "continue", phase zero adds one blow, never two.
+            Assert.AreEqual(1, BossAttackState.ComboLength(0, new FixedBoolRandom(true), Baseline));
+            Assert.AreEqual(0, BossAttackState.ComboLength(0, new FixedBoolRandom(false), Baseline));
+
+            // About one attack in four, untrained.
+            int pairs = 0;
+            const int Seeds = 2000;
+
+            for (uint seed = 1; seed <= Seeds; seed++)
+            {
+                int length = BossAttackState.ComboLength(0, new XorShiftRandomProvider(seed), Baseline);
+                Assert.LessOrEqual(length, 1, $"Seed {seed} chained more than one blow in the opening.");
+                pairs += length;
+            }
+
+            Assert.AreEqual(BossAttackState.OpeningChainChance, pairs / (float)Seeds, 0.05f);
+        }
+
+        [Test]
+        public void ABossThatHasLearnedToPress_PairsMoreOftenInTheOpening_UpToACeiling()
+        {
+            int baseline = 0;
+            int pressing = 0;
+            int pinned = 0;
+
+            for (uint seed = 1; seed <= 2000; seed++)
+            {
+                baseline += BossAttackState.ComboLength(0, new XorShiftRandomProvider(seed), Baseline);
+                pressing += BossAttackState.ComboLength(0, new XorShiftRandomProvider(seed), Baseline + 0.3f);
+                pinned += BossAttackState.ComboLength(0, new XorShiftRandomProvider(seed), 5f);
+            }
+
+            Assert.Greater(pressing, baseline);
+            Assert.LessOrEqual(pinned / 2000f, BossAttackState.OpeningChainCeiling + 0.05f);
         }
 
         [Test]
