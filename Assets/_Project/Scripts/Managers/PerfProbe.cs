@@ -308,6 +308,12 @@ namespace AdaptiveBossArena.Game
             _shotEvery = Mathf.Max(0.02f, request.ShotEverySeconds);
             _shotsIncludeIntro = request.ShotsIncludeIntro;
 
+            // Only a capture that asks for it drives the fight; no ordinary scene ever contains the showcase.
+            if (request.IsRequested && request.Showcase && GetComponent<ShowcaseDirector>() == null)
+            {
+                gameObject.AddComponent<ShowcaseDirector>();
+            }
+
             if (!string.IsNullOrEmpty(_shotFolder))
             {
                 Directory.CreateDirectory(_shotFolder);

@@ -224,6 +224,9 @@ namespace AdaptiveBossArena.Game
         private float _nextStrikeIn = LightningMinimumGap;
         private float _sinceStrike = float.PositiveInfinity;
 
+        /// <summary>How many times lightning has struck since the scene loaded. For tests and debug tooling.</summary>
+        public int StrikeCount { get; private set; }
+
         /// <summary>
         /// Counts down to the next strike in the Last Stand, and plays it: a double flash and a thunderclap.
         /// </summary>
@@ -250,6 +253,7 @@ namespace AdaptiveBossArena.Game
 
             _nextStrikeIn = _lightningRandom.NextFloat(LightningMinimumGap, LightningMaximumGap);
             _sinceStrike = 0f;
+            StrikeCount++;
 
             if (ServiceRegistry.Current != null && ServiceRegistry.Current.TryGet(out IAudioService audio))
             {

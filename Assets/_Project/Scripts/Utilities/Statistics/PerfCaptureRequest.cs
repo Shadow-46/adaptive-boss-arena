@@ -30,6 +30,9 @@ namespace AdaptiveBossArena.Utilities.Statistics
         /// <summary>Starts the frame sequence during the frozen intro rather than once the fight runs.</summary>
         private const string ShotsIntroFlag = "-perfShotsIntro";
 
+        /// <summary>Plays the fight's set pieces on a timetable while capturing: every phase, the kneel, the finisher.</summary>
+        private const string ShowcaseFlag = "-perfShowcase";
+
         /// <summary>Default spacing of a frame sequence: ten frames a second, enough to read a swing's arc.</summary>
         public const float DefaultShotEverySeconds = 0.1f;
         private const string CaptureQueryKey = "perf";
@@ -66,6 +69,15 @@ namespace AdaptiveBossArena.Utilities.Statistics
         /// </remarks>
         public bool ShotsIncludeIntro { get; init; }
 
+        /// <summary>
+        /// Whether the capture walks the boss through his set pieces rather than leaving the knight idle.
+        /// </summary>
+        /// <remarks>
+        /// An idle knight never takes the boss out of his first phase, so the phase changes, the Last Stand and the
+        /// finisher could never be photographed. Opt-in, so ordinary performance captures are unchanged.
+        /// </remarks>
+        public bool Showcase { get; init; }
+
         /// <summary>Whether a capture was requested at all.</summary>
         public bool IsRequested => Seconds > 0f;
 
@@ -82,6 +94,7 @@ namespace AdaptiveBossArena.Utilities.Statistics
             float shotEvery = DefaultShotEverySeconds;
             bool quit = false;
             bool shotsIntro = false;
+            bool showcase = false;
 
             if (arguments != null)
             {
@@ -105,6 +118,10 @@ namespace AdaptiveBossArena.Utilities.Statistics
 
                         case ShotsIntroFlag:
                             shotsIntro = true;
+                            break;
+
+                        case ShowcaseFlag:
+                            showcase = true;
                             break;
 
                         case ShotFlag when !string.IsNullOrEmpty(next):
@@ -135,7 +152,8 @@ namespace AdaptiveBossArena.Utilities.Statistics
                 ShotPath = shotPath,
                 ShotFolder = shotFolder,
                 ShotEverySeconds = shotEvery,
-                ShotsIncludeIntro = shotsIntro
+                ShotsIncludeIntro = shotsIntro,
+                Showcase = showcase
             };
         }
 

@@ -52,6 +52,9 @@ namespace AdaptiveBossArena.Game
         /// <summary>How fast a flare dies back, per second.</summary>
         private float _flareDecay;
 
+        /// <summary>True while the fire is flaring above its own light. For tests and debug tooling.</summary>
+        public bool IsFlaring => _flare > 0f;
+
         /// <summary>
         /// Makes the fire flare up and die back, as a gust or a blast through the room would.
         /// </summary>

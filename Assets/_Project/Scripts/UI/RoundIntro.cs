@@ -62,6 +62,12 @@ namespace AdaptiveBossArena.UI
         /// <summary>The whole length of the flash, to fade it across.</summary>
         private float _flashLength;
 
+        /// <summary>True while a title flashed mid-fight is on screen. For tests and debug tooling.</summary>
+        public bool IsFlashing => _flashRemaining > 0f;
+
+        /// <summary>The banner's words right now. For tests and debug tooling.</summary>
+        public string BannerText => _label != null ? _label.text : string.Empty;
+
         /// <summary>
         /// Shows a title over the fight for a moment and fades it: a phase's name as the boss turns into it.
         /// </summary>

@@ -127,6 +127,16 @@ namespace AdaptiveBossArena.Tests.EditMode
             Assert.IsFalse(request.IsRequested);
             Assert.IsFalse(request.QuitWhenDone);
             Assert.IsNull(request.ShotFolder);
+            Assert.IsFalse(request.Showcase, "An ordinary launch must never drive the fight.");
+        }
+
+        [Test]
+        public void AShowcaseIsAskedForByName_AndOnlyThen()
+        {
+            Assert.IsTrue(PerfCaptureRequest.Read(
+                new[] { "game.exe", "-perfCapture", "45", "-perfShowcase" }, string.Empty).Showcase);
+            Assert.IsFalse(PerfCaptureRequest.Read(
+                new[] { "game.exe", "-perfCapture", "45" }, string.Empty).Showcase);
         }
 
         [Test]

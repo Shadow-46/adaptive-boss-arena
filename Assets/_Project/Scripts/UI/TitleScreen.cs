@@ -56,8 +56,17 @@ namespace AdaptiveBossArena.UI
             // A run launched to measure performance goes straight into the fight. The probe that
             // measures lives in the arena, so a capture left waiting here measured a menu and never
             // wrote its result. An ordinary launch requests nothing and is unaffected.
-            if (PerfCaptureRequest.Read(Environment.GetCommandLineArgs(), Application.absoluteURL).IsRequested)
+            PerfCaptureRequest capture = PerfCaptureRequest.Read(Environment.GetCommandLineArgs(), Application.absoluteURL);
+
+            if (capture.IsRequested)
             {
+                // A showcase takes the boss through every set piece, so the knight must live to see them, and the
+                // run must not be recorded. Set before the arena loads, so the knight is built immortal.
+                if (capture.Showcase)
+                {
+                    Core.Services.RunSettings.Current = new Core.Services.RunModifiers { TrainingMode = true };
+                }
+
                 StartGame();
                 return;
             }
