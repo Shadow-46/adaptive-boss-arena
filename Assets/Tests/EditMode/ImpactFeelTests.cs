@@ -71,6 +71,16 @@ namespace AdaptiveBossArena.Tests.EditMode
         }
 
         [Test]
+        public void AStrengthBar_FillsWithTheStrength_AndNeverReadsEmptyWhileInForce()
+        {
+            Assert.AreEqual("■■■■■", EncounterDirector.StrengthCells(1f));
+            Assert.AreEqual("■■■□□", EncounterDirector.StrengthCells(0.6f));
+            Assert.AreEqual("■□□□□", EncounterDirector.StrengthCells(0.01f));
+            Assert.AreEqual("□□□□□", EncounterDirector.StrengthCells(0f));
+            Assert.AreEqual(EncounterDirector.StrengthCells(1f), EncounterDirector.StrengthCells(3f));
+        }
+
+        [Test]
         public void APhaseTitle_IsItsNumeralAndItsName()
         {
             Assert.AreEqual("II · PRESSING", CombatEffectsDirector.PhaseTitle(1, "Pressing"));

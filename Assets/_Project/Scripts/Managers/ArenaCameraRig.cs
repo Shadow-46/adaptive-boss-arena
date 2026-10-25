@@ -491,6 +491,12 @@ namespace AdaptiveBossArena.Game
         /// <summary>True while the finisher's two-shot holds the camera. For tests and debug tooling.</summary>
         public bool IsPlayingFinisher => _finisherRemaining > 0f;
 
+        /// <summary>True while the boss's entrance holds the camera.</summary>
+        public bool IsPlayingEntrance => _entranceRemaining > 0f;
+
+        /// <summary>True while any directed shot holds the camera: the entrance, a phase's turn, or the finisher.</summary>
+        public bool IsPlayingShot => IsPlayingEntrance || IsPlayingPhaseShot || IsPlayingFinisher;
+
         /// <summary>The whole length of the entrance in progress, to place each of its shots.</summary>
         private float _entranceTotal;
 

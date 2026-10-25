@@ -128,6 +128,9 @@ namespace AdaptiveBossArena.Game
             // The controller's share of the same beats, added here because it listens to the same bus.
             gameObject.AddComponent<RumbleDirector>();
 
+            // And the screen's share: the bars step aside while the camera plays a directed shot.
+            gameObject.AddComponent<CinematicHud>();
+
             if (_bloodMaterial != null)
             {
                 _blood = new GameObject("BloodDecals").AddComponent<BloodDecalPool>();

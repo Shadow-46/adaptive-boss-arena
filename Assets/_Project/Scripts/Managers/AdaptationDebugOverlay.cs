@@ -100,6 +100,9 @@ namespace AdaptiveBossArena.Game
 
         private void Start()
         {
+            // The panel draws with plain GUI calls only, so Unity's layout pass - a second walk of every element
+            // each frame - is skipped.
+            useGUILayout = false;
             _isVisible = _visibleOnStart;
 
             if (_boss == null)
@@ -162,7 +165,16 @@ namespace AdaptiveBossArena.Game
 
             if (keyboard != null && keyboard[_toggleKey].wasPressedThisFrame)
             {
-                _isVisible = !_isVisible;
+                // In Training the panel is shown for the player, and the key puts it away and brings it back; it
+                // covered a third of the screen with no way to move it.
+                if (_forced)
+                {
+                    _forcedHidden = !_forcedHidden;
+                }
+                else
+                {
+                    _isVisible = !_isVisible;
+                }
             }
 
             TickHeartbeat();
@@ -248,20 +260,40 @@ namespace AdaptiveBossArena.Game
             // but it is also the only way to diagnose a fight that has gone quiet — and the fights
             // worth diagnosing are the ones a player reports from a shipped build, not the ones
             // reproduced in the editor.
-            if (!_isVisible && !_forced)
+            if (!IsShowing || Event.current.type != EventType.Repaint)
             {
                 return;
             }
 
             EnsureStyle();
 
-            GUILayout.BeginArea(
-                new Rect(PanelMargin, PanelMargin, PanelWidth, Screen.height - PanelMargin * 2f),
-                GUI.skin.box);
+            // Rebuilt a few times a second, not every frame and every GUI event: a player cannot read faster, and
+            // laying out this much text each time cost Training players about five milliseconds a frame.
+            if (_report == null || Time.unscaledTime >= _nextReportAt)
+            {
+                _report = BuildReport();
+                _nextReportAt = Time.unscaledTime + ReportRefreshSeconds;
+            }
 
-            GUILayout.Label(BuildReport(), _style);
-            GUILayout.EndArea();
+            var panel = new Rect(PanelMargin, PanelMargin, PanelWidth, Screen.height - PanelMargin * 2f);
+            GUI.Box(panel, GUIContent.none);
+            GUI.Label(new Rect(panel.x + 6f, panel.y + 4f, panel.width - 12f, panel.height - 8f), _report, _style);
         }
+
+        /// <summary>Seconds between rebuilds of the panel's text.</summary>
+        private const float ReportRefreshSeconds = 0.25f;
+
+        private string _report;
+        private float _nextReportAt;
+
+        /// <summary>
+        /// Set when the player hides a panel that Training showed for them, so the panel stays out of the way
+        /// until they ask for it back.
+        /// </summary>
+        private bool _forcedHidden;
+
+        /// <summary>Whether the panel is on screen now.</summary>
+        public bool IsShowing => _isVisible || (_forced && !_forcedHidden);
 
         /// <summary>
         /// Composes the whole panel into one string, rebuilt each frame without allocating.
@@ -275,6 +307,12 @@ namespace AdaptiveBossArena.Game
         private string BuildReport()
         {
             _builder.Clear();
+
+            // Training shows this panel on its own, so it says how to put it away.
+            if (_forced)
+            {
+                _builder.Append("<i>").Append(_toggleKey).AppendLine(" hides this panel</i>").AppendLine();
+            }
 
             AppendClock();
             AppendCombatants();

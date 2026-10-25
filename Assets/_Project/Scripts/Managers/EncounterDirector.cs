@@ -198,6 +198,12 @@ namespace AdaptiveBossArena.Game
 
         private UnityEngine.UI.Text _ripostePromptText;
 
+        /// <summary>Whether the riposte prompt is on screen. For tests and debug tooling.</summary>
+        public bool IsPromptShowing => _ripostePrompt != null && _ripostePrompt.activeSelf;
+
+        /// <summary>The riposte prompt's words, RIPOSTE or EXECUTE. For tests and debug tooling.</summary>
+        public string PromptWords => _ripostePromptText != null ? _ripostePromptText.text : string.Empty;
+
         /// <summary>Sets the prompt's words, only when they change.</summary>
         private void SetPromptText(string words)
         {
@@ -716,6 +722,30 @@ namespace AdaptiveBossArena.Game
             return builder.ToString();
         }
 
+        /// <summary>Cells in a strength bar.</summary>
+        public const int StrengthCellCount = 5;
+
+        /// <summary>
+        /// A strength from zero to one as a row of filled and empty squares, such as "■■■□□".
+        /// </summary>
+        /// <remarks>
+        /// Squares rather than a drawn bar because the dossier is one block of text; both glyphs are in every
+        /// common interface font. Any strength above nothing shows at least one cell, so an answer that was still
+        /// in force never reads as empty.
+        /// </remarks>
+        /// <param name="strength">The strength, clamped to zero and one.</param>
+        /// <returns>The bar.</returns>
+        public static string StrengthCells(float strength)
+        {
+            float clamped = Mathf.Clamp01(strength);
+            // The tolerance keeps 0.6 at three cells: 0.6 times five is a hair over three in floating point.
+            int filled = clamped <= 0f
+                ? 0
+                : Mathf.Clamp(Mathf.CeilToInt(clamped * StrengthCellCount - 0.0001f), 1, StrengthCellCount);
+
+            return new string('■', filled) + new string('□', StrengthCellCount - filled);
+        }
+
         /// <summary>Appends the counters the boss developed, each with its player-facing tell.</summary>
         private static void AppendAnswers(StringBuilder builder, AdaptationManager adaptation)
         {
@@ -733,8 +763,13 @@ namespace AdaptiveBossArena.Game
                 if (strategy != null && !string.IsNullOrWhiteSpace(strategy.TellMessage))
                 {
                     // Whether the answer was still in force at the end says whether the player ever broke the habit.
+                    // How hard he leaned on it at the end, in five cells: the dossier showed only that an answer was
+                    // chosen, never how strongly the player's habit had pulled him toward it.
+                    float strength = active.Contains(strategy) ? adaptation.StrengthOf(strategy) : 0f;
+
                     builder.Append("• \"").Append(strategy.TellMessage).Append("\"")
-                        .AppendLine(active.Contains(strategy) ? "  - to the end" : "  - until you changed");
+                        .Append(active.Contains(strategy) ? "  - to the end  " : "  - until you changed  ")
+                        .AppendLine(StrengthCells(strength));
                 }
             }
 

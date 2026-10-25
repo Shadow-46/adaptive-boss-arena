@@ -138,6 +138,23 @@ namespace AdaptiveBossArena.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator TheBars_StepAsideForTheCut_AndComeBackForTheFight()
+        {
+            CinematicHud hud = Object.FindAnyObjectByType<CinematicHud>();
+            Assert.IsNotNull(hud, "Nothing fades the bars for the cut.");
+
+            yield return WaitUntil(() => hud.Alpha >= 1f, 2f);
+            Assert.AreEqual(1f, hud.Alpha, 0.01f, "The bars were not on screen during the fight.");
+
+            DropTo(0.64f);
+            yield return WaitUntil(() => hud.Alpha <= 0.05f, 1f);
+            Assert.LessOrEqual(hud.Alpha, 0.05f, "The bars stayed over the phase's cut.");
+
+            yield return WaitUntil(() => hud.Alpha >= 1f, 3f);
+            Assert.AreEqual(1f, hud.Alpha, 0.01f, "The bars did not come back for the fight.");
+        }
+
+        [UnityTest]
         public IEnumerator TheLastStand_BringsLightning()
         {
             ArenaAtmosphere atmosphere = Object.FindAnyObjectByType<ArenaAtmosphere>();
@@ -169,6 +186,31 @@ namespace AdaptiveBossArena.Tests.PlayMode
 
             Assert.IsTrue(_camera.IsPlayingFinisher, "The finisher's two-shot did not play.");
             Assert.IsTrue(end.IsShown, "The fight did not end on the victory screen.");
+        }
+
+        [UnityTest]
+        public IEnumerator AKneelingBoss_OffersTheKnightAnExecution_ByName()
+        {
+            var knight = Object.FindAnyObjectByType<Player.PlayerController>();
+            Assert.IsNotNull(knight, "No knight in the arena scene.");
+
+            _boss.TakeDamage(Blow(_boss.Health.Current + 100f));
+            Assert.IsTrue(_boss.AwaitingFinalBlow, "The lethal blow did not bring him to his knee.");
+
+            // Two metres in front of the knight's own facing, so he stands within reach and looking at the boss.
+            Vector3 facing = knight.transform.forward;
+            facing.y = 0f;
+            facing.Normalize();
+            knight.ResetForNewAttempt(_boss.transform.position - facing * 2f);
+
+            yield return WaitUntil(() => knight.RiposteOffered, 2f);
+            Assert.IsTrue(knight.RiposteOffered, "The kneeling boss offered no riposte to a knight standing over him.");
+
+            yield return null;
+            yield return null;
+
+            Assert.IsTrue(_director.IsPromptShowing, "The prompt is not on screen.");
+            Assert.AreEqual("EXECUTE", _director.PromptWords, "The prompt does not name the last blow.");
         }
 
         [UnityTest]
