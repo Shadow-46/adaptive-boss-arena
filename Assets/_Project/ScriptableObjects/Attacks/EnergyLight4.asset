@@ -14,26 +14,26 @@ MonoBehaviour:
   m_EditorClassIdentifier: AdaptiveBossArena.Combat::AdaptiveBossArena.Combat.AttackDefinition
   _id: attack.energylight4
   _designerNotes: 
-  _displayName: Flourish
+  _displayName: Arc Wave
   _castVfxPrefab: {fileID: 0}
-  _damage: 14
+  _damage: 16
   _damageType: 0
   _poiseDamage: 18
   _stagger: 1
   _knockbackSpeed: 3.5
   _impactReaction: 0
   _startupSeconds: 0.08
-  _activeSeconds: 0.06
-  _recoverySeconds: 0.26
-  _shape: 2
-  _offset: {x: 0, y: 1, z: 1}
-  _range: 2.1
-  _arcDegrees: 120
-  _boxHalfExtents: {x: 0.6, y: 0.6, z: 1}
+  _activeSeconds: 0.1
+  _recoverySeconds: 0.3
+  _shape: 1
+  _offset: {x: 0, y: 1, z: 3}
+  _range: 5.6
+  _arcDegrees: 30
+  _boxHalfExtents: {x: 0.7, y: 0.6, z: 2.6}
   _staminaCost: 0
   _lungeSpeed: 0
   _hitStopSeconds: 0.06
-  _cameraTrauma: 0.18
+  _cameraTrauma: 0.2
   _leavesHazard: 0
   _hazardRadius: 2.5
   _hazardDamagePerTick: 4
@@ -44,7 +44,7 @@ MonoBehaviour:
   _unblockable: 0
   _unparryable: 0
   _telegraphColor: {r: 0.6, g: 1, b: 0.85, a: 0.6}
-  _showTelegraph: 0
+  _showTelegraph: 1
   _comboWindowStart: 0.1
   _comboWindowEnd: 0.85
   _followUps: []

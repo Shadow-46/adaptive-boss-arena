@@ -282,6 +282,9 @@ namespace AdaptiveBossArena.Editor
             // The counters: the blade's is a lunging cut, the greatsword's its widest swing, the energy blade's a
             // thrust - each a body the knight already has, played quick out of the read.
             ("BladeCounter", "Dash"), ("GreatswordCounter", "Light3"), ("EnergyCounter", "Riposte"),
+
+            // The blade's dash-cut is the same driving lunge, thrown from inside the roll.
+            ("BladeDashCut", "Dash"),
             // The execution is a thrust driven in with both hands, not another passing slash.
             ("PlayerExecution", "Riposte")
         };
@@ -329,7 +332,7 @@ namespace AdaptiveBossArena.Editor
             ("PlayerLight3", StrikerParts.Weapon), ("PlayerHeavy", StrikerParts.Weapon),
             ("PlayerExecution", StrikerParts.Weapon),
             ("BladeCounter", StrikerParts.Weapon), ("GreatswordCounter", StrikerParts.Weapon),
-            ("EnergyCounter", StrikerParts.Weapon),
+            ("EnergyCounter", StrikerParts.Weapon), ("BladeDashCut", StrikerParts.Weapon),
             ("GreatswordLight1", StrikerParts.Weapon), ("GreatswordLight2", StrikerParts.Weapon),
             ("GreatswordHeavy", StrikerParts.Weapon),
             ("EnergyLight1", StrikerParts.Weapon), ("EnergyLight2", StrikerParts.Weapon),
@@ -1241,9 +1244,16 @@ namespace AdaptiveBossArena.Editor
                 range: 2.4f, arc: 100f, poise: 22f, knockback: 3f, hitStop: 0.08f, trauma: 0.22f,
                 lungeSpeed: 9f, overlayColor: CounterSwingColor);
 
+            // The blade's signature: a cut out of the roll itself, closing the gap and striking in one motion.
+            AttackDefinition bladeDashCut = CreateAttack(
+                "BladeDashCut", "Dash Cut", DamageType.Light,
+                damage: 18f, startup: 0.06f, active: 0.10f, recovery: 0.30f,
+                range: 2.4f, arc: 90f, poise: 18f, knockback: 3f, hitStop: 0.07f, trauma: 0.18f,
+                lungeSpeed: 10f, overlayColor: PlayerSwingColor);
+
             WeaponDefinition blade = CreateWeapon(
                 "WeaponBlade", "Blade", new Color(0.55f, 0.85f, 1f, 0.6f),
-                bladeAttacks, CreateBladeEmpoweredSpecial(), bladeCounter, DefenceStyle.Deflect,
+                bladeAttacks, CreateBladeEmpoweredSpecial(), bladeCounter, bladeDashCut, DefenceStyle.Deflect,
                 deflectWindow: 0.2f, deflectPosture: 28f,
                 moveMultiplier: 1f, staminaMultiplier: 1f,
                 swingCueId: "swing.blade",
@@ -1253,7 +1263,7 @@ namespace AdaptiveBossArena.Editor
             // commitment was wrong, which is a different kind of decision rather than a worse one.
             WeaponDefinition greatsword = CreateWeapon(
                 "WeaponGreatsword", "Greatsword", new Color(1f, 0.75f, 0.35f, 0.6f),
-                greatswordAttacks, CreateGreatswordEmpoweredSpecial(), greatswordCounter, DefenceStyle.HyperArmour,
+                greatswordAttacks, CreateGreatswordEmpoweredSpecial(), greatswordCounter, null, DefenceStyle.HyperArmour,
                 deflectWindow: 0.2f, deflectPosture: 0f,
                 moveMultiplier: 0.82f, staminaMultiplier: 1.35f,
                 swingCueId: "swing.greatsword",
@@ -1261,7 +1271,7 @@ namespace AdaptiveBossArena.Editor
 
             WeaponDefinition energyBlade = CreateWeapon(
                 "WeaponEnergyBlade", "Energy Blade", new Color(0.7f, 1f, 0.8f, 0.6f),
-                energyAttacks, CreateEnergyEmpoweredSpecial(), energyCounter, DefenceStyle.SustainedGuard,
+                energyAttacks, CreateEnergyEmpoweredSpecial(), energyCounter, null, DefenceStyle.SustainedGuard,
                 deflectWindow: 0.28f, deflectPosture: 16f,
                 moveMultiplier: 1.12f, staminaMultiplier: 0.85f,
                 swingCueId: "swing.energy",
@@ -1368,9 +1378,15 @@ namespace AdaptiveBossArena.Editor
                 overlayColor: EnergySwingColor);
 
             AttackDefinition flourish = CreateAttack(
-                "EnergyLight4", "Flourish", DamageType.Light,
-                damage: 14f, startup: 0.08f, active: 0.06f, recovery: 0.26f,
-                range: 2.1f, arc: 120f, poise: 18f, knockback: 3.5f, hitStop: 0.06f, trauma: 0.18f,
+                // The energy blade's signature: the flurry's last cut throws its edge out as a wave, a narrow band
+                // reaching five and a half metres along the floor, drawn in the blade's own cyan so a hit at range is
+                // seen to come from somewhere. The flurry stays close; its finisher reaches.
+                "EnergyLight4", "Arc Wave", DamageType.Light,
+                damage: 16f, startup: 0.08f, active: 0.10f, recovery: 0.30f,
+                range: 5.6f, arc: 30f, poise: 18f, knockback: 3.5f, hitStop: 0.06f, trauma: 0.2f,
+                shape: AttackShape.Box, telegraph: true,
+                offset: new Vector3(0f, 1f, 3f),
+                boxHalfExtents: new Vector3(0.7f, 0.6f, 2.6f),
                 overlayColor: EnergySwingColor);
 
             // The only box in the game, and the one attack that should be. A 40-degree cone at 3.4 m
@@ -1405,6 +1421,7 @@ namespace AdaptiveBossArena.Editor
             PlayerAttacks attacks,
             AttackDefinition empoweredSpecial,
             AttackDefinition counter,
+            AttackDefinition dashAttack,
             DefenceStyle defence,
             float deflectWindow,
             float deflectPosture,
@@ -1433,6 +1450,7 @@ namespace AdaptiveBossArena.Editor
                     .Reference("_empoweredSpecialAttack", empoweredSpecial)
                     .Reference("_riposteAttack", attacks.Heavy)
                     .Reference("_counterAttack", counter)
+                    .Reference("_dashAttack", dashAttack)
                     .Reference("_modelPrefab", model)
                     .Float("_bladeBase", bladeBase)
                     .Float("_bladeTip", bladeTip);

@@ -95,6 +95,10 @@ namespace AdaptiveBossArena.Combat
         [Tooltip("A fast, heavy cut thrown from a perfect dodge or a parry, or none.")]
         private AttackDefinition _counterAttack;
 
+        [SerializeField]
+        [Tooltip("A cut thrown out of the dash itself, or none for a weapon that cannot.")]
+        private AttackDefinition _dashAttack;
+
         [Header("Defence")]
         [SerializeField]
         [Tooltip("How this weapon answers an incoming attack.")]
@@ -186,6 +190,15 @@ namespace AdaptiveBossArena.Combat
         /// own: quick out of the dodge or the parry, heavier than a light, and flowing on into the chain.
         /// </remarks>
         public AttackDefinition CounterAttack => _counterAttack;
+
+        /// <summary>
+        /// The cut thrown out of the dash itself rather than its tail, or null for a weapon without one.
+        /// </summary>
+        /// <remarks>
+        /// The blade's signature: the quickest weapon closes the gap and strikes in one motion, so a roll toward the
+        /// boss is an attack as well as an escape. The heavier weapons wait for the roll's tail, as before.
+        /// </remarks>
+        public AttackDefinition DashAttack => _dashAttack;
 
         /// <summary>How this weapon answers an incoming attack.</summary>
         public DefenceStyle Defence => _defence;

@@ -203,6 +203,9 @@ namespace AdaptiveBossArena.Player
         /// <summary>The rate the knight's swings run at now: quicker in Wrath.</summary>
         public float AttackSpeedMultiplier => IsInWrath ? WrathSpeedMultiplier : 1f;
 
+        /// <summary>The drawn weapon's dash-cut, or null when it has none.</summary>
+        public AttackDefinition DashAttack => Weapon?.DashAttack;
+
         /// <summary>The drawn weapon's counter, or null when it has none.</summary>
         public AttackDefinition CounterAttack => Weapon?.CounterAttack;
 

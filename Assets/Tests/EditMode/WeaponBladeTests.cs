@@ -57,6 +57,28 @@ namespace AdaptiveBossArena.Tests.EditMode
         }
 
         [Test]
+        public void EachWeapon_HasItsSignature()
+        {
+            WeaponDefinition blade = Weapons().FirstOrDefault(weapon => weapon.name == "WeaponBlade");
+            WeaponDefinition greatsword = Weapons().FirstOrDefault(weapon => weapon.name == "WeaponGreatsword");
+            WeaponDefinition energy = Weapons().FirstOrDefault(weapon => weapon.name == "WeaponEnergyBlade");
+            Assume.That(blade != null && greatsword != null && energy != null, "Run setup to generate the weapons.");
+
+            // The blade strikes out of the roll itself; the heavier weapons wait for its tail.
+            Assert.IsNotNull(blade.DashAttack, "The blade has no dash-cut.");
+            Assert.Greater(blade.DashAttack.LungeSpeed, 0f, "The dash-cut does not close the gap.");
+            Assert.IsNull(greatsword.DashAttack);
+            Assert.IsNull(energy.DashAttack);
+
+            // The greatsword wades through blows; the energy blade's finisher reaches out as a wave.
+            Assert.AreEqual(DefenceStyle.HyperArmour, greatsword.Defence);
+
+            AttackDefinition finisher = energy.LightComboChain[energy.LightComboChain.Length - 1];
+            Assert.Greater(finisher.EffectiveReach, 5f, "The energy blade's finisher does not reach as a wave.");
+            Assert.IsTrue(finisher.ShowTelegraph, "The wave is not drawn, so a hit at range comes from nowhere.");
+        }
+
+        [Test]
         public void TheGreatswordReachesFurtherThanTheBlade()
         {
             WeaponDefinition blade = Weapons().FirstOrDefault(weapon => weapon.name == "WeaponBlade");

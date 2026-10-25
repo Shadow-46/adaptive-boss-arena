@@ -758,6 +758,10 @@ namespace AdaptiveBossArena.Player
             // for it to finish and then starting from standing.
             _machine.AddTransition(_dashState, _attackState, WantsToCancelRollIntoAttack, AttackTransitionPriority);
 
+            // A weapon with a dash-cut strikes out of the roll itself, not only its tail. Ranked above the tail's
+            // cancel so the cut is what comes out, and below nothing else the roll offers.
+            _machine.AddTransition(_dashState, _attackState, WantsToDashCut, AttackTransitionPriority + 1);
+
             // The same slow tail can raise the guard, so a roll that lands in front of a swing is not a trap.
             _machine.AddTransition(_dashState, _parryState, WantsToCancelRollIntoGuard, GuardTransitionPriority);
             _machine.AddTransition(_dashState, _moveState, DashFinishedWithInput);
@@ -847,6 +851,19 @@ namespace AdaptiveBossArena.Player
 
         private bool WantsToCancelRollIntoAttack(PlayerContext context) =>
             _dashState.CanCancel(context) && WantsToAttack(context);
+
+        /// <summary>How far into a roll the dash-cut may come out: past the first instant, so a tap still rolls.</summary>
+        public const float DashCutEarliestSeconds = 0.08f;
+
+        /// <summary>
+        /// Throws the weapon's dash-cut from inside the roll, when it has one. A counter the roll opened comes
+        /// first: a perfect read is paid with the counter, not the cut.
+        /// </summary>
+        private bool WantsToDashCut(PlayerContext context) =>
+            context.DashAttack != null &&
+            context.CounterWindowRemaining <= 0f &&
+            _dashState.TimeInState >= DashCutEarliestSeconds &&
+            TryStartAttack(context, PlayerInputAction.LightAttack, context.DashAttack, _time.CombatTime);
 
         private bool WantsToCancelRollIntoGuard(PlayerContext context) =>
             _dashState.CanCancel(context) && WantsToGuard(context);

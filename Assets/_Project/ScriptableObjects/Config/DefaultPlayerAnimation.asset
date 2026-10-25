@@ -73,6 +73,10 @@ MonoBehaviour:
     _state: Riposte
     _contactFraction: 0.63829786
     _frenzyContactFraction: 0
+  - _attack: {fileID: 11400000, guid: e1b843ee006172e4a8c6f2f4f34d053e, type: 2}
+    _state: Dash
+    _contactFraction: 0.44680852
+    _frenzyContactFraction: 0
   - _attack: {fileID: 11400000, guid: ebc03bd400ae8a040892263c650ed6c0, type: 2}
     _state: Riposte
     _contactFraction: 0.63829786
