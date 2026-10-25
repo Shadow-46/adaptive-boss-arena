@@ -49,7 +49,10 @@ namespace AdaptiveBossArena.Player.States
             ApplyAttackMovement(context, deltaTime);
 
             context.Motor.Tick(deltaTime);
-            context.Attacks.Tick(deltaTime);
+
+            // In Wrath the swing's own clock runs faster, so every phase of it - wind-up, strike, recovery - is
+            // quicker in proportion and the timing a player has learned still reads.
+            context.Attacks.Tick(deltaTime * context.AttackSpeedMultiplier);
 
             TryChainCombo(context);
         }

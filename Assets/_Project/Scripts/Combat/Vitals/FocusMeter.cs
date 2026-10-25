@@ -83,6 +83,18 @@ namespace AdaptiveBossArena.Combat.Vitals
             return true;
         }
 
+        /// <summary>
+        /// Adds the small share of focus a landed blow earns.
+        /// </summary>
+        /// <remarks>
+        /// Focus was earned only by defending, so a player who fought well on the attack never filled it. A landed
+        /// blow is worth a fraction of a deflect: defending stays the fast road to a full meter, attacking a slow one.
+        /// </remarks>
+        public void AddFromLandedHit() => Add(_gainPerDeflect * LandedHitShare);
+
+        /// <summary>The share of a deflect's focus that a landed blow earns.</summary>
+        public const float LandedHitShare = 0.15f;
+
         /// <summary>Empties the meter, for a stagger or a fresh attempt.</summary>
         public void Reset() => Set(0f);
 

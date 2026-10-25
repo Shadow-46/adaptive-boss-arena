@@ -157,6 +157,12 @@ namespace AdaptiveBossArena.Combat
         /// <summary>Raised each time this attack deals damage.</summary>
         public event Action<DamageResult> HitLanded;
 
+        /// <summary>
+        /// Scale on the damage this executor's blows deal: one normally, more while a power such as the knight's
+        /// Wrath is in force. Applied as each blow lands, so it changes how hard a swing hits, never what it is.
+        /// </summary>
+        public float OutgoingDamageMultiplier { get; set; } = 1f;
+
         /// <summary>Raised when the attack finishes and the attacker becomes actionable.</summary>
         public event Action Completed;
 
@@ -458,6 +464,11 @@ namespace AdaptiveBossArena.Combat
             DamageInfo damage = attack
                 .BuildDamageInfo(_team, _instanceId)
                 .AtPoint(contactPoint, direction);
+
+            if (!Mathf.Approximately(OutgoingDamageMultiplier, 1f))
+            {
+                damage = damage.WithAmount(damage.Amount * OutgoingDamageMultiplier);
+            }
 
             DamageResult result = hurtbox.Receive(damage);
 

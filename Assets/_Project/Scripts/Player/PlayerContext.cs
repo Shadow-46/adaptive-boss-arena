@@ -185,6 +185,24 @@ namespace AdaptiveBossArena.Player
         public AttackDefinition RiposteAttack =>
             Weapon?.RiposteAttack ?? Config.RiposteAttack ?? HeavyAttack;
 
+        /// <summary>Seconds of Wrath left, or zero.</summary>
+        public float WrathRemaining { get; set; }
+
+        /// <summary>Whether Wrath is in force.</summary>
+        public bool IsInWrath => WrathRemaining > 0f;
+
+        /// <summary>How long Wrath lasts once a full focus meter is spent on it.</summary>
+        public const float WrathSeconds = 8f;
+
+        /// <summary>How much harder the knight's blows land in Wrath.</summary>
+        public const float WrathDamageMultiplier = 1.25f;
+
+        /// <summary>How much faster the knight's swings run in Wrath.</summary>
+        public const float WrathSpeedMultiplier = 1.2f;
+
+        /// <summary>The rate the knight's swings run at now: quicker in Wrath.</summary>
+        public float AttackSpeedMultiplier => IsInWrath ? WrathSpeedMultiplier : 1f;
+
         /// <summary>The drawn weapon's counter, or null when it has none.</summary>
         public AttackDefinition CounterAttack => Weapon?.CounterAttack;
 

@@ -137,7 +137,9 @@ namespace AdaptiveBossArena.Editor.Art
                 // rule rejects for a stance the player steers from.
                 ["Parry"] = "sword and shield block",
                 // The execution: a thrust driven in with both hands, rather than another passing slash.
-                ["Riposte"] = "Stabbing"
+                ["Riposte"] = "Stabbing",
+                // Wrath: the blade raised and the body gathered, the knight's own war cry.
+                ["Roar"] = "sword and shield power up"
             },
             // walk (2) steps back; strafe and strafe (4) step right, (2) and (3) left - measured, not assumed.
             new[]

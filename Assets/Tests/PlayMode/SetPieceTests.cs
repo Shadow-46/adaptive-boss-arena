@@ -214,6 +214,38 @@ namespace AdaptiveBossArena.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Wrath_NeedsAFullMeter_BurnsRed_AndEndsOnItsOwn()
+        {
+            var knight = Object.FindAnyObjectByType<Player.PlayerController>();
+            Assert.IsNotNull(knight, "No knight in the arena scene.");
+
+            Assert.IsFalse(knight.TryEnterWrath(), "Wrath began on an empty meter.");
+
+            var focus = (Combat.Vitals.FocusMeter)typeof(Player.PlayerController)
+                .GetField("_focus", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                .GetValue(knight);
+
+            for (int i = 0; i < 20 && !focus.IsFull; i++)
+            {
+                focus.AddFromDeflect();
+            }
+
+            Assert.IsTrue(focus.IsFull, "The meter could not be filled.");
+            Assert.IsTrue(knight.TryEnterWrath(), "Wrath did not begin on a full meter.");
+            Assert.IsTrue(knight.IsInWrath);
+            Assert.IsFalse(focus.IsFull, "Wrath did not spend the meter.");
+
+            Light aura = System.Array.Find(knight.GetComponentsInChildren<Light>(true), l => l.name == "WrathAura");
+            Assert.IsNotNull(aura, "The knight carries no Wrath aura.");
+            Assert.IsTrue(aura.enabled, "The aura is not burning in Wrath.");
+
+            yield return WaitUntil(() => !knight.IsInWrath, 12f);
+
+            Assert.IsFalse(knight.IsInWrath, "Wrath never ended.");
+            Assert.IsFalse(aura.enabled, "The aura stayed lit after Wrath.");
+        }
+
+        [UnityTest]
         public IEnumerator AfterARetry_TheNextTurnIsStagedAgain()
         {
             Assert.IsNotNull(_director, "No encounter director in the arena scene.");

@@ -73,5 +73,15 @@ namespace AdaptiveBossArena.Tests.EditMode
 
             Assert.AreEqual(0f, meter.Current);
         }
+
+        [Test]
+        public void ALandedBlowEarnsASmallShare_DefendingStaysTheFastRoad()
+        {
+            FocusMeter meter = Meter();
+            meter.AddFromLandedHit();
+
+            Assert.AreEqual(40f * FocusMeter.LandedHitShare, meter.Current, 0.001f);
+            Assert.Less(meter.Current, 40f, "A landed blow earned as much as a deflect.");
+        }
     }
 }

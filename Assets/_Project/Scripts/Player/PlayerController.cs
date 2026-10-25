@@ -75,6 +75,90 @@ namespace AdaptiveBossArena.Player
         /// </remarks>
         public const float CounterWindowSeconds = 0.6f;
 
+        /// <summary>Whether the knight is in Wrath now. For the interface, tests and debug tooling.</summary>
+        public bool IsInWrath => _context != null && _context.IsInWrath;
+
+        /// <summary>Seconds of Wrath left. For the interface, tests and debug tooling.</summary>
+        public float WrathRemaining => _context != null ? _context.WrathRemaining : 0f;
+
+        /// <summary>The red light the knight carries in Wrath.</summary>
+        private Light _wrathAura;
+
+        /// <summary>The aura's brightness at full Wrath, and its reach.</summary>
+        private const float WrathAuraIntensity = 3f;
+        private const float WrathAuraRange = 3.5f;
+
+        /// <summary>How long the knight's war gesture plays as Wrath begins.</summary>
+        private const float WrathGestureSeconds = 0.8f;
+
+        /// <summary>Shake as Wrath is unleashed.</summary>
+        private const float WrathTrauma = 0.35f;
+
+        /// <summary>
+        /// Spends a full focus meter on Wrath: eight seconds of harder, quicker swings, a red aura on the knight.
+        /// </summary>
+        /// <remarks>
+        /// The big action games give the player a rage to build and unleash; this is the knight's. It changes how
+        /// hard and how fast the knight's own blows are, never what the boss may do or see: the aura is the one
+        /// thing about it the boss can perceive, as any watcher could.
+        /// </remarks>
+        /// <returns>True when the meter was full and Wrath has begun.</returns>
+        public bool TryEnterWrath()
+        {
+            if (_context == null || _context.IsInWrath || _focus == null || !_focus.TryConsumeFull())
+            {
+                return false;
+            }
+
+            _context.WrathRemaining = PlayerContext.WrathSeconds;
+            _animator?.Flourish(WrathGestureSeconds);
+            _screenShake?.AddTrauma(WrathTrauma);
+            ApplyWrath();
+            return true;
+        }
+
+        /// <summary>Counts Wrath down on the fight's clock, and ends it.</summary>
+        private void TickWrath(float deltaTime)
+        {
+            if (!_context.IsInWrath)
+            {
+                return;
+            }
+
+            _context.WrathRemaining = Mathf.Max(0f, _context.WrathRemaining - deltaTime);
+            ApplyWrath();
+        }
+
+        /// <summary>Sets the knight's blows and aura to match whether Wrath is in force, fading the aura out at the end.</summary>
+        private void ApplyWrath()
+        {
+            _context.Attacks.OutgoingDamageMultiplier =
+                _context.IsInWrath ? PlayerContext.WrathDamageMultiplier : 1f;
+
+            if (_wrathAura != null)
+            {
+                _wrathAura.enabled = _context.IsInWrath;
+                _wrathAura.intensity = WrathAuraIntensity * Mathf.Clamp01(_context.WrathRemaining);
+            }
+        }
+
+        /// <summary>Makes the red light the knight carries in Wrath, off until it is needed.</summary>
+        private Light CreateWrathAura()
+        {
+            var auraObject = new GameObject("WrathAura");
+            auraObject.transform.SetParent(transform, false);
+            auraObject.transform.localPosition = new Vector3(0f, 1.2f, 0f);
+
+            var aura = auraObject.AddComponent<Light>();
+            aura.type = LightType.Point;
+            aura.color = new Color(1f, 0.18f, 0.08f);
+            aura.range = WrathAuraRange;
+            aura.intensity = 0f;
+            aura.shadows = LightShadows.None;
+            aura.enabled = false;
+            return aura;
+        }
+
         /// <summary>Freeze on a clean deflect. Longer than a normal hit — this is the moment to sell.</summary>
         private const float DeflectHitStopSeconds = 0.12f;
 
@@ -325,6 +409,17 @@ namespace AdaptiveBossArena.Player
 
             attacks.Parried += OnOwnAttackParried;
 
+            // Landing blows earns a little focus too, though never during the Wrath it is spent on.
+            attacks.HitLanded += _ =>
+            {
+                if (_context != null && !_context.IsInWrath)
+                {
+                    _focus?.AddFromLandedHit();
+                }
+            };
+
+            _wrathAura = CreateWrathAura();
+
             BuildStateMachine();
             SubscribeToVitals();
 
@@ -363,6 +458,7 @@ namespace AdaptiveBossArena.Player
 
             // Real time, so the perfect dodge's slow motion does not stretch the window it opened.
             _context.CounterWindowRemaining = Mathf.Max(0f, _context.CounterWindowRemaining - Time.unscaledDeltaTime);
+            TickWrath(deltaTime);
 
             // Posture only recovers while the guard is down, so holding block indefinitely is not a
             // way to wait out pressure.
@@ -608,6 +704,8 @@ namespace AdaptiveBossArena.Player
             _context.RiposteConsumed = false;
             _context.IsThreatPostureBroken = false;
             _context.CounterWindowRemaining = 0f;
+            _context.WrathRemaining = 0f;
+            ApplyWrath();
             _posture.ResetToFull();
             _focus.Reset();
             _context.Attacks.Cancel();
@@ -781,6 +879,13 @@ namespace AdaptiveBossArena.Player
             if (context.CanUseSpecial &&
                 context.InputBuffer.TryConsume(PlayerInputAction.Special, now))
             {
+                // With the guard held, a full meter is spent on Wrath instead of a single blow: the same two
+                // controls the player already has, so the choice between the two uses is one of intent.
+                if (context.Input.IsHeld(PlayerInputAction.Guard) && TryEnterWrath())
+                {
+                    return false;
+                }
+
                 // A full focus meter turns the special into its empowered form and is spent doing so.
                 // The empowered attack falls back to the ordinary one, so a charged meter is never
                 // wasted even on a weapon without a distinct empowered version.
