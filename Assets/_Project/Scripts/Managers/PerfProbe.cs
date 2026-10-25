@@ -213,9 +213,115 @@ namespace AdaptiveBossArena.Game
             }
         }
 
+        /// <summary>One frame-time record per boss phase, so a slow phase can be told from a slow fight.</summary>
+        private readonly FrameTimeSampler[] _phaseSamplers =
+        {
+            new FrameTimeSampler(PhaseSamplerCapacity), new FrameTimeSampler(PhaseSamplerCapacity),
+            new FrameTimeSampler(PhaseSamplerCapacity), new FrameTimeSampler(PhaseSamplerCapacity)
+        };
+
+        /// <summary>Frames kept per phase: a minute and a half at 144 frames a second.</summary>
+        private const int PhaseSamplerCapacity = 13000;
+
+        /// <summary>The most live particles, active debris pieces and enabled lights seen in each phase.</summary>
+        private readonly int[] _peakParticles = new int[4];
+        private readonly int[] _peakDebris = new int[4];
+        private readonly int[] _peakLights = new int[4];
+
+        private AI.BossController _boss;
+        private float _sinceCensus;
+
+        /// <summary>How often the scene is counted for its particles, debris and lights: a search, so rarely.</summary>
+        private const float CensusEverySeconds = 0.5f;
+
+        /// <summary>The boss's phase now, or the opening when there is no boss.</summary>
+        private int CurrentPhase()
+        {
+            if (_boss == null)
+            {
+                _boss = FindAnyObjectByType<AI.BossController>();
+            }
+
+            return _boss != null ? Mathf.Clamp(_boss.PhaseIndex, 0, _phaseSamplers.Length - 1) : 0;
+        }
+
+        /// <summary>
+        /// Counts what each phase has alive - particles, debris, lights - so a phase that runs slow names its cost.
+        /// </summary>
+        private void TakeCensus(int phase)
+        {
+            _sinceCensus += Time.unscaledDeltaTime;
+
+            if (_sinceCensus < CensusEverySeconds)
+            {
+                return;
+            }
+
+            _sinceCensus = 0f;
+
+            int particles = 0;
+
+            foreach (ParticleSystem system in FindObjectsByType<ParticleSystem>(FindObjectsSortMode.None))
+            {
+                particles += system.particleCount;
+            }
+
+            int debris = 0;
+
+            foreach (Combat.Feel.DebrisPool pool in FindObjectsByType<Combat.Feel.DebrisPool>(FindObjectsSortMode.None))
+            {
+                debris += pool.ActiveCount;
+            }
+
+            int lights = 0;
+
+            foreach (Light light in FindObjectsByType<Light>(FindObjectsSortMode.None))
+            {
+                if (light.isActiveAndEnabled && light.intensity > 0f)
+                {
+                    lights++;
+                }
+            }
+
+            _peakParticles[phase] = Mathf.Max(_peakParticles[phase], particles);
+            _peakDebris[phase] = Mathf.Max(_peakDebris[phase], debris);
+            _peakLights[phase] = Mathf.Max(_peakLights[phase], lights);
+        }
+
+        /// <summary>Each phase's p95 and peaks, as one field of the report line.</summary>
+        private string FormatPhases()
+        {
+            CultureInfo invariant = CultureInfo.InvariantCulture;
+            var parts = new System.Text.StringBuilder();
+
+            for (int i = 0; i < _phaseSamplers.Length; i++)
+            {
+                if (_phaseSamplers[i].Count == 0)
+                {
+                    continue;
+                }
+
+                parts.Append(string.Format(
+                    invariant, " phase{0}:p95={1:F2}ms,frames={2},particles={3},debris={4},lights={5}",
+                    i + 1, _phaseSamplers[i].PercentileMilliseconds(0.95f), _phaseSamplers[i].Count,
+                    _peakParticles[i], _peakDebris[i], _peakLights[i]));
+            }
+
+            return parts.ToString();
+        }
+
         private void Sample()
         {
             _sampler.Add(Time.unscaledDeltaTime);
+
+            int phase = CurrentPhase();
+            _phaseSamplers[phase].Add(Time.unscaledDeltaTime);
+
+            // The census searches the scene, so only a capture pays for it; an ordinary fight never does.
+            if (IsCapturing)
+            {
+                TakeCensus(phase);
+            }
 
             if (_drawCalls.Valid && _drawCalls.LastValue > 0)
             {
@@ -292,7 +398,7 @@ namespace AdaptiveBossArena.Game
                 drawCalls,
                 triangles,
                 _captured,
-                QualitySettings.names[QualitySettings.GetQualityLevel()].Replace(' ', '_'));
+                QualitySettings.names[QualitySettings.GetQualityLevel()].Replace(' ', '_')) + FormatPhases();
         }
 
         private void ReadCaptureRequest()
@@ -307,6 +413,14 @@ namespace AdaptiveBossArena.Game
             _shotFolder = request.ShotFolder;
             _shotEvery = Mathf.Max(0.02f, request.ShotEverySeconds);
             _shotsIncludeIntro = request.ShotsIncludeIntro;
+
+            // An unattended capture must not stop when its window loses focus: a player pauses itself unfocused, and
+            // captures started while the machine was in use sat frozen after loading until they were killed. Only a
+            // capture asks for this; an ordinary run still pauses when the player switches away.
+            if (request.IsRequested)
+            {
+                Application.runInBackground = true;
+            }
 
             // Only a capture that asks for it drives the fight; no ordinary scene ever contains the showcase.
             if (request.IsRequested && request.Showcase && GetComponent<ShowcaseDirector>() == null)

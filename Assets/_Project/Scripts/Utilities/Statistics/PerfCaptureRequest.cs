@@ -142,6 +142,9 @@ namespace AdaptiveBossArena.Utilities.Statistics
             if (seconds <= 0f && TryReadQuerySeconds(url, out float querySeconds))
             {
                 seconds = querySeconds;
+
+                // A page has no command line, so the showcase rides the query too: ?perf=45&showcase=1.
+                showcase |= QueryAsksForShowcase(url);
             }
 
             return new PerfCaptureRequest
@@ -155,6 +158,37 @@ namespace AdaptiveBossArena.Utilities.Statistics
                 ShotsIncludeIntro = shotsIntro,
                 Showcase = showcase
             };
+        }
+
+        /// <summary>Whether a page URL's query asks for the showcase, as <c>showcase=1</c>.</summary>
+        /// <param name="url">The page URL.</param>
+        /// <returns>True when it does.</returns>
+        public static bool QueryAsksForShowcase(string url)
+        {
+            int queryStart = string.IsNullOrEmpty(url) ? -1 : url.IndexOf('?');
+
+            if (queryStart < 0)
+            {
+                return false;
+            }
+
+            string query = url.Substring(queryStart + 1);
+            int fragment = query.IndexOf('#');
+
+            if (fragment >= 0)
+            {
+                query = query.Substring(0, fragment);
+            }
+
+            foreach (string pair in query.Split('&'))
+            {
+                if (pair == "showcase=1" || pair == "showcase=true")
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>Reads the capture length from a page URL's query string.</summary>

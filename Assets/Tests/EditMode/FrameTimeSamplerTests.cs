@@ -140,6 +140,16 @@ namespace AdaptiveBossArena.Tests.EditMode
         }
 
         [Test]
+        public void APageAsksForTheShowcaseInItsQuery_OnlyAlongsideACapture()
+        {
+            Assert.IsTrue(PerfCaptureRequest.Read(null, "https://example.test/?perf=45&showcase=1").Showcase);
+            Assert.IsFalse(PerfCaptureRequest.Read(null, "https://example.test/?perf=45").Showcase);
+
+            // Without a capture, the word alone does nothing: an ordinary visitor's page never drives the fight.
+            Assert.IsFalse(PerfCaptureRequest.Read(null, "https://example.test/?showcase=1").Showcase);
+        }
+
+        [Test]
         public void ACaptureCanRecordASequenceOfFrames()
         {
             // Motion is judged in motion: a single frame cannot show whether a swing has weight.

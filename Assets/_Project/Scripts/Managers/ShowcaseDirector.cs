@@ -72,6 +72,15 @@ namespace AdaptiveBossArena.Game
                 _camera?.SetLockedOn(true);
             }
 
+            // Training is only borrowed for the knight's immortality: its learning panel would cover the frames and
+            // cost frame time no ordinary fight pays, so a measurement of the fight would measure the panel.
+            if (_overlay == null)
+            {
+                _overlay = FindAnyObjectByType<AdaptationDebugOverlay>();
+            }
+
+            _overlay?.SetForcedVisible(false);
+
             _elapsed += Time.deltaTime;
             Report();
 
@@ -93,6 +102,7 @@ namespace AdaptiveBossArena.Game
 
         private float _sinceReport;
         private Player.PlayerController _knight;
+        private AdaptationDebugOverlay _overlay;
         private ArenaCameraRig _camera;
 
         /// <summary>

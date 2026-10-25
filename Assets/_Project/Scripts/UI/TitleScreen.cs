@@ -60,6 +60,9 @@ namespace AdaptiveBossArena.UI
 
             if (capture.IsRequested)
             {
+                // An unattended capture keeps running when its window is not focused, from the title onwards.
+                Application.runInBackground = true;
+
                 // A showcase takes the boss through every set piece, so the knight must live to see them, and the
                 // run must not be recorded. Set before the arena loads, so the knight is built immortal.
                 if (capture.Showcase)
