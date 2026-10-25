@@ -278,6 +278,10 @@ namespace AdaptiveBossArena.Editor
             ("GreatswordLight1", "Light1"), ("GreatswordLight2", "Light3"),
             ("EnergyLight1", "Light1"), ("EnergyLight2", "Light2"), ("EnergyLight3", "Light3"), ("EnergyLight4", "Light1"),
             ("EnergyHeavy", "Dash"),
+
+            // The counters: the blade's is a lunging cut, the greatsword's its widest swing, the energy blade's a
+            // thrust - each a body the knight already has, played quick out of the read.
+            ("BladeCounter", "Dash"), ("GreatswordCounter", "Light3"), ("EnergyCounter", "Riposte"),
             // The execution is a thrust driven in with both hands, not another passing slash.
             ("PlayerExecution", "Riposte")
         };
@@ -324,6 +328,8 @@ namespace AdaptiveBossArena.Editor
             ("PlayerLight1", StrikerParts.Weapon), ("PlayerLight2", StrikerParts.Weapon),
             ("PlayerLight3", StrikerParts.Weapon), ("PlayerHeavy", StrikerParts.Weapon),
             ("PlayerExecution", StrikerParts.Weapon),
+            ("BladeCounter", StrikerParts.Weapon), ("GreatswordCounter", StrikerParts.Weapon),
+            ("EnergyCounter", StrikerParts.Weapon),
             ("GreatswordLight1", StrikerParts.Weapon), ("GreatswordLight2", StrikerParts.Weapon),
             ("GreatswordHeavy", StrikerParts.Weapon),
             ("EnergyLight1", StrikerParts.Weapon), ("EnergyLight2", StrikerParts.Weapon),
@@ -1214,9 +1220,30 @@ namespace AdaptiveBossArena.Editor
             PlayerAttacks greatswordAttacks = CreateGreatswordAttacks();
             PlayerAttacks energyAttacks = CreateEnergyBladeAttacks();
 
+            // The counters, one to a weapon, thrown from the window a perfect dodge or a parry opens. Each answers
+            // the read the way its weapon fights: the blade lunges in, the greatsword lands its heaviest swing,
+            // the energy blade darts through. All quicker than any light, all heavier.
+            AttackDefinition bladeCounter = CreateAttack(
+                "BladeCounter", "Riposte Cut", DamageType.Heavy,
+                damage: 26f, startup: 0.06f, active: 0.10f, recovery: 0.26f,
+                range: 2.6f, arc: 110f, poise: 34f, knockback: 4f, hitStop: 0.10f, trauma: 0.30f,
+                lungeSpeed: 6f, stagger: StaggerStrength.Interrupt, overlayColor: CounterSwingColor);
+
+            AttackDefinition greatswordCounter = CreateAttack(
+                "GreatswordCounter", "Retribution", DamageType.Heavy,
+                damage: 44f, startup: 0.10f, active: 0.12f, recovery: 0.40f,
+                range: 3.0f, arc: 150f, poise: 55f, knockback: 7f, hitStop: 0.13f, trauma: 0.42f,
+                stagger: StaggerStrength.Interrupt, overlayColor: CounterSwingColor);
+
+            AttackDefinition energyCounter = CreateAttack(
+                "EnergyCounter", "Flash Counter", DamageType.Heavy,
+                damage: 20f, startup: 0.04f, active: 0.08f, recovery: 0.20f,
+                range: 2.4f, arc: 100f, poise: 22f, knockback: 3f, hitStop: 0.08f, trauma: 0.22f,
+                lungeSpeed: 9f, overlayColor: CounterSwingColor);
+
             WeaponDefinition blade = CreateWeapon(
                 "WeaponBlade", "Blade", new Color(0.55f, 0.85f, 1f, 0.6f),
-                bladeAttacks, CreateBladeEmpoweredSpecial(), DefenceStyle.Deflect,
+                bladeAttacks, CreateBladeEmpoweredSpecial(), bladeCounter, DefenceStyle.Deflect,
                 deflectWindow: 0.2f, deflectPosture: 28f,
                 moveMultiplier: 1f, staminaMultiplier: 1f,
                 swingCueId: "swing.blade",
@@ -1226,7 +1253,7 @@ namespace AdaptiveBossArena.Editor
             // commitment was wrong, which is a different kind of decision rather than a worse one.
             WeaponDefinition greatsword = CreateWeapon(
                 "WeaponGreatsword", "Greatsword", new Color(1f, 0.75f, 0.35f, 0.6f),
-                greatswordAttacks, CreateGreatswordEmpoweredSpecial(), DefenceStyle.HyperArmour,
+                greatswordAttacks, CreateGreatswordEmpoweredSpecial(), greatswordCounter, DefenceStyle.HyperArmour,
                 deflectWindow: 0.2f, deflectPosture: 0f,
                 moveMultiplier: 0.82f, staminaMultiplier: 1.35f,
                 swingCueId: "swing.greatsword",
@@ -1234,7 +1261,7 @@ namespace AdaptiveBossArena.Editor
 
             WeaponDefinition energyBlade = CreateWeapon(
                 "WeaponEnergyBlade", "Energy Blade", new Color(0.7f, 1f, 0.8f, 0.6f),
-                energyAttacks, CreateEnergyEmpoweredSpecial(), DefenceStyle.SustainedGuard,
+                energyAttacks, CreateEnergyEmpoweredSpecial(), energyCounter, DefenceStyle.SustainedGuard,
                 deflectWindow: 0.28f, deflectPosture: 16f,
                 moveMultiplier: 1.12f, staminaMultiplier: 0.85f,
                 swingCueId: "swing.energy",
@@ -1242,6 +1269,9 @@ namespace AdaptiveBossArena.Editor
 
             return new[] { blade, greatsword, energyBlade };
         }
+
+        /// <summary>White-gold tint marking a counter: the read paid back.</summary>
+        private static readonly Color CounterSwingColor = new Color(1f, 0.93f, 0.68f, 0.75f);
 
         /// <summary>Violet tint marking a focus-empowered special, matching the focus bar.</summary>
         private static readonly Color EmpoweredSwingColor = new Color(1f, 0.55f, 1f, 0.7f);
@@ -1374,6 +1404,7 @@ namespace AdaptiveBossArena.Editor
             Color signature,
             PlayerAttacks attacks,
             AttackDefinition empoweredSpecial,
+            AttackDefinition counter,
             DefenceStyle defence,
             float deflectWindow,
             float deflectPosture,
@@ -1401,6 +1432,7 @@ namespace AdaptiveBossArena.Editor
                     .Reference("_specialAttack", attacks.Special)
                     .Reference("_empoweredSpecialAttack", empoweredSpecial)
                     .Reference("_riposteAttack", attacks.Heavy)
+                    .Reference("_counterAttack", counter)
                     .Reference("_modelPrefab", model)
                     .Float("_bladeBase", bladeBase)
                     .Float("_bladeTip", bladeTip);

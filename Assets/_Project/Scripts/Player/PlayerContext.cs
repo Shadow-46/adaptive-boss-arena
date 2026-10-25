@@ -185,6 +185,15 @@ namespace AdaptiveBossArena.Player
         public AttackDefinition RiposteAttack =>
             Weapon?.RiposteAttack ?? Config.RiposteAttack ?? HeavyAttack;
 
+        /// <summary>The drawn weapon's counter, or null when it has none.</summary>
+        public AttackDefinition CounterAttack => Weapon?.CounterAttack;
+
+        /// <summary>
+        /// Seconds left in which a light attack is thrown as the counter. Opened by a perfect dodge or a parry,
+        /// counted on real time so the dodge's own slow motion does not stretch it.
+        /// </summary>
+        public float CounterWindowRemaining { get; set; }
+
         /// <summary>The execution thrown into a broken guard, falling back to the ordinary riposte.</summary>
         public AttackDefinition ExecutionAttack => Config.ExecutionAttack ?? RiposteAttack;
 

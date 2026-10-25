@@ -66,6 +66,15 @@ namespace AdaptiveBossArena.Player
         /// </remarks>
         private const float PerfectDodgeTimeScale = 0.35f;
 
+        /// <summary>
+        /// Real seconds after a perfect dodge or a parry in which a light attack is thrown as the counter.
+        /// </summary>
+        /// <remarks>
+        /// Long enough to press attack on the reaction to the read, the way the slowed moment invites; short enough
+        /// that the counter is the answer to that read and not a stronger light attack held in reserve.
+        /// </remarks>
+        public const float CounterWindowSeconds = 0.6f;
+
         /// <summary>Freeze on a clean deflect. Longer than a normal hit — this is the moment to sell.</summary>
         private const float DeflectHitStopSeconds = 0.12f;
 
@@ -352,6 +361,9 @@ namespace AdaptiveBossArena.Player
             _context.TickCooldowns(deltaTime);
             _stamina.Tick(deltaTime);
 
+            // Real time, so the perfect dodge's slow motion does not stretch the window it opened.
+            _context.CounterWindowRemaining = Mathf.Max(0f, _context.CounterWindowRemaining - Time.unscaledDeltaTime);
+
             // Posture only recovers while the guard is down, so holding block indefinitely is not a
             // way to wait out pressure.
             if (!_context.IsGuarding)
@@ -595,6 +607,7 @@ namespace AdaptiveBossArena.Player
             _context.IsGuarding = false;
             _context.RiposteConsumed = false;
             _context.IsThreatPostureBroken = false;
+            _context.CounterWindowRemaining = 0f;
             _posture.ResetToFull();
             _focus.Reset();
             _context.Attacks.Cancel();
@@ -776,6 +789,15 @@ namespace AdaptiveBossArena.Player
                 context.PendingAttack = empowered ? context.EmpoweredSpecialAttack : context.SpecialAttack;
                 context.ComboIndex = 0;
                 context.SpecialCooldownRemaining = context.Config.SpecialCooldownSeconds;
+                return true;
+            }
+
+            // Inside the window a perfect dodge or a parry opened, the light attack is the counter: quick out of the
+            // read, heavier than a light, and the chain carries on from it, so the next press is the second cut.
+            if (context.CounterWindowRemaining > 0f && context.CounterAttack != null &&
+                TryStartAttack(context, PlayerInputAction.LightAttack, context.CounterAttack, now))
+            {
+                context.CounterWindowRemaining = 0f;
                 return true;
             }
 
@@ -1020,6 +1042,7 @@ namespace AdaptiveBossArena.Player
             _context.PublishCombatEvent(CombatEventKind.PerfectDodge, _context.DashDirection);
             _perfectDodgeChannel?.Raise();
             _focus?.AddFromPerfectDodge();
+            _context.CounterWindowRemaining = CounterWindowSeconds;
 
             return DamageResult.NoDamage(DamageOutcome.PerfectDodged);
         }
@@ -1097,6 +1120,7 @@ namespace AdaptiveBossArena.Player
             // Reported as a deflect so every listener - sparks, sound, the boss recoiling - already knows what to
             // do; the outcome returned below is what tells the attacker this one cost more.
             _context.LastDefenceWasParry = true;
+            _context.CounterWindowRemaining = CounterWindowSeconds;
             _context.PublishCombatEvent(CombatEventKind.Deflected, damage.HitDirection);
             _context.PublishCombatEvent(CombatEventKind.PlayerParried, damage.HitDirection);
 

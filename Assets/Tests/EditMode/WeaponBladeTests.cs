@@ -39,6 +39,24 @@ namespace AdaptiveBossArena.Tests.EditMode
         }
 
         [Test]
+        public void EveryWeapon_PaysAPerfectReadWithACounter_QuickerAndHeavierThanItsFirstCut()
+        {
+            WeaponDefinition[] weapons = Weapons();
+            Assume.That(weapons.Length, Is.GreaterThan(0), "Run setup to generate the weapons.");
+
+            foreach (WeaponDefinition weapon in weapons)
+            {
+                AttackDefinition counter = weapon.CounterAttack;
+                AttackDefinition opener = weapon.LightComboChain[0];
+
+                Assert.IsNotNull(counter, $"{weapon.name} has no counter.");
+                Assert.LessOrEqual(counter.StartupSeconds, opener.StartupSeconds, $"{weapon.name}'s counter is slower than its first cut.");
+                Assert.Greater(counter.Damage, opener.Damage, $"{weapon.name}'s counter hits no harder than its first cut.");
+                Assert.Greater(counter.PoiseDamage, opener.PoiseDamage, $"{weapon.name}'s counter breaks no more stance than its first cut.");
+            }
+        }
+
+        [Test]
         public void TheGreatswordReachesFurtherThanTheBlade()
         {
             WeaponDefinition blade = Weapons().FirstOrDefault(weapon => weapon.name == "WeaponBlade");

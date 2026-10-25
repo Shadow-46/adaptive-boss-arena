@@ -25,6 +25,7 @@ MonoBehaviour:
   _specialAttack: {fileID: 11400000, guid: 0b35863c3f74a2844a246bd8e5653b19, type: 2}
   _empoweredSpecialAttack: {fileID: 11400000, guid: 849bd9b4239dbfa4f85dd179b122c9e0, type: 2}
   _riposteAttack: {fileID: 11400000, guid: 34d5a34a022479f409759f5503c57b20, type: 2}
+  _counterAttack: {fileID: 11400000, guid: 430a504169c008d478b9c6546f28dcc9, type: 2}
   _defence: 1
   _deflectWindowSeconds: 0.2
   _deflectPostureDamage: 0

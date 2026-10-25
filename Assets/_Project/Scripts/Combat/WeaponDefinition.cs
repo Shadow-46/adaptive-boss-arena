@@ -91,6 +91,10 @@ namespace AdaptiveBossArena.Combat
         [Tooltip("Strike used to punish a broken guard.")]
         private AttackDefinition _riposteAttack;
 
+        [SerializeField]
+        [Tooltip("A fast, heavy cut thrown from a perfect dodge or a parry, or none.")]
+        private AttackDefinition _counterAttack;
+
         [Header("Defence")]
         [SerializeField]
         [Tooltip("How this weapon answers an incoming attack.")]
@@ -172,6 +176,16 @@ namespace AdaptiveBossArena.Combat
 
         /// <summary>Strike used to punish a broken guard.</summary>
         public AttackDefinition RiposteAttack => _riposteAttack;
+
+        /// <summary>
+        /// The counter thrown inside the window a perfect dodge or a parry opens, or null for none.
+        /// </summary>
+        /// <remarks>
+        /// The reward for reading the boss used to be a slowed moment and a sliver of focus, then whatever the
+        /// light chain's first cut happened to be. The big action games pay a perfect read with a blow of its
+        /// own: quick out of the dodge or the parry, heavier than a light, and flowing on into the chain.
+        /// </remarks>
+        public AttackDefinition CounterAttack => _counterAttack;
 
         /// <summary>How this weapon answers an incoming attack.</summary>
         public DefenceStyle Defence => _defence;
