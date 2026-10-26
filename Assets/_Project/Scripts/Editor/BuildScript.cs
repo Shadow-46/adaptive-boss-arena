@@ -70,6 +70,13 @@ namespace AdaptiveBossArena.Editor
                 }
             }
 
+            // Unity writes its debug symbols beside the player in folders it names "DoNotShip"; the last release
+            // shipped one anyway. They are for reading crash reports locally, never for players.
+            foreach (string debugFolder in Directory.GetDirectories(WindowsFolder, "*_DoNotShip"))
+            {
+                Directory.Delete(debugFolder, recursive: true);
+            }
+
             string zipPath = Path.Combine(ReleaseFolder, $"AdaptiveBossArena-{ShortCommit()}-win64.zip");
 
             if (File.Exists(zipPath))

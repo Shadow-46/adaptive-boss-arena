@@ -131,6 +131,9 @@ namespace AdaptiveBossArena.Game
             // And the screen's share: the bars step aside while the camera plays a directed shot.
             gameObject.AddComponent<CinematicHud>();
 
+            // Igris's presence as the fight turns: burning eyes, a rim of light, the floor scorched about him.
+            gameObject.AddComponent<BossPresence>().Construct(_impactMaterial, _bloodMaterial);
+
             if (_bloodMaterial != null)
             {
                 _blood = new GameObject("BloodDecals").AddComponent<BloodDecalPool>();

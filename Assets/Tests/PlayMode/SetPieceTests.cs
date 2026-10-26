@@ -280,6 +280,23 @@ namespace AdaptiveBossArena.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator IgrisGrowsMoreTerrible_AsTheFightTurns()
+        {
+            BossPresence presence = Object.FindAnyObjectByType<BossPresence>();
+            Assert.IsNotNull(presence, "Nothing gives Igris his presence.");
+
+            yield return null;
+            Assert.AreEqual(0f, presence.ScorchRadius, 0.01f, "The floor scorched in the opening phase.");
+            Assert.Less(presence.EyeGlow, 0.05f, "His eyes burned in the opening phase.");
+
+            DropTo(0.2f);
+            yield return WaitUntil(() => presence.ScorchRadius > 2f, 5f);
+
+            Assert.Greater(presence.ScorchRadius, 2f, "The floor did not scorch around him in the Last Stand.");
+            Assert.Greater(presence.EyeGlow, 1f, "His eyes did not burn in the Last Stand.");
+        }
+
+        [UnityTest]
         public IEnumerator TheLeap_RisesLandsAndRecovers()
         {
             var knight = Object.FindAnyObjectByType<Player.PlayerController>();
