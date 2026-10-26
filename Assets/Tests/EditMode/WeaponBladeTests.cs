@@ -79,6 +79,20 @@ namespace AdaptiveBossArena.Tests.EditMode
         }
 
         [Test]
+        public void TheKnight_HasAnAirGame_AndItsPlungeLandsAroundHim()
+        {
+            var config = AssetDatabase.LoadAssetAtPath<Player.PlayerConfig>(
+                "Assets/_Project/ScriptableObjects/Config/DefaultPlayerConfig.asset");
+            Assume.That(config != null, "Run setup to generate the knight's config.");
+
+            Assert.IsNotNull(config.LauncherAttack, "No rising slash.");
+            Assert.IsNotNull(config.AirSlashAttack, "No air slash.");
+            Assert.IsNotNull(config.PlungeAttack, "No plunge.");
+            Assert.AreEqual(AttackShape.Sphere, config.PlungeAttack.Shape, "The plunge does not land around the knight.");
+            Assert.Greater(config.PlungeAttack.Damage, config.AirSlashAttack.Damage);
+        }
+
+        [Test]
         public void TheGreatswordReachesFurtherThanTheBlade()
         {
             WeaponDefinition blade = Weapons().FirstOrDefault(weapon => weapon.name == "WeaponBlade");

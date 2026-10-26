@@ -57,6 +57,9 @@ MonoBehaviour:
   _focusPerPerfectDodge: 26
   _riposteAttack: {fileID: 0}
   _executionAttack: {fileID: 11400000, guid: ebc03bd400ae8a040892263c650ed6c0, type: 2}
+  _launcherAttack: {fileID: 11400000, guid: 418e1d5a410714d43a521a9977efbe7f, type: 2}
+  _airSlashAttack: {fileID: 11400000, guid: 9227c622fbc42024f87203e9cfa8d4da, type: 2}
+  _plungeAttack: {fileID: 11400000, guid: 1475f0bda225120448f6a826cc8ceeb5, type: 2}
   _maxPosture: 100
   _postureRegenPerSecond: 22
   _blockPostureCost: 22

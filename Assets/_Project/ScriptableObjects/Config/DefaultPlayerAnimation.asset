@@ -77,6 +77,18 @@ MonoBehaviour:
     _state: Dash
     _contactFraction: 0.44680852
     _frenzyContactFraction: 0
+  - _attack: {fileID: 11400000, guid: 418e1d5a410714d43a521a9977efbe7f, type: 2}
+    _state: Light3
+    _contactFraction: 0.42553192
+    _frenzyContactFraction: 0
+  - _attack: {fileID: 11400000, guid: 9227c622fbc42024f87203e9cfa8d4da, type: 2}
+    _state: Light2
+    _contactFraction: 0.5319149
+    _frenzyContactFraction: 0
+  - _attack: {fileID: 11400000, guid: 1475f0bda225120448f6a826cc8ceeb5, type: 2}
+    _state: Heavy
+    _contactFraction: 0.5744681
+    _frenzyContactFraction: 0
   - _attack: {fileID: 11400000, guid: ebc03bd400ae8a040892263c650ed6c0, type: 2}
     _state: Riposte
     _contactFraction: 0.63829786

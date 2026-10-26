@@ -246,6 +246,37 @@ namespace AdaptiveBossArena.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator TheLeap_RisesLandsAndRecovers()
+        {
+            var knight = Object.FindAnyObjectByType<Player.PlayerController>();
+            Assert.IsNotNull(knight, "No knight in the arena scene.");
+
+            const System.Reflection.BindingFlags Private =
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+
+            object machine = typeof(Player.PlayerController).GetField("_machine", Private).GetValue(knight);
+            object aerial = typeof(Player.PlayerController).GetField("_aerialState", Private).GetValue(knight);
+            Assert.IsNotNull(aerial, "The knight has no air game.");
+
+            float ground = knight.transform.position.y;
+            machine.GetType().GetMethod("ForceState").Invoke(machine, new[] { aerial });
+            Assert.IsTrue(knight.IsLeaping, "The knight did not leap.");
+
+            float peak = ground;
+            float until = Time.realtimeSinceStartup + 4f;
+
+            while (knight.IsLeaping && Time.realtimeSinceStartup < until)
+            {
+                peak = Mathf.Max(peak, knight.transform.position.y);
+                yield return null;
+            }
+
+            Assert.Greater(peak, ground + 0.5f, "The leap never left the ground.");
+            Assert.IsFalse(knight.IsLeaping, "The knight never came back down to act again.");
+            Assert.Less(knight.transform.position.y, ground + 0.3f, "The knight is still in the air.");
+        }
+
+        [UnityTest]
         public IEnumerator AfterARetry_TheNextTurnIsStagedAgain()
         {
             Assert.IsNotNull(_director, "No encounter director in the arena scene.");

@@ -289,6 +289,7 @@ namespace AdaptiveBossArena.Player
         private PlayerStaggerState _staggerState;
         private PlayerDeadState _deadState;
         private PlayerAirborneState _airborneState;
+        private PlayerAerialState _aerialState;
         private PlayerKnockedDownState _knockedDownState;
         private PlayerGetUpState _getUpState;
 
@@ -740,6 +741,7 @@ namespace AdaptiveBossArena.Player
             _staggerState = new PlayerStaggerState();
             _deadState = new PlayerDeadState();
             _airborneState = new PlayerAirborneState();
+            _aerialState = new PlayerAerialState();
             _knockedDownState = new PlayerKnockedDownState();
             _getUpState = new PlayerGetUpState(() => _posture.ResetToFull());
 
@@ -761,6 +763,12 @@ namespace AdaptiveBossArena.Player
             // A weapon with a dash-cut strikes out of the roll itself, not only its tail. Ranked above the tail's
             // cancel so the cut is what comes out, and below nothing else the roll offers.
             _machine.AddTransition(_dashState, _attackState, WantsToDashCut, AttackTransitionPriority + 1);
+
+            // A heavy attack out of the roll's tail is the knight's leap: ranked above the tail's ordinary cancel, so
+            // the heavy from a roll launches him rather than swinging from the ground.
+            _machine.AddTransition(_dashState, _aerialState, WantsToLeap, AttackTransitionPriority + 2);
+            _machine.AddTransition(_aerialState, _moveState, LeapFinishedWithInput);
+            _machine.AddTransition(_aerialState, _idleState, LeapFinished);
 
             // The same slow tail can raise the guard, so a roll that lands in front of a swing is not a trap.
             _machine.AddTransition(_dashState, _parryState, WantsToCancelRollIntoGuard, GuardTransitionPriority);
@@ -851,6 +859,21 @@ namespace AdaptiveBossArena.Player
 
         private bool WantsToCancelRollIntoAttack(PlayerContext context) =>
             _dashState.CanCancel(context) && WantsToAttack(context);
+
+        /// <summary>Launches the knight into his air game from the roll's tail on a heavy attack.</summary>
+        private bool WantsToLeap(PlayerContext context) =>
+            context.LauncherAttack != null &&
+            _dashState.CanCancel(context) &&
+            context.Stamina.CanSpend(context.LauncherAttack.StaminaCost) &&
+            context.InputBuffer.TryConsume(PlayerInputAction.HeavyAttack, _time.CombatTime);
+
+        private bool LeapFinished(PlayerContext context) => _aerialState.IsComplete(context);
+
+        private bool LeapFinishedWithInput(PlayerContext context) =>
+            _aerialState.IsComplete(context) && context.HasMoveInput;
+
+        /// <summary>Whether the knight is in a leap of his own. For tests and debug tooling.</summary>
+        public bool IsLeaping => _machine != null && ReferenceEquals(_machine.CurrentState, _aerialState);
 
         /// <summary>How far into a roll the dash-cut may come out: past the first instant, so a tap still rolls.</summary>
         public const float DashCutEarliestSeconds = 0.08f;

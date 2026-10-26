@@ -218,6 +218,15 @@ namespace AdaptiveBossArena.Player
         /// <summary>The execution thrown into a broken guard, falling back to the ordinary riposte.</summary>
         public AttackDefinition ExecutionAttack => Config.ExecutionAttack ?? RiposteAttack;
 
+        /// <summary>The rising slash that launches the knight, shared by every weapon.</summary>
+        public AttackDefinition LauncherAttack => Config.LauncherAttack;
+
+        /// <summary>The cut thrown in the air.</summary>
+        public AttackDefinition AirSlashAttack => Config.AirSlashAttack;
+
+        /// <summary>The slam a plunge lands as.</summary>
+        public AttackDefinition PlungeAttack => Config.PlungeAttack;
+
         /// <summary>Deflect window for the drawn weapon.</summary>
         public float DeflectWindowSeconds =>
             Weapon != null ? Weapon.DeflectWindowSeconds : States.PlayerParryState.DeflectWindowSeconds;

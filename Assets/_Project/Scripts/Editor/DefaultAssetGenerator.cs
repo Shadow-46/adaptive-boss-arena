@@ -285,6 +285,10 @@ namespace AdaptiveBossArena.Editor
 
             // The blade's dash-cut is the same driving lunge, thrown from inside the roll.
             ("BladeDashCut", "Dash"),
+
+            // The air game: the rising slash is the widest upward cut, the air slash a quick return cut, and the
+            // plunge brings the blade down as the overhead does.
+            ("KnightRisingSlash", "Light3"), ("KnightAirSlash", "Light2"), ("KnightPlunge", "Heavy"),
             // The execution is a thrust driven in with both hands, not another passing slash.
             ("PlayerExecution", "Riposte")
         };
@@ -333,6 +337,7 @@ namespace AdaptiveBossArena.Editor
             ("PlayerExecution", StrikerParts.Weapon),
             ("BladeCounter", StrikerParts.Weapon), ("GreatswordCounter", StrikerParts.Weapon),
             ("EnergyCounter", StrikerParts.Weapon), ("BladeDashCut", StrikerParts.Weapon),
+            ("KnightRisingSlash", StrikerParts.Weapon), ("KnightAirSlash", StrikerParts.Weapon),
             ("GreatswordLight1", StrikerParts.Weapon), ("GreatswordLight2", StrikerParts.Weapon),
             ("GreatswordHeavy", StrikerParts.Weapon),
             ("EnergyLight1", StrikerParts.Weapon), ("EnergyLight2", StrikerParts.Weapon),
@@ -1130,6 +1135,27 @@ namespace AdaptiveBossArena.Editor
         /// </remarks>
         private static void CreatePlayerConfig(PlayerAttacks attacks, WeaponDefinition[] weapons)
         {
+            // The air game, shared by every weapon: a rising slash out of a roll, cuts thrown aloft, and a plunge
+            // that lands as a slam around the knight. The plunge is an area, drawn by the burst it lands with, and
+            // stays off the strike volumes so it hits around him rather than along the blade.
+            AttackDefinition risingSlash = CreateAttack(
+                "KnightRisingSlash", "Rising Slash", DamageType.Heavy,
+                damage: 22f, startup: 0.08f, active: 0.14f, recovery: 0.20f,
+                range: 2.4f, arc: 140f, poise: 30f, knockback: 3f, hitStop: 0.08f, trauma: 0.25f,
+                staminaCost: 18f, overlayColor: PlayerSwingColor);
+
+            AttackDefinition airSlash = CreateAttack(
+                "KnightAirSlash", "Air Slash", DamageType.Light,
+                damage: 12f, startup: 0.05f, active: 0.08f, recovery: 0.14f,
+                range: 2.4f, arc: 120f, poise: 12f, knockback: 2f, hitStop: 0.05f, trauma: 0.12f,
+                overlayColor: PlayerSwingColor);
+
+            AttackDefinition plunge = CreateAttack(
+                "KnightPlunge", "Plunging Slam", DamageType.Heavy,
+                damage: 34f, startup: 0.02f, active: 0.12f, recovery: 0.35f,
+                range: 3f, arc: 360f, poise: 45f, knockback: 7f, hitStop: 0.12f, trauma: 0.5f,
+                shape: AttackShape.Sphere, stagger: StaggerStrength.Interrupt, overlayColor: PlayerSwingColor);
+
             var config = AssetAuthoring.CreateOrLoad<PlayerConfig>(
                 $"{ConfigFolder}/DefaultPlayerConfig.asset", out bool created);
 
@@ -1201,7 +1227,10 @@ namespace AdaptiveBossArena.Editor
                     .ReferenceArray("_lightComboChain", attacks.LightChain)
                     .Reference("_heavyAttack", attacks.Heavy)
                     .Reference("_specialAttack", attacks.Special)
-                    .Reference("_executionAttack", execution);
+                    .Reference("_executionAttack", execution)
+                    .Reference("_launcherAttack", risingSlash)
+                    .Reference("_airSlashAttack", airSlash)
+                    .Reference("_plungeAttack", plunge);
             }
         }
 

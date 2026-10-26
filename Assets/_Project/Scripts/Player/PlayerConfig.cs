@@ -194,6 +194,18 @@ namespace AdaptiveBossArena.Player
                  "back to the ordinary riposte when empty.")]
         private AttackDefinition _executionAttack;
 
+        [SerializeField]
+        [Tooltip("The rising slash that launches the knight from a roll.")]
+        private AttackDefinition _launcherAttack;
+
+        [SerializeField]
+        [Tooltip("The cut thrown in the air.")]
+        private AttackDefinition _airSlashAttack;
+
+        [SerializeField]
+        [Tooltip("The slam a plunge lands as.")]
+        private AttackDefinition _plungeAttack;
+
         [Header("Posture")]
         [SerializeField]
         [Tooltip("Posture capacity. Blocking late drains this; running out breaks the guard and " +
@@ -347,6 +359,15 @@ namespace AdaptiveBossArena.Player
 
         /// <summary>The execution used to punish a broken guard, or null to reuse the riposte.</summary>
         public AttackDefinition ExecutionAttack => _executionAttack;
+
+        /// <summary>The rising slash that launches the knight from a roll, or null for no air game.</summary>
+        public AttackDefinition LauncherAttack => _launcherAttack;
+
+        /// <summary>The cut thrown in the air.</summary>
+        public AttackDefinition AirSlashAttack => _airSlashAttack;
+
+        /// <summary>The slam a plunge lands as.</summary>
+        public AttackDefinition PlungeAttack => _plungeAttack;
 
         /// <summary>Posture capacity.</summary>
         public float MaxPosture => _maxPosture;
