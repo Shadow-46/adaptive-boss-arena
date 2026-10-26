@@ -677,6 +677,7 @@ namespace AdaptiveBossArena.Player
                 ActionState = _context.ObservableState,
                 TimeInActionState = _time.CombatTime - _context.ObservableStateEnteredAt,
                 NormalizedHealth = _health.Normalized,
+                IsBurningWithWrath = _context.IsInWrath,
                 IsValid = true
             };
         }

@@ -1166,7 +1166,10 @@ namespace AdaptiveBossArena.AI
                 return false;
             }
 
-            float parryChance = context.Tuning.Get(BossTuningParameter.ParryChance);
+            // Against a knight he can see burning with Wrath he guards more readily: the heavy blows are the
+            // dangerous ones now, and meeting them is how a wary fighter waits a fury out.
+            float parryChance = context.Tuning.Get(BossTuningParameter.ParryChance) +
+                                (context.SeesWrath ? BossContext.WrathParryBonus : 0f);
 
             if (parryChance <= 0f)
             {

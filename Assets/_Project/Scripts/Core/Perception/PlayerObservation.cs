@@ -141,6 +141,15 @@ namespace AdaptiveBossArena.Core.Perception
         /// <summary>Player health as a fraction of maximum. Visible on the health bar.</summary>
         public float NormalizedHealth { get; init; }
 
+        /// <summary>
+        /// Whether the knight is burning with Wrath: a red light blazes about him, plain to anyone watching.
+        /// </summary>
+        /// <remarks>
+        /// The aura and nothing behind it. The meter, its fullness and the seconds left are never carried - only
+        /// what a human opponent would see across the arena.
+        /// </remarks>
+        public bool IsBurningWithWrath { get; init; }
+
         /// <summary>True when this snapshot holds real data rather than a default value.</summary>
         public bool IsValid { get; init; }
 

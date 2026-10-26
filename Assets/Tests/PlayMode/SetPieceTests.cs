@@ -246,6 +246,40 @@ namespace AdaptiveBossArena.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Igris_GivesGroundToAKnightHeCanSeeBurning_AndOnlyWhileHeCanSeeIt()
+        {
+            var knight = Object.FindAnyObjectByType<Player.PlayerController>();
+            Assert.IsNotNull(knight, "No knight in the arena scene.");
+
+            const System.Reflection.BindingFlags Private =
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+
+            var context = (BossContext)typeof(BossController).GetField("_context", Private).GetValue(_boss);
+            var focus = (Combat.Vitals.FocusMeter)typeof(Player.PlayerController).GetField("_focus", Private).GetValue(knight);
+
+            float calm = context.PreferredRange;
+            Assert.IsFalse(context.SeesWrath);
+
+            for (int i = 0; i < 20 && !focus.IsFull; i++)
+            {
+                focus.AddFromDeflect();
+            }
+
+            Assert.IsTrue(knight.TryEnterWrath(), "Wrath did not begin.");
+
+            // Through the perception delay, as everything he knows about the knight is.
+            yield return WaitUntil(() => context.SeesWrath, 2f);
+
+            Assert.IsTrue(context.SeesWrath, "He never saw the aura.");
+            Assert.AreEqual(calm + BossContext.WrathWaryMetres, context.PreferredRange, 0.25f,
+                "He did not give ground to the burning knight.");
+
+            yield return WaitUntil(() => !knight.IsInWrath && !context.SeesWrath, 12f);
+
+            Assert.IsFalse(context.SeesWrath, "He went on seeing a fury that had burned out.");
+        }
+
+        [UnityTest]
         public IEnumerator TheLeap_RisesLandsAndRecovers()
         {
             var knight = Object.FindAnyObjectByType<Player.PlayerController>();

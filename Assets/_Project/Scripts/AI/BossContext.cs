@@ -296,7 +296,23 @@ namespace AdaptiveBossArena.AI
         public Vector2 HabitualDodge { get; set; }
 
         /// <summary>Distance the boss currently wants to hold, after adaptation.</summary>
-        public float PreferredRange => Tuning.Get(BossTuningParameter.PreferredRange);
+        public float PreferredRange =>
+            Tuning.Get(BossTuningParameter.PreferredRange) + (SeesWrath ? WrathWaryMetres : 0f);
+
+        /// <summary>
+        /// Whether the boss can see the knight burning with Wrath, through the same delay as everything else.
+        /// </summary>
+        /// <remarks>
+        /// A wary fighter gives ground to an opponent who has just caught fire and lets the fury burn out. He does
+        /// this from the first fight, not by learning it, and only for as long as the aura is visible to him.
+        /// </remarks>
+        public bool SeesWrath => Perceived.IsValid && Perceived.IsBurningWithWrath;
+
+        /// <summary>How much further off the boss holds while he can see the knight in Wrath.</summary>
+        public const float WrathWaryMetres = 1.5f;
+
+        /// <summary>How much more readily he meets a burning knight's heavy blows with a parry.</summary>
+        public const float WrathParryBonus = 0.15f;
 
         /// <summary>True when the boss's reaction delay has elapsed and it may act.</summary>
         public bool IsReactionReady => Time.CombatTime >= ReactionReadyAt;
