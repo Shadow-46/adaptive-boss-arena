@@ -37,6 +37,13 @@ namespace AdaptiveBossArena.Tests.EditMode
         }
 
         [Test]
+        public void ADeathReachesTryAgainInUnderTwoSeconds()
+        {
+            // A death is the common case in a souls-hard fight; the verdict must not stand long between it and a retry.
+            Assert.Less(EndScreen.CardOutEnd * EndScreen.DefeatCardPace, 2f);
+        }
+
+        [Test]
         public void TheGlintPeaksWellInsideTheShortestPerilousWindUp()
         {
             // The grab, the quickest blow that cannot be blocked, winds up for 0.55 s. The glint must be at full

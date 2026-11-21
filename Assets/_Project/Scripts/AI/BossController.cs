@@ -219,6 +219,16 @@ namespace AdaptiveBossArena.AI
         /// <summary>Zero-based index of the phase currently in effect.</summary>
         public int PhaseIndex => _context?.PhaseIndex ?? 0;
 
+        /// <summary>
+        /// Whether the latest phase change was an escalation the player caused, rather than a quiet opening or reset.
+        /// </summary>
+        /// <remarks>
+        /// Set before the phase channel is raised, so its listeners can tell the two apart. The channel carries only
+        /// the phase number, and the Ascended rematch opens in phase two: judged by the number alone, every listener
+        /// played the full transformation - the cut, the slow motion, the title, the roar - over the entrance.
+        /// </remarks>
+        public bool LastPhaseChangeWasEscalation { get; private set; }
+
         /// <summary>A phase's name as configured, for its title as the boss turns into it.</summary>
         /// <param name="index">Zero-based phase.</param>
         /// <returns>The name, or empty when there is no such phase.</returns>
@@ -1264,6 +1274,7 @@ namespace AdaptiveBossArena.AI
             // Captured before the assignment so a genuine escalation can be told apart from the
             // opening phase and from a reset back to phase zero, neither of which should erupt.
             bool isEscalation = announce && phaseIndex > _context.PhaseIndex;
+            LastPhaseChangeWasEscalation = isEscalation;
 
             _context.PhaseIndex = phaseIndex;
             _context.Motor.SetSpeedMultiplier(_context.CurrentPhase.MoveSpeedMultiplier);

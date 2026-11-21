@@ -32,6 +32,16 @@ namespace AdaptiveBossArena.Game
 
         private readonly string _rootFolder;
 
+        /// <summary>
+        /// A folder every default-constructed service writes to instead of the persistent data path. Null in a game.
+        /// </summary>
+        /// <remarks>
+        /// Set by the play-mode tests. The editor shares its persistent data path with the Windows player, so every
+        /// test that won a fight wrote a real record into the player's own save: hundreds of attempts, a zero-second
+        /// best, trials completed and the Ascended rematch unlocked by a harness.
+        /// </remarks>
+        public static string DefaultRootOverride { get; set; }
+
         /// <summary>Creates a save service writing beneath the given folder.</summary>
         /// <param name="rootFolder">
         /// Destination folder. Defaults to the platform's persistent data path, which is the only
@@ -39,9 +49,9 @@ namespace AdaptiveBossArena.Game
         /// </param>
         public JsonSaveService(string rootFolder = null)
         {
-            _rootFolder = string.IsNullOrEmpty(rootFolder)
-                ? Application.persistentDataPath
-                : rootFolder;
+            _rootFolder = !string.IsNullOrEmpty(rootFolder) ? rootFolder
+                : !string.IsNullOrEmpty(DefaultRootOverride) ? DefaultRootOverride
+                : Application.persistentDataPath;
 
             Directory.CreateDirectory(_rootFolder);
         }

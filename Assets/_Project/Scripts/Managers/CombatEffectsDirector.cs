@@ -421,7 +421,9 @@ namespace AdaptiveBossArena.Game
         /// </remarks>
         private void OnBossPhaseChanged(int phaseIndex)
         {
-            bool escalation = phaseIndex > _lastPhase;
+            // The boss says whether he escalated: the Ascended rematch opens in phase two without one.
+            AI.BossController boss = _bossTransform != null ? _bossTransform.GetComponent<AI.BossController>() : null;
+            bool escalation = phaseIndex > _lastPhase && (boss == null || boss.LastPhaseChangeWasEscalation);
             _lastPhase = phaseIndex;
 
             if (phaseIndex <= 0 || _bossTransform == null || !escalation)

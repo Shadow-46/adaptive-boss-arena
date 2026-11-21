@@ -139,6 +139,38 @@ namespace AdaptiveBossArena.Combat.Feel
             }
         }
 
+        /// <summary>
+        /// Multiplies every body's resting colour, for the knight's unlocked armour tints, and shows it at once.
+        /// </summary>
+        /// <remarks>
+        /// The tint must live here, in the colours this component restores after every flash. Written onto the
+        /// materials instead, it lasted until the first blow: the flash writes its cached, untinted colour back
+        /// through the property block, which overrides the material.
+        /// </remarks>
+        /// <param name="multiplier">The tint, multiplied into each body's colour; white leaves them unchanged.</param>
+        public void TintBase(Color multiplier)
+        {
+            if (_baseColors == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _baseColors.Length; i++)
+            {
+                Color tinted = _baseColors[i] * multiplier;
+                tinted.a = _baseColors[i].a;
+                _baseColors[i] = tinted;
+            }
+
+            ApplyTint(0f);
+        }
+
+        /// <summary>The resting colour of one body, after any tint. For tests.</summary>
+        /// <param name="index">The body's index.</param>
+        /// <returns>Its colour, or white when there is no such body.</returns>
+        public Color BaseColorAt(int index) =>
+            _baseColors != null && index >= 0 && index < _baseColors.Length ? _baseColors[index] : Color.white;
+
         /// <summary>Reads a renderer's untinted colour, tolerating either pipeline's property name.</summary>
         private static Color ReadBaseColor(Renderer target)
         {

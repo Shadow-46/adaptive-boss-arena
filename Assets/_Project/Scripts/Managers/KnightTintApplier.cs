@@ -33,6 +33,30 @@ namespace AdaptiveBossArena.Game
 
             var armour = new Color(tint.R, tint.G, tint.B, 1f);
 
+            // Through the hit flash when the knight has one: it restores its own cached colours after every blow,
+            // so a tint written anywhere else lasted only until the first hit.
+            HitFlash flash = knight.GetComponentInChildren<HitFlash>(true);
+
+            if (flash != null)
+            {
+                flash.TintBase(armour);
+            }
+            else
+            {
+                TintMaterials(knight, armour);
+            }
+
+            var glow = new Color(tint.GlowR, tint.GlowG, tint.GlowB, 1f);
+
+            foreach (WeaponTrail trail in knight.GetComponentsInChildren<WeaponTrail>(true))
+            {
+                trail.SetColour(glow);
+            }
+        }
+
+        /// <summary>Tints per-renderer material copies, for a body with no hit flash to carry the tint.</summary>
+        private static void TintMaterials(GameObject knight, Color armour)
+        {
             foreach (SkinnedMeshRenderer body in knight.GetComponentsInChildren<SkinnedMeshRenderer>(true))
             {
                 // Renderer.materials hands back per-renderer instances, created once; later calls reuse them.
@@ -43,13 +67,6 @@ namespace AdaptiveBossArena.Game
                         material.SetColor(BaseColorId, material.GetColor(BaseColorId) * armour);
                     }
                 }
-            }
-
-            var glow = new Color(tint.GlowR, tint.GlowG, tint.GlowB, 1f);
-
-            foreach (WeaponTrail trail in knight.GetComponentsInChildren<WeaponTrail>(true))
-            {
-                trail.SetColour(glow);
             }
         }
     }

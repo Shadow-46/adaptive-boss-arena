@@ -89,6 +89,15 @@ namespace AdaptiveBossArena.UI
         /// <summary>How far the lettering spreads as it arrives, as a fraction of its width.</summary>
         private const float CardSpread = 0.08f;
 
+        /// <summary>
+        /// How fast the card plays on a death, as a share of its victory pace.
+        /// </summary>
+        /// <remarks>
+        /// A death is the common case in a souls-hard fight, and the card stood between it and Try Again: at full
+        /// pace every retry waited over three seconds where it used to wait one. A victory earns the long beat.
+        /// </remarks>
+        public const float DefeatCardPace = 0.6f;
+
         /// <summary>The verdict on a win: Igris is the Blood-Red Commander, and he has been felled.</summary>
         public const string VictoryVerdict = "Commander felled";
 
@@ -96,6 +105,7 @@ namespace AdaptiveBossArena.UI
         public const string DefeatVerdict = "Fallen";
 
         private bool _isRunning;
+        private bool _won;
         private float _elapsed;
 
         /// <summary>Raised when the player asks to try again.</summary>
@@ -146,7 +156,13 @@ namespace AdaptiveBossArena.UI
         /// The card is the moment; the report is the reading. Shown together, the report's paragraphs pulled the
         /// eye off the one line that matters at the instant the fight was decided.
         /// </remarks>
-        private float ReportDelay => _card != null ? Mathf.Max(_delaySeconds, CardOutEnd) : _delaySeconds;
+        private float ReportDelay => _card != null ? Mathf.Max(_delaySeconds, CardOutEnd * CardPace) : _delaySeconds;
+
+        /// <summary>The card's pace for this ending: full on a win, quicker on a death.</summary>
+        private float CardPace => _won ? 1f : DefeatCardPace;
+
+        /// <summary>Seconds after the end before the report and its buttons appear. For tests.</summary>
+        public float ReportDelaySeconds => ReportDelay;
 
         /// <summary>Whether the verdict card is on screen now. For tests.</summary>
         public bool IsCardShowing => _card != null && _card.alpha > 0f;
@@ -179,11 +195,12 @@ namespace AdaptiveBossArena.UI
                 return;
             }
 
-            _card.alpha = CardAlpha(_elapsed);
+            float paced = _elapsed / CardPace;
+            _card.alpha = CardAlpha(paced);
 
             if (_cardText != null)
             {
-                float arrival = Mathf.Clamp01((_elapsed - CardInStart) / (CardOutEnd - CardInStart));
+                float arrival = Mathf.Clamp01((paced - CardInStart) / (CardOutEnd - CardInStart));
                 float spread = 1f - CardSpread + CardSpread * Mathf.Sqrt(arrival);
                 _cardText.rectTransform.localScale = new Vector3(spread, 1f, 1f);
             }
@@ -201,6 +218,7 @@ namespace AdaptiveBossArena.UI
             string dossier = "")
         {
             _isRunning = true;
+            _won = won;
             _elapsed = 0f;
             _selectedOnReport = false;
 

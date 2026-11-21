@@ -60,6 +60,9 @@ namespace AdaptiveBossArena.Game
         private VoidEventChannel _overbalanceChannel;
 
         private IAudioService _audio;
+
+        /// <summary>The boss, found on the first phase change, asked whether the change was an escalation.</summary>
+        private AI.BossController _boss;
         private ICombatEventBus _events;
 
         /// <summary>Latches so the focus-full chime plays once per fill, not every frame it is full.</summary>
@@ -363,8 +366,14 @@ namespace AdaptiveBossArena.Game
             _audio?.PlayMusic("music.bed");
             _audio?.SetMusicIntensity(phaseIndex);
 
-            // The opening phase is not an escalation, so it gets no roar.
-            if (phaseIndex > 0)
+            // The opening phase is not an escalation, so it gets no roar - nor does the Ascended rematch opening in
+            // phase two, which the boss reports as quiet.
+            if (_boss == null)
+            {
+                _boss = FindAnyObjectByType<AI.BossController>();
+            }
+
+            if (phaseIndex > 0 && (_boss == null || _boss.LastPhaseChangeWasEscalation))
             {
                 _audio?.PlayCue2D(AudioService.Cues.MusicStinger);
                 _audio?.PlayCue2D(AudioService.Cues.BossRoar);

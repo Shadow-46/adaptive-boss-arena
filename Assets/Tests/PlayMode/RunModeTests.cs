@@ -1,5 +1,6 @@
 using System.Collections;
 using AdaptiveBossArena.AI;
+using AdaptiveBossArena.Combat.Feel;
 using AdaptiveBossArena.Core.Services;
 using AdaptiveBossArena.Player;
 using NUnit.Framework;
@@ -52,6 +53,13 @@ namespace AdaptiveBossArena.Tests.PlayMode
             Assert.AreEqual(0f, boss.PhaseTransitionInvulnRemaining, "Opening in phase two is not an escalation.");
             Assert.AreEqual(1f, boss.Health.Normalized, 1e-4f, "He opens at full health.");
             Assert.Less(boss.GetContext().CooldownScale, 1f, "An Ascended Igris rests less between swings.");
+            Assert.IsFalse(boss.LastPhaseChangeWasEscalation, "The opening was announced as an escalation.");
+            Assert.AreEqual(1, boss.GetContext().ComboCeilingBonus, "An Ascended Igris chains one blow longer.");
+
+            // The set piece's own cut would hold the camera on him over the entrance.
+            var camera = Object.FindAnyObjectByType<Game.ArenaCameraRig>();
+            Assert.IsNotNull(camera);
+            Assert.IsFalse(camera.IsPlayingPhaseShot, "The phase transformation played over the Ascended entrance.");
         }
 
         [UnityTest]
@@ -62,6 +70,51 @@ namespace AdaptiveBossArena.Tests.PlayMode
             var boss = Object.FindAnyObjectByType<BossController>();
             Assert.AreEqual(0, boss.PhaseIndex);
             Assert.AreEqual(1f, boss.GetContext().CooldownScale);
+
+            // Every test writes its records to a throwaway folder, never to the player's own save.
+            Assert.IsTrue(ServiceRegistry.Current.TryGet(out ISaveService saves));
+            Assert.AreEqual(TestSaveIsolation.Folder, ((Game.JsonSaveService)saves).RootFolder,
+                "The tests are writing into the player's real save.");
+        }
+
+        [UnityTest]
+        public IEnumerator AnUnlockedTintSurvivesAHit()
+        {
+            yield return LoadArena(new RunModifiers());
+            Color plain = Object.FindAnyObjectByType<PlayerController>().GetComponentInChildren<HitFlash>().BaseColorAt(0);
+
+            yield return LoadArena(new RunModifiers { KnightTintId = "gilded" });
+            HitFlash flash = Object.FindAnyObjectByType<PlayerController>().GetComponentInChildren<HitFlash>();
+            Color tinted = flash.BaseColorAt(0);
+            Assert.AreNotEqual(plain, tinted, "The tint did not reach the knight.");
+
+            // A blow flashes the body and then restores its resting colour; the resting colour must be the tint.
+            flash.Play();
+
+            for (int i = 0; i < 60; i++)
+            {
+                yield return null;
+            }
+
+            Renderer body = FirstBody(flash);
+            var block = new MaterialPropertyBlock();
+            body.GetPropertyBlock(block);
+            Color shown = block.GetColor("_BaseColor");
+            Assert.AreEqual(tinted.r, shown.r, 0.02f, "The first blow wiped the tint.");
+            Assert.AreEqual(tinted.b, shown.b, 0.02f, "The first blow wiped the tint.");
+        }
+
+        private static Renderer FirstBody(HitFlash flash)
+        {
+            foreach (Renderer candidate in flash.GetComponentsInChildren<Renderer>())
+            {
+                if (candidate is MeshRenderer || candidate is SkinnedMeshRenderer)
+                {
+                    return candidate;
+                }
+            }
+
+            return null;
         }
 
         [UnityTest]
