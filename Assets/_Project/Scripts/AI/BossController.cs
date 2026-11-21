@@ -157,6 +157,15 @@ namespace AdaptiveBossArena.AI
         /// <summary>Run-modifier multiplier on the adaptation rate. One is the ordinary fight.</summary>
         private float _adaptationRateScale = 1f;
 
+        /// <summary>Difficulty's multiplier on damage the boss takes. One is the ordinary fight.</summary>
+        private float _damageTakenScale = 1f;
+
+        /// <summary>Difficulty's multiplier on the rest between swings, kept until the context exists.</summary>
+        private float _cooldownScale = 1f;
+
+        /// <summary>The phase each attempt opens in: zero, or the second phase for the Ascended rematch.</summary>
+        private int _openingPhase;
+
         private ITimeService _time;
         private ICombatEventBus _events;
         private DelayedPerceptionSource _perception;
@@ -303,6 +312,7 @@ namespace AdaptiveBossArena.AI
                 _config, transform, motor, _health, _poise, attacks,
                 _perception, tuning, _time, random, _events);
 
+            _context.CooldownScale = _cooldownScale;
             attacks.Parried += OnOwnAttackParried;
 
             _selector = new BossAttackSelector(random);
@@ -313,7 +323,7 @@ namespace AdaptiveBossArena.AI
             SessionMemory.TryRecall(_adaptation);
             BuildStateMachine();
             SubscribeToVitals();
-            ApplyPhase(0);
+            ApplyPhase(_openingPhase, announce: false);
 
             _isInitialised = true;
             _healthChannel?.Raise(_health.Normalized);
@@ -635,12 +645,16 @@ namespace AdaptiveBossArena.AI
 
             // The killing blow is always an execution. A blow that would end a standing boss brings him to
             // his knee instead, broken; the knight's next blow - the riposte the broken guard offers - ends it.
-            if (!_awaitingFinalBlow && !_poise.IsBroken && damage.Amount >= _health.Current)
+            // Difficulty scales the blow here, at the one door all damage passes, so the kneel below sees the
+            // same number the health bar will.
+            float amount = damage.Amount * _damageTakenScale;
+
+            if (!_awaitingFinalBlow && !_poise.IsBroken && amount >= _health.Current)
             {
                 return KneelForFinalBlow(damage);
             }
 
-            float applied = _health.Reduce(damage.Amount, damage);
+            float applied = _health.Reduce(amount, damage);
             _hitFlash?.Play();
             _animator?.Recoil(damage.HitDirection);
 
@@ -835,7 +849,7 @@ namespace AdaptiveBossArena.AI
             // The same player, trying again: the boss opens the rematch remembering them, faded.
             SessionMemory.TryRecall(_adaptation);
 
-            ApplyPhase(0);
+            ApplyPhase(_openingPhase, announce: false);
             _machine.ForceState(_idleState);
             // The body goes back to the Animator before the pose is reset, or the reset would pose bones
             // that physics still owns.
@@ -1226,7 +1240,8 @@ namespace AdaptiveBossArena.AI
                 return;
             }
 
-            int resolved = _config.ResolvePhaseIndex(_health.Normalized);
+            // Never below the opening phase: an Ascended Igris at full health is still in his second phase.
+            int resolved = Mathf.Max(_openingPhase, _config.ResolvePhaseIndex(_health.Normalized));
 
             if (resolved != _context.PhaseIndex)
             {
@@ -1235,11 +1250,16 @@ namespace AdaptiveBossArena.AI
         }
 
         /// <summary>Applies a phase's movement multiplier and adaptation rate, then announces it.</summary>
-        private void ApplyPhase(int phaseIndex)
+        /// <param name="phaseIndex">The phase to enter.</param>
+        /// <param name="announce">
+        /// False for the phase an attempt opens in. An Ascended attempt opens in phase two, and entering it
+        /// from a reset must not roar, turn invulnerable and erupt before the first blow is struck.
+        /// </param>
+        private void ApplyPhase(int phaseIndex, bool announce = true)
         {
             // Captured before the assignment so a genuine escalation can be told apart from the
             // opening phase and from a reset back to phase zero, neither of which should erupt.
-            bool isEscalation = phaseIndex > _context.PhaseIndex;
+            bool isEscalation = announce && phaseIndex > _context.PhaseIndex;
 
             _context.PhaseIndex = phaseIndex;
             _context.Motor.SetSpeedMultiplier(_context.CurrentPhase.MoveSpeedMultiplier);
@@ -1329,6 +1349,43 @@ namespace AdaptiveBossArena.AI
         /// <summary>Assigns the configuration. Used by the prefab generator.</summary>
         /// <param name="config">Boss tuning values.</param>
         public void SetConfig(BossConfig config) => _config = config;
+
+        /// <summary>Applies the chosen difficulty's multipliers on damage taken and on rest between swings.</summary>
+        /// <remarks>
+        /// Numbers on values the boss already respects, pushed in by the encounter: the AI never reads the run
+        /// settings itself. Held here as well as on the context, so a call made before the boss initialises
+        /// still lands, and neither a reset nor a phase change clears them.
+        /// </remarks>
+        /// <param name="damageTakenScale">Multiplier on damage the boss takes.</param>
+        /// <param name="cooldownScale">Multiplier on the rest between swings.</param>
+        public void SetDifficultyScales(float damageTakenScale, float cooldownScale)
+        {
+            _damageTakenScale = Mathf.Max(0.1f, damageTakenScale);
+            _cooldownScale = Mathf.Max(0.1f, cooldownScale);
+
+            if (_context != null)
+            {
+                _context.CooldownScale = _cooldownScale;
+            }
+        }
+
+        /// <summary>Sets the phase each attempt opens in, and enters it now if the fight has not begun.</summary>
+        /// <remarks>
+        /// The Ascended rematch opens in the second phase. Applied quietly, as a reset applies phase one: the
+        /// phase beat is for an escalation the player caused, not for the opening.
+        /// </remarks>
+        /// <param name="phaseIndex">The opening phase, clamped to the phases the boss has.</param>
+        public void SetOpeningPhase(int phaseIndex)
+        {
+            _openingPhase = _config != null
+                ? Mathf.Clamp(phaseIndex, 0, Mathf.Max(0, _config.Phases.Length - 1))
+                : Mathf.Max(0, phaseIndex);
+
+            if (_isInitialised && _context.PhaseIndex < _openingPhase)
+            {
+                ApplyPhase(_openingPhase, announce: false);
+            }
+        }
 
         /// <summary>
         /// Scales how fast the boss adapts, on top of its per-phase rate, for the Fast Learner run

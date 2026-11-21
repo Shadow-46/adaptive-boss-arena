@@ -2,6 +2,7 @@ using System.Text;
 using AdaptiveBossArena.AI;
 using AdaptiveBossArena.Combat;
 using AdaptiveBossArena.Combat.Movement;
+using AdaptiveBossArena.Core.Combat;
 using AdaptiveBossArena.Core.Constants;
 using AdaptiveBossArena.Core.Events;
 using AdaptiveBossArena.Core.Services;
@@ -111,6 +112,9 @@ namespace AdaptiveBossArena.Game
         private int _parriedByBossThisAttempt;
         private int _perfectDodgesThisAttempt;
 
+        /// <summary>Blows that took the knight's health this attempt, for the Untouched trial and flawless records.</summary>
+        private int _hitsTakenThisAttempt;
+
         /// <summary>Seconds the current attempt has been running.</summary>
         public float AttemptDuration =>
             _time == null ? 0f : Mathf.Max(0f, _time.CombatTime - _attemptStartedAt);
@@ -158,6 +162,11 @@ namespace AdaptiveBossArena.Game
 
         private void OnDisable()
         {
+            if (_player != null && _player.Health != null)
+            {
+                _player.Health.Changed -= OnPlayerHealthChanged;
+            }
+
             if (_playerDiedChannel != null)
             {
                 _playerDiedChannel.Raised -= OnPlayerDied;
@@ -225,6 +234,7 @@ namespace AdaptiveBossArena.Game
 
             _saveService = ResolveSaveService();
             _records = LoadRecords();
+            _records.Migrate();
 
             if (_endScreen != null)
             {
@@ -236,8 +246,22 @@ namespace AdaptiveBossArena.Game
                 _pauseMenu.RestartRequested += RestartAttempt;
             }
 
+            if (_player != null && _player.Health != null)
+            {
+                _player.Health.Changed += OnPlayerHealthChanged;
+            }
+
             ApplyRunModifiers();
             StartAttemptWithIntro();
+        }
+
+        /// <summary>Counts the blows that cost the knight health while an attempt is live.</summary>
+        private void OnPlayerHealthChanged(ResourceChangedArgs args)
+        {
+            if (!_isDecided && args.Delta < 0f)
+            {
+                _hitsTakenThisAttempt++;
+            }
         }
 
         /// <summary>
@@ -482,7 +506,11 @@ namespace AdaptiveBossArena.Game
         /// <summary>Holds the camera on the boss under its name and a roar, then hands the fight over.</summary>
         private void PlayEntrance()
         {
-            _roundIntro.BeginEntrance(BossIdentity.EntranceTitle, OnIntroComplete);
+            _roundIntro.BeginEntrance(
+                RunSettings.Current != null && RunSettings.Current.Ascended
+                    ? BossIdentity.AscendedEntranceTitle
+                    : BossIdentity.EntranceTitle,
+                OnIntroComplete);
 
             if (_cameraRig == null)
             {
@@ -537,6 +565,7 @@ namespace AdaptiveBossArena.Game
             _deflectsThisAttempt = 0;
             _parriedByBossThisAttempt = 0;
             _perfectDodgesThisAttempt = 0;
+            _hitsTakenThisAttempt = 0;
 
             _pauseMenu?.SetSuppressed(false);
             _endScreen?.Hide();
@@ -583,8 +612,17 @@ namespace AdaptiveBossArena.Game
             RunModifiers modifiers = RunSettings.Current ?? new RunModifiers();
 
             _player?.ApplyRunModifiers(
-                modifiers.HealingEnabled, modifiers.IncomingDamageMultiplier, modifiers.TrainingMode);
+                modifiers.HealingEnabled, modifiers.IncomingDamageMultiplier, modifiers.TrainingMode,
+                modifiers.HealChargeBonus);
             _boss?.SetAdaptationRateScale(modifiers.AdaptationRateScale);
+            _boss?.SetDifficultyScales(modifiers.BossDamageTakenScale, modifiers.BossCooldownScale);
+            _boss?.SetOpeningPhase(modifiers.OpeningPhase);
+
+            // Once per fight, here at its start: the tint multiplies the armour, so reapplying would compound it.
+            if (_player != null)
+            {
+                KnightTintApplier.Apply(_player.gameObject, TrialBook.TintById(modifiers.KnightTintId));
+            }
 
             if (modifiers.TrainingMode)
             {
@@ -658,16 +696,20 @@ namespace AdaptiveBossArena.Game
 
             // An unkillable Training player would otherwise set the fastest victory and the fewest
             // adaptations allowed permanently, with no way to undo it.
-            bool countsTowardRecords = RunSettings.Current?.CountsTowardRecords ?? true;
-            bool isNewRecord = won && countsTowardRecords && IsImprovement(duration, adaptations);
+            RunModifiers modifiers = RunSettings.Current ?? new RunModifiers();
+            bool countsTowardRecords = modifiers.CountsTowardRecords;
+            AttemptSummary summary = SummariseAttempt(won, duration, remainingHealth, adaptations, modifiers);
+            bool isNewRecord = false;
+            string trialLines = string.Empty;
 
             if (countsTowardRecords)
             {
-                _records.RecordAttempt(won, duration, remainingHealth, adaptations);
+                isNewRecord = _records.RecordAttempt(summary);
+                trialLines = CompleteTrials(summary);
                 _saveService?.Save(SaveKeys.Records, _records);
             }
 
-            string dossier = BuildDossier(adaptation, remainingHealth);
+            string dossier = trialLines + BuildDossier(adaptation, remainingHealth);
             _endScreen?.Show(won, duration, adaptations, isNewRecord, dossier);
         }
 
@@ -776,11 +818,64 @@ namespace AdaptiveBossArena.Game
             builder.AppendLine();
         }
 
-        /// <summary>True when this attempt beats a stored best.</summary>
-        private bool IsImprovement(float duration, int adaptations) =>
-            !_records.HasWon ||
-            duration < _records.FastestVictorySeconds ||
-            adaptations < _records.FewestAdaptationsAllowed;
+        /// <summary>Gathers how the attempt went into the value records and trials are judged from.</summary>
+        private AttemptSummary SummariseAttempt(
+            bool won, float duration, float remainingHealth, int adaptations, RunModifiers modifiers)
+        {
+            int capacity = _player != null ? _player.HealChargeCapacity : 0;
+            int remaining = _player != null ? _player.HealChargesRemaining : 0;
+
+            return new AttemptSummary(
+                won, modifiers.Difficulty, modifiers.Ascended, duration, remainingHealth, adaptations,
+                _hitsTakenThisAttempt, Mathf.Max(0, capacity - remaining), _deflectsThisAttempt,
+                _perfectDodgesThisAttempt, _player != null ? _player.WeaponName : string.Empty);
+        }
+
+        /// <summary>
+        /// Marks every trial this attempt met, and returns the lines announcing the ones met for the first time.
+        /// </summary>
+        /// <remarks>
+        /// Only first completions are announced. A trial met again is still worth nothing new, and a dossier that
+        /// repeated "First Blood" after every win would bury the lines that are news.
+        /// </remarks>
+        private string CompleteTrials(in AttemptSummary summary)
+        {
+            var builder = new StringBuilder();
+
+            foreach (Trial trial in TrialBook.MetBy(summary))
+            {
+                if (!_records.CompleteTrial(trial.Id))
+                {
+                    continue;
+                }
+
+                builder.Append("<color=#E8B04A><b>TRIAL COMPLETE</b> - ").Append(trial.Title).Append("</color>");
+
+                if (!string.IsNullOrEmpty(trial.RewardTintId))
+                {
+                    builder.Append("   <i>unlocked: ").Append(TrialBook.TintById(trial.RewardTintId).Name)
+                        .Append(" armour</i>");
+                }
+
+                builder.AppendLine();
+            }
+
+            if (summary.Won && summary.AtLeastKnight && !summary.Ascended && _records.AscendedUnlocked &&
+                _records.CompleteTrial(AscendedOpenedMarker))
+            {
+                builder.AppendLine("<color=#E04A3A><b>IGRIS ASCENDED</b> awaits you on the title screen.</color>");
+            }
+
+            if (builder.Length > 0)
+            {
+                builder.AppendLine();
+            }
+
+            return builder.ToString();
+        }
+
+        /// <summary>A marker kept with the trials so the Ascended rematch is announced once, when it opens.</summary>
+        public const string AscendedOpenedMarker = "ascended_opened";
 
         private ISaveService ResolveSaveService() =>
             ServiceRegistry.Current.TryGet(out ISaveService service) ? service : null;

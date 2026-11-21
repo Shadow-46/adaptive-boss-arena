@@ -34,6 +34,13 @@ namespace AdaptiveBossArena.Core.Constants
         /// <summary>The name and, on a smaller line beneath it, the title, as the boss is met.</summary>
         public static string EntranceTitle => $"{Spaced(Name)}\n<size={EntranceEpithetSize}>{Spaced(Epithet)}</size>";
 
+        /// <summary>The epithet the Ascended rematch is announced with.</summary>
+        public const string AscendedEpithet = "Ascended, the Commander Unbound";
+
+        /// <summary>The entrance card for the Ascended rematch: the same name, a new epithet.</summary>
+        public static string AscendedEntranceTitle =>
+            $"{Spaced(Name)}\n<size={EntranceEpithetSize}>{Spaced(AscendedEpithet)}</size>";
+
         /// <summary>Upper-case, a space between letters and three between words: the fight's lettering.</summary>
         /// <param name="text">The words to space.</param>
         /// <returns>The spaced text.</returns>

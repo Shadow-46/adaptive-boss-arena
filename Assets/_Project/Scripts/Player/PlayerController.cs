@@ -268,6 +268,9 @@ namespace AdaptiveBossArena.Player
         // Run-modifier state, applied by the encounter director at the start of a run. Defaults leave
         // the ordinary fight untouched.
         private float _incomingDamageMultiplier = 1f;
+
+        /// <summary>Flasks the difficulty adds to, or takes from, the usual count.</summary>
+        private int _healChargeBonus;
         private bool _immortal;
         private IPlayerInput _input;
         private ITimeService _time;
@@ -319,6 +322,12 @@ namespace AdaptiveBossArena.Player
 
         /// <summary>Health pool, exposed read-only for the heads-up display.</summary>
         public IHealth Health => _health;
+
+        /// <summary>Flasks left this attempt. Read by the encounter for the post-fight summary.</summary>
+        public int HealChargesRemaining => _context != null ? _context.HealChargesRemaining : 0;
+
+        /// <summary>The name of the weapon in hand, for the post-fight summary.</summary>
+        public string WeaponName => _context?.Weapon != null ? _context.Weapon.DisplayName : string.Empty;
 
         /// <summary>Stamina pool, exposed read-only for the heads-up display.</summary>
         public IStaminaPool Stamina => _stamina;
@@ -697,7 +706,7 @@ namespace AdaptiveBossArena.Player
             _context.IsInvulnerable = false;
             _context.DashCooldownRemaining = 0f;
             _context.SpecialCooldownRemaining = 0f;
-            _context.HealChargesRemaining = _config.HealCharges;
+            _context.HealChargesRemaining = HealChargeCapacity;
             _context.ComboIndex = 0;
             _context.DashStartedAt = float.NegativeInfinity;
             _context.StaggerRequested = false;
@@ -1477,16 +1486,25 @@ namespace AdaptiveBossArena.Player
         /// <param name="healingEnabled">Whether the player may heal.</param>
         /// <param name="incomingDamageMultiplier">Multiplier on damage the player takes.</param>
         /// <param name="immortal">When true, the player is held one hit above death (Training).</param>
-        public void ApplyRunModifiers(bool healingEnabled, float incomingDamageMultiplier, bool immortal)
+        /// <param name="healChargeBonus">
+        /// Flasks the difficulty adds to the usual count, or takes from it. Applied now and on every reset.
+        /// </param>
+        public void ApplyRunModifiers(
+            bool healingEnabled, float incomingDamageMultiplier, bool immortal, int healChargeBonus = 0)
         {
             _incomingDamageMultiplier = Mathf.Max(0f, incomingDamageMultiplier);
             _immortal = immortal;
+            _healChargeBonus = healChargeBonus;
 
             if (_context != null)
             {
                 _context.HealingEnabled = healingEnabled;
+                _context.HealChargesRemaining = HealChargeCapacity;
             }
         }
+
+        /// <summary>Flasks the knight starts each attempt with: the usual count plus the difficulty's bonus.</summary>
+        public int HealChargeCapacity => _config != null ? Mathf.Max(0, _config.HealCharges + _healChargeBonus) : 0;
 
         /// <summary>Reports whether the opponent's guard is broken, opening a riposte.</summary>
         /// <param name="isBroken">True while the opponent is staggered by a posture break.</param>

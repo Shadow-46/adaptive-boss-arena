@@ -133,13 +133,15 @@ namespace AdaptiveBossArena.Editor
             var actions = AssetDatabase.LoadAssetAtPath<InputActionAsset>(InputActionsGenerator.AssetPath);
             SettingsMenu settings = SettingsMenuBuilder.Build(root, actions);
 
-            UiBuilder.CreateButton(root, "Start", "Fight", new Vector2(0f, -20f), titleScreen.StartGame);
-            UiBuilder.CreateButton(root, "Settings", "Settings", new Vector2(0f, -90f), settings.Open);
+            UiBuilder.CreateButton(root, "Start", "Fight", new Vector2(0f, -70f), titleScreen.StartGame);
+            HowToFightPanel guide = BuildHowToFight(root, canvasObject);
+            UiBuilder.CreateButton(root, "HowToFight", "How to Fight", new Vector2(0f, -140f), guide.Open);
+            UiBuilder.CreateButton(root, "Settings", "Settings", new Vector2(0f, -210f), settings.Open);
 
             // Built unconditionally and hidden at runtime in a browser, where a page cannot close its
             // own tab and the button would otherwise sit on the front door doing nothing.
             Button quit = UiBuilder.CreateButton(
-                root, "Quit", "Quit", new Vector2(0f, -160f), titleScreen.Quit);
+                root, "Quit", "Quit", new Vector2(0f, -280f), titleScreen.Quit);
 
             titleScreen.Bind(
                 Path.GetFileNameWithoutExtension(EditorMenus.ArenaScenePath),
@@ -181,9 +183,31 @@ namespace AdaptiveBossArena.Editor
             Toggle noHealing = ModifierToggle(root, "No Healing", ref y);
             Toggle fragile = ModifierToggle(root, "Fragile", ref y);
             Toggle training = ModifierToggle(root, "Training", ref y);
+            Toggle ascended = ModifierToggle(root, "Ascended", ref y, out Text ascendedLabel);
 
             var menu = canvasObject.AddComponent<RunModifierMenu>();
             menu.Bind(fastLearner, noHealing, fragile, training);
+
+            // The difficulty sits above Fight, where it is chosen just before starting; its line says what it changes.
+            Button difficulty = UiBuilder.CreateButton(
+                root, "Difficulty", "Difficulty: Knight", new Vector2(0f, 40f), menu.CycleDifficulty);
+            Text blurb = UiBuilder.CreateText(root, "DifficultyBlurb", string.Empty, 20, TextAnchor.MiddleCenter);
+            blurb.rectTransform.anchoredPosition = new Vector2(0f, -6f);
+            blurb.rectTransform.sizeDelta = new Vector2(900f, 30f);
+            blurb.color = SubtitleColor;
+            blurb.fontStyle = FontStyle.Italic;
+
+            y -= ModifierRowSpacing * 0.5f;
+            Button tint = UiBuilder.CreateButton(
+                root, "Armour", "Armour: Steel", new Vector2(ModifierColumnX + ArmourButtonOffset, y), menu.CycleTint);
+
+            Text records = BuildRecordsPanel(root);
+
+            menu.BindProgression(
+                difficulty.GetComponentInChildren<Text>(), blurb, tint.GetComponentInChildren<Text>(), ascended,
+                ascendedLabel, records);
+
+            UnityEventTools.AddPersistentListener(ascended.onValueChanged, menu.SetAscended);
 
             UnityEventTools.AddPersistentListener(fastLearner.onValueChanged, menu.SetFastLearner);
             UnityEventTools.AddPersistentListener(noHealing.onValueChanged, menu.SetNoHealing);
@@ -192,12 +216,17 @@ namespace AdaptiveBossArena.Editor
         }
 
         /// <summary>Creates a left-aligned caption and its toggle, advancing the running y.</summary>
-        private static Toggle ModifierToggle(Transform parent, string caption, ref float y)
+        private static Toggle ModifierToggle(Transform parent, string caption, ref float y) =>
+            ModifierToggle(parent, caption, ref y, out _);
+
+        /// <summary>A modifier row, also handing back its caption so the menu can rewrite it.</summary>
+        private static Toggle ModifierToggle(Transform parent, string caption, ref float y, out Text captionText)
         {
             Text label = UiBuilder.CreateText(parent, $"{caption} Label", caption, 24, TextAnchor.MiddleLeft);
             label.rectTransform.anchoredPosition = new Vector2(ModifierColumnX, y);
             label.rectTransform.sizeDelta = new Vector2(300f, 34f);
             label.color = SubtitleColor;
+            captionText = label;
 
             Toggle toggle = UiBuilder.CreateToggle(
                 parent, $"{caption} Toggle", new Vector2(ModifierColumnX + ModifierToggleOffset, y), ModifierAccent);
@@ -207,6 +236,74 @@ namespace AdaptiveBossArena.Editor
         }
 
         /// <summary>Creates the scaling canvas and an event system that reads the new Input System.</summary>
+        private static readonly Color GuidePanelColor = new Color(0.02f, 0.015f, 0.015f, 0.97f);
+
+        /// <summary>
+        /// The How to Fight guide: a full-screen panel with the controls and the fight's mechanics, hidden until
+        /// opened (and opened by itself on a first launch).
+        /// </summary>
+        private static HowToFightPanel BuildHowToFight(Transform root, GameObject canvasObject)
+        {
+            var panel = new GameObject("HowToFightPanel", typeof(RectTransform), typeof(Image));
+            panel.transform.SetParent(root, false);
+            var rect = panel.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            panel.GetComponent<Image>().color = GuidePanelColor;
+
+            Text header = UiBuilder.CreateText(panel.transform, "Header", "H O W   T O   F I G H T", 44, TextAnchor.MiddleCenter);
+            header.rectTransform.anchoredPosition = new Vector2(0f, 400f);
+            header.rectTransform.sizeDelta = new Vector2(1400f, 70f);
+            header.color = TitleColor;
+
+            Text body = UiBuilder.CreateText(panel.transform, "Guide", HowToFightPanel.Guide, 24, TextAnchor.UpperLeft);
+            body.rectTransform.anchoredPosition = new Vector2(0f, -20f);
+            body.rectTransform.sizeDelta = new Vector2(1300f, 720f);
+            body.color = new Color(0.82f, 0.76f, 0.68f);
+            body.supportRichText = true;
+            body.lineSpacing = 1.15f;
+
+            var guide = canvasObject.AddComponent<HowToFightPanel>();
+            guide.Bind(panel);
+
+            UiBuilder.CreateButton(panel.transform, "Close", "Ready", new Vector2(0f, -440f), guide.Close);
+            panel.SetActive(false);
+
+            return guide;
+        }
+
+        /// <summary>How far right of the challenge column the armour button's centre sits.</summary>
+        private const float ArmourButtonOffset = 130f;
+
+        /// <summary>Where the records column's left edge sits.</summary>
+        private const float RecordsColumnX = 420f;
+
+        /// <summary>
+        /// The right-hand column: every mode's record and every trial, so the reasons to fight again are on
+        /// the front door rather than buried after a win.
+        /// </summary>
+        private static Text BuildRecordsPanel(Transform root)
+        {
+            Text header = UiBuilder.CreateText(root, "RecordsHeader", "THE RECORD", 24, TextAnchor.MiddleLeft);
+            header.rectTransform.pivot = new Vector2(0f, 0.5f);
+            header.rectTransform.anchoredPosition = new Vector2(RecordsColumnX, 120f);
+            header.rectTransform.sizeDelta = new Vector2(520f, 34f);
+            header.fontStyle = FontStyle.Bold;
+            header.color = ModifierHeaderColor;
+
+            Text body = UiBuilder.CreateText(root, "Records", string.Empty, 19, TextAnchor.UpperLeft);
+            body.rectTransform.pivot = new Vector2(0f, 1f);
+            body.rectTransform.anchoredPosition = new Vector2(RecordsColumnX, 96f);
+            body.rectTransform.sizeDelta = new Vector2(540f, 520f);
+            body.color = SubtitleColor;
+            body.supportRichText = true;
+            body.lineSpacing = 1.1f;
+
+            return body;
+        }
+
         private static GameObject CreateCanvas()
         {
             var canvasObject = new GameObject(

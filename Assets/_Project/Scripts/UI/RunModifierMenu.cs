@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using AdaptiveBossArena.Core.Constants;
 using AdaptiveBossArena.Core.Services;
 using UnityEngine;
@@ -32,6 +33,31 @@ namespace AdaptiveBossArena.UI
         [SerializeField]
         private Toggle _trainingToggle;
 
+        [SerializeField]
+        [Tooltip("The difficulty button's label.")]
+        private Text _difficultyLabel;
+
+        [SerializeField]
+        [Tooltip("One line under the difficulty saying what it changes.")]
+        private Text _difficultyBlurb;
+
+        [SerializeField]
+        [Tooltip("The armour button's label.")]
+        private Text _tintLabel;
+
+        [SerializeField]
+        [Tooltip("The Ascended rematch toggle, locked until Igris is beaten on Knight or Nightmare.")]
+        private Toggle _ascendedToggle;
+
+        [SerializeField]
+        [Tooltip("The Ascended toggle's caption, which says how to unlock it while it is locked.")]
+        private Text _ascendedLabel;
+
+        [SerializeField]
+        [Tooltip("The records panel's body.")]
+        private Text _recordsText;
+
+        private RecordsData _records = new RecordsData();
         private ISaveService _saveService;
         private RunModifiers _modifiers = new RunModifiers();
 
@@ -47,6 +73,8 @@ namespace AdaptiveBossArena.UI
                 : null;
 
             _modifiers = Load();
+            _records = LoadRecords();
+            Sanitise();
             RunSettings.Current = _modifiers;
             ReflectToToggles();
         }
@@ -64,6 +92,37 @@ namespace AdaptiveBossArena.UI
         public void SetTraining(bool on) => Change(() => _modifiers.TrainingMode = on);
 
         /// <summary>Applies a change, publishes it to the session, and persists it.</summary>
+        /// <summary>Steps the difficulty: Story, Knight, Nightmare, and round again.</summary>
+        public void CycleDifficulty() => Change(() => _modifiers.Difficulty = DifficultyProfile.Next(_modifiers.Difficulty));
+
+        /// <summary>Steps to the next armour tint the player has unlocked.</summary>
+        public void CycleTint() =>
+            Change(() => _modifiers.KnightTintId = TrialBook.NextUnlockedTint(_modifiers.KnightTintId, _records));
+
+        /// <summary>Turns the Ascended rematch on or off. Ignored while it is still locked.</summary>
+        /// <param name="on">Whether to fight the rematch.</param>
+        public void SetAscended(bool on) => Change(() => _modifiers.Ascended = on && _records.AscendedUnlocked);
+
+        /// <summary>
+        /// Clears any choice a saved file holds that the player has not earned.
+        /// </summary>
+        /// <remarks>
+        /// The run modifiers and the records are separate files. A records file deleted or reset leaves a
+        /// run-modifier file still asking for Ascended or a trial's armour, which would hand both out for free.
+        /// </remarks>
+        private void Sanitise()
+        {
+            if (!_records.AscendedUnlocked)
+            {
+                _modifiers.Ascended = false;
+            }
+
+            if (!TrialBook.IsTintUnlocked(_modifiers.KnightTintId, _records))
+            {
+                _modifiers.KnightTintId = TrialBook.DefaultTintId;
+            }
+        }
+
         private void Change(Action apply)
         {
             if (_loading)
@@ -74,6 +133,7 @@ namespace AdaptiveBossArena.UI
             apply();
             RunSettings.Current = _modifiers;
             _saveService?.Save(SaveKeys.RunModifiers, _modifiers);
+            ReflectToToggles();
         }
 
         /// <summary>Pushes the loaded modifiers back into the toggles without re-saving them.</summary>
@@ -101,10 +161,134 @@ namespace AdaptiveBossArena.UI
                 _trainingToggle.isOn = _modifiers.TrainingMode;
             }
 
+            ReflectProgression();
             _loading = false;
         }
 
         /// <summary>Reads the saved modifiers, defaulting to an unmodified run.</summary>
+        /// <summary>Shows the difficulty, the armour, the rematch and the records as they now stand.</summary>
+        private void ReflectProgression()
+        {
+            if (_difficultyLabel != null)
+            {
+                _difficultyLabel.text = "Difficulty: " + DifficultyProfile.Label(_modifiers.Difficulty);
+            }
+
+            if (_difficultyBlurb != null)
+            {
+                _difficultyBlurb.text = DifficultyProfile.Blurb(_modifiers.Difficulty);
+            }
+
+            if (_tintLabel != null)
+            {
+                _tintLabel.text = "Armour: " + TrialBook.TintById(_modifiers.KnightTintId).Name;
+            }
+
+            bool unlocked = _records.AscendedUnlocked;
+
+            if (_ascendedToggle != null)
+            {
+                _ascendedToggle.interactable = unlocked;
+                _ascendedToggle.isOn = _modifiers.Ascended;
+            }
+
+            if (_ascendedLabel != null)
+            {
+                _ascendedLabel.text = unlocked ? "Igris Ascended" : "Ascended (beat Knight)";
+            }
+
+            if (_recordsText != null)
+            {
+                _recordsText.text = DescribeRecords(_records);
+            }
+        }
+
+        /// <summary>The records panel: one line per difficulty, the rematch if fought, and the trials.</summary>
+        /// <remarks>Static and pure so it can be tested without a scene.</remarks>
+        /// <param name="records">The player's records.</param>
+        /// <returns>The panel's text.</returns>
+        public static string DescribeRecords(RecordsData records)
+        {
+            records ??= new RecordsData();
+            var builder = new StringBuilder();
+
+            foreach (Difficulty difficulty in new[] { Difficulty.Story, Difficulty.Knight, Difficulty.Nightmare })
+            {
+                builder.AppendLine(DescribeMode(DifficultyProfile.Label(difficulty), records.Find(difficulty, false)));
+            }
+
+            foreach (Difficulty difficulty in new[] { Difficulty.Knight, Difficulty.Nightmare })
+            {
+                ModeRecord ascended = records.Find(difficulty, true);
+
+                if (ascended != null)
+                {
+                    builder.AppendLine(DescribeMode("Ascended " + DifficultyProfile.Label(difficulty), ascended));
+                }
+            }
+
+            int completed = 0;
+
+            foreach (Trial trial in TrialBook.Trials)
+            {
+                if (records.HasCompleted(trial.Id))
+                {
+                    completed++;
+                }
+            }
+
+            builder.AppendLine();
+            builder.Append("Trials ").Append(completed).Append(" / ").Append(TrialBook.Trials.Count);
+
+            foreach (Trial trial in TrialBook.Trials)
+            {
+                builder.AppendLine();
+                builder.Append(records.HasCompleted(trial.Id) ? "<color=#E8B04A>+ " : "<color=#7A6E62>- ")
+                    .Append(trial.Title).Append("</color>  <size=16>").Append(trial.Description).Append("</size>");
+            }
+
+            return builder.ToString();
+        }
+
+        /// <summary>One mode's line on the records panel.</summary>
+        private static string DescribeMode(string name, ModeRecord record)
+        {
+            if (record == null || record.Attempts == 0)
+            {
+                return "<b>" + name + "</b>   not yet fought";
+            }
+
+            if (record.Wins == 0)
+            {
+                return $"<b>{name}</b>   unbeaten   fallen {record.Deaths}";
+            }
+
+            string flawless = record.FlawlessWin ? "   <color=#E8B04A>FLAWLESS</color>" : string.Empty;
+            return $"<b>{name}</b>   wins {record.Wins}   fallen {record.Deaths}   best {FormatTime(record.FastestVictorySeconds)}{flawless}";
+        }
+
+        /// <summary>Minutes and seconds, as the end screen shows them.</summary>
+        /// <param name="seconds">A duration.</param>
+        /// <returns>For example "3:07".</returns>
+        public static string FormatTime(float seconds)
+        {
+            int total = Mathf.Max(0, Mathf.RoundToInt(seconds));
+            return $"{total / 60}:{total % 60:00}";
+        }
+
+        private RecordsData LoadRecords()
+        {
+            if (_saveService != null &&
+                _saveService.TryLoad(SaveKeys.Records, out RecordsData loaded) &&
+                loaded != null)
+            {
+                loaded.Migrate();
+                return loaded;
+            }
+
+            return new RecordsData();
+        }
+
         private RunModifiers Load()
         {
             if (_saveService != null &&
@@ -115,6 +299,24 @@ namespace AdaptiveBossArena.UI
             }
 
             return new RunModifiers();
+        }
+
+        /// <summary>Assigns the progression widgets. Used by the scene generator.</summary>
+        /// <param name="difficultyLabel">The difficulty button's label.</param>
+        /// <param name="difficultyBlurb">The line under it.</param>
+        /// <param name="tintLabel">The armour button's label.</param>
+        /// <param name="ascended">The Ascended toggle.</param>
+        /// <param name="ascendedLabel">The Ascended caption.</param>
+        /// <param name="records">The records panel's body.</param>
+        public void BindProgression(
+            Text difficultyLabel, Text difficultyBlurb, Text tintLabel, Toggle ascended, Text ascendedLabel, Text records)
+        {
+            _difficultyLabel = difficultyLabel;
+            _difficultyBlurb = difficultyBlurb;
+            _tintLabel = tintLabel;
+            _ascendedToggle = ascended;
+            _ascendedLabel = ascendedLabel;
+            _recordsText = records;
         }
 
         /// <summary>Assigns the toggles. Used by the scene generator.</summary>

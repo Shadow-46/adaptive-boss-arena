@@ -205,7 +205,7 @@ namespace AdaptiveBossArena.AI.States
                 context.CurrentPhase.AttackCooldownSeconds,
                 context.Tuning.Get(BossTuningParameter.AttackDelay),
                 _isFeinting,
-                context.Tuning.Get(BossTuningParameter.Aggression));
+                context.Tuning.Get(BossTuningParameter.Aggression)) * context.CooldownScale;
 
             _isFeinting = false;
             _holdRemaining = 0f;

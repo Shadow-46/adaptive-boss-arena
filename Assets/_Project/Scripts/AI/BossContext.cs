@@ -191,6 +191,16 @@ namespace AdaptiveBossArena.AI
         /// <summary>Seconds remaining before the boss may attack again.</summary>
         public float AttackCooldownRemaining { get; set; }
 
+        /// <summary>
+        /// Difficulty's multiplier on the rest between swings. One is the fight as balanced.
+        /// </summary>
+        /// <remarks>
+        /// Set by the encounter from the chosen difficulty, never by learning, and left alone by a reset, so it
+        /// holds for every attempt and every phase. A number on a value the boss already respects: it changes
+        /// how often he swings, never what he may do or how soon he can see.
+        /// </remarks>
+        public float CooldownScale { get; set; } = 1f;
+
         /// <summary>Set when a hit should interrupt the boss.</summary>
         public bool StaggerRequested { get; set; }
 

@@ -27,7 +27,18 @@ namespace AdaptiveBossArena.Core.Services
         public int SchemaVersion = CurrentSchemaVersion;
 
         /// <summary>Version the current code writes and understands.</summary>
-        public const int CurrentSchemaVersion = 1;
+        public const int CurrentSchemaVersion = 2;
+
+        /// <summary>How hard the fight is. Knight, the zero value, is the fight as balanced.</summary>
+        public Difficulty Difficulty = Difficulty.Knight;
+
+        /// <summary>
+        /// The rematch, unlocked by a win: Igris opens in his second phase, tougher and quicker to swing.
+        /// </summary>
+        public bool Ascended;
+
+        /// <summary>The tint the knight wears, by id. Cosmetic; unlocked by trials.</summary>
+        public string KnightTintId = TrialBook.DefaultTintId;
 
         /// <summary>The boss works the player out faster, for a run that adapts sooner.</summary>
         public bool FastLearner;
@@ -47,17 +58,44 @@ namespace AdaptiveBossArena.Core.Services
         /// <summary>How much harder a fragile player is hit.</summary>
         private const float FragileDamageMultiplier = 1.5f;
 
-        /// <summary>Multiplier on the boss's adaptation rate.</summary>
-        public float AdaptationRateScale => FastLearner ? FastLearnerScale : 1f;
+        /// <summary>How much less damage an Ascended Igris takes: a quarter more health to cut through.</summary>
+        private const float AscendedDamageTakenScale = 0.8f;
 
-        /// <summary>Multiplier on damage the player takes.</summary>
-        public float IncomingDamageMultiplier => FragilePlayer ? FragileDamageMultiplier : 1f;
+        /// <summary>How much shorter an Ascended Igris rests between swings.</summary>
+        private const float AscendedCooldownScale = 0.9f;
+
+        /// <summary>The phase an Ascended Igris opens in: his second, the sword already burning.</summary>
+        public const int AscendedOpeningPhase = 1;
+
+        /// <summary>The numbers the chosen difficulty changes.</summary>
+        public DifficultyProfile Profile => DifficultyProfile.For(Difficulty);
+
+        /// <summary>Multiplier on the boss's adaptation rate: difficulty times Fast Learner.</summary>
+        public float AdaptationRateScale => Profile.AdaptationRateScale * (FastLearner ? FastLearnerScale : 1f);
+
+        /// <summary>Multiplier on damage the player takes: difficulty times Fragile.</summary>
+        public float IncomingDamageMultiplier =>
+            Profile.IncomingDamageScale * (FragilePlayer ? FragileDamageMultiplier : 1f);
+
+        /// <summary>Multiplier on damage the boss takes: difficulty times Ascended.</summary>
+        public float BossDamageTakenScale =>
+            Profile.BossDamageTakenScale * (Ascended ? AscendedDamageTakenScale : 1f);
+
+        /// <summary>Multiplier on the boss's rest between swings: difficulty times Ascended.</summary>
+        public float BossCooldownScale => Profile.BossCooldownScale * (Ascended ? AscendedCooldownScale : 1f);
+
+        /// <summary>Flasks added to or taken from the knight's usual count.</summary>
+        public int HealChargeBonus => Profile.HealChargeBonus;
+
+        /// <summary>The phase the boss opens the fight in.</summary>
+        public int OpeningPhase => Ascended ? AscendedOpeningPhase : 0;
 
         /// <summary>Whether the player may heal.</summary>
         public bool HealingEnabled => !NoHealing;
 
         /// <summary>True when any modifier departs from the ordinary fight.</summary>
-        public bool AnyActive => FastLearner || NoHealing || FragilePlayer || TrainingMode;
+        public bool AnyActive =>
+            FastLearner || NoHealing || FragilePlayer || TrainingMode || Ascended || Difficulty != Difficulty.Knight;
 
         /// <summary>
         /// Whether an attempt under these rules may be written to the permanent records.
@@ -76,6 +114,16 @@ namespace AdaptiveBossArena.Core.Services
         public IReadOnlyList<string> ActiveLabels()
         {
             var labels = new List<string>();
+
+            if (Difficulty != Difficulty.Knight)
+            {
+                labels.Add(DifficultyProfile.Label(Difficulty));
+            }
+
+            if (Ascended)
+            {
+                labels.Add("Ascended");
+            }
 
             if (FastLearner)
             {

@@ -107,6 +107,10 @@ namespace AdaptiveBossArena.Combat.Feel
             _material = material;
         }
 
+        /// <summary>Recolours the smear, for the knight's unlocked tints.</summary>
+        /// <param name="colour">Colour at the head of the smear.</param>
+        public void SetColour(Color colour) => _colour = colour;
+
         /// <summary>Fits the smear to a blade: from where it begins to its point, in metres from the mount.</summary>
         /// <param name="baseDistance">Where the blade begins.</param>
         /// <param name="tipDistance">Where the point is.</param>
