@@ -617,6 +617,7 @@ namespace AdaptiveBossArena.Game
             _boss?.SetAdaptationRateScale(modifiers.AdaptationRateScale);
             _boss?.SetDifficultyScales(modifiers.BossDamageTakenScale, modifiers.BossCooldownScale);
             _boss?.SetOpeningPhase(modifiers.OpeningPhase);
+            _boss?.SetComboCeilingBonus(modifiers.BossComboCeilingBonus);
 
             // Once per fight, here at its start: the tint multiplies the armour, so reapplying would compound it.
             if (_player != null)

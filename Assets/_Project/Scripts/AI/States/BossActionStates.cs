@@ -124,7 +124,8 @@ namespace AdaptiveBossArena.AI.States
                     context.PhaseIndex,
                     context.Random,
                     BaseComboContinueChance +
-                    context.Tuning.Get(BossTuningParameter.ComboExtensionChance));
+                    context.Tuning.Get(BossTuningParameter.ComboExtensionChance),
+                    context.ComboCeilingBonus);
 
             // A lunging or unblockable opener is a real commitment the boss can be made to regret if it
             // misses; a light poke is not. A feint is never a commitment — nothing was thrown.
@@ -302,7 +303,11 @@ namespace AdaptiveBossArena.AI.States
         /// <see cref="BossTuningParameter.ComboExtensionChance"/> exists to change.
         /// </param>
         /// <returns>Extra hits to chain: zero or one in the opening phase, otherwise zero to <paramref name="phaseIndex"/>.</returns>
-        public static int ComboLength(int phaseIndex, IRandomProvider random, float continueChance)
+        /// <param name="ceilingBonus">
+        /// Extra blows the chain may run to beyond the phase's ceiling, for the Ascended rematch: a longer string
+        /// of the moves he already has, never a new one. Zero for the ordinary fight.
+        /// </param>
+        public static int ComboLength(int phaseIndex, IRandomProvider random, float continueChance, int ceilingBonus = 0)
         {
             // The opening phase strings two blows now and then - about one attack in four - so its rhythm is not a
             // metronome of single strikes, but never more than two: it is still where the knight learns to read him.
@@ -313,7 +318,7 @@ namespace AdaptiveBossArena.AI.States
                 return random.NextBool(Mathf.Clamp(OpeningChainChance + learned, 0f, OpeningChainCeiling)) ? 1 : 0;
             }
 
-            int maxExtra = Mathf.Max(0, phaseIndex);
+            int maxExtra = Mathf.Max(0, phaseIndex + Mathf.Max(0, ceilingBonus));
             float chance = Mathf.Clamp01(continueChance);
             int extra = 0;
 

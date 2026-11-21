@@ -158,5 +158,36 @@ namespace AdaptiveBossArena.Tests.PlayMode
                 HazeColor.Luminance(RenderSettings.fogColor), HazeColor.MinimumLuminance - 0.001f,
                 "The haze has gone dark, which is how fog was lost last time.");
         }
+    
+        [UnityTest]
+        public IEnumerator TheFallenBladesStandOutsideTheFightAndBlockNothing()
+        {
+            yield return null;
+
+            GameObject field = GameObject.Find("FallenBlades");
+            Assert.IsNotNull(field, "The hall has no fallen blades.");
+
+            Renderer[] blades = field.GetComponentsInChildren<Renderer>();
+            Assert.Greater(blades.Length, 0, "The blade field is empty.");
+            Assert.IsEmpty(field.GetComponentsInChildren<Collider>(), "A relic blade carries a collider.");
+
+            foreach (Renderer blade in blades)
+            {
+                Vector3 centre = blade.bounds.center;
+                float flat = new Vector2(centre.x, centre.z).magnitude;
+                Assert.Greater(flat, Radius - 0.5f, $"{blade.name} stands inside the fighting surface.");
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator ChainsHangFromTheVault()
+        {
+            yield return null;
+
+            GameObject chains = GameObject.Find("HangingChains");
+            Assert.IsNotNull(chains, "No chains hang in the hall.");
+            Assert.Greater(chains.transform.childCount, 0);
+            Assert.IsEmpty(chains.GetComponentsInChildren<Collider>(), "A chain carries a collider.");
+        }
     }
 }

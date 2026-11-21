@@ -28,6 +28,15 @@ namespace AdaptiveBossArena.Tests.EditMode
         }
 
         [Test]
+        public void TheVerdictCardComesInHoldsAndGoesBeforeTheReport()
+        {
+            Assert.AreEqual(0f, EndScreen.CardAlpha(0f), "The last blow lands before the card.");
+            Assert.AreEqual(1f, EndScreen.CardAlpha((EndScreen.CardInEnd + EndScreen.CardOutStart) * 0.5f), 1e-4f);
+            Assert.AreEqual(0f, EndScreen.CardAlpha(EndScreen.CardOutEnd), 1e-4f);
+            Assert.Greater(EndScreen.CardOutStart - EndScreen.CardInEnd, 1f, "Held long enough to be read.");
+        }
+
+        [Test]
         public void TheGlintPeaksWellInsideTheShortestPerilousWindUp()
         {
             // The grab, the quickest blow that cannot be blocked, winds up for 0.55 s. The glint must be at full

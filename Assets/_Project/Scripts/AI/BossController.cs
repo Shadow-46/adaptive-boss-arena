@@ -163,6 +163,9 @@ namespace AdaptiveBossArena.AI
         /// <summary>Difficulty's multiplier on the rest between swings, kept until the context exists.</summary>
         private float _cooldownScale = 1f;
 
+        /// <summary>Extra blows his chains may run to, kept until the context exists.</summary>
+        private int _comboCeilingBonus;
+
         /// <summary>The phase each attempt opens in: zero, or the second phase for the Ascended rematch.</summary>
         private int _openingPhase;
 
@@ -313,6 +316,7 @@ namespace AdaptiveBossArena.AI
                 _perception, tuning, _time, random, _events);
 
             _context.CooldownScale = _cooldownScale;
+            _context.ComboCeilingBonus = _comboCeilingBonus;
             attacks.Parried += OnOwnAttackParried;
 
             _selector = new BossAttackSelector(random);
@@ -1366,6 +1370,19 @@ namespace AdaptiveBossArena.AI
             if (_context != null)
             {
                 _context.CooldownScale = _cooldownScale;
+            }
+        }
+
+        /// <summary>Sets how many blows longer than the phase allows his chains may run.</summary>
+        /// <remarks>The Ascended rematch's one escalation of his combos: longer strings of the same moves.</remarks>
+        /// <param name="bonus">Extra blows; zero for the ordinary fight.</param>
+        public void SetComboCeilingBonus(int bonus)
+        {
+            _comboCeilingBonus = Mathf.Max(0, bonus);
+
+            if (_context != null)
+            {
+                _context.ComboCeilingBonus = _comboCeilingBonus;
             }
         }
 

@@ -165,6 +165,9 @@ namespace AdaptiveBossArena.Editor.Environment
             BuildGroundMist(root.transform, radius);
             BuildBraziers(root.transform, radius);
 
+            // Before the static-batching pass below, so the relics batch with the rest of the ruin.
+            RelicsBuilder.Build(root.transform, radius, radius + ColumnRingOffset, ColumnCount);
+
             // The dust and the candles are what the web build thins; hand them to the platform lighting, which
             // BuildShafts has just added beside the cathedral.
             if (root.transform.parent.TryGetComponent(out PlatformLighting lighting))

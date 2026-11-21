@@ -333,6 +333,15 @@ namespace AdaptiveBossArena.Editor
             // generator has no idea which platform the build will target.
             Button quit = CreateButton(panel.transform, "Quit", "Quit", new Vector2(0f, -190f), menu.Quit);
 
+            // The guide from the title screen, to the right of the buttons: the moment a player pauses after a
+            // death they cannot explain is the moment they need it, and the title is a scene away.
+            Text guide = CreateText(panel.transform, "Guide", HowToFightPanel.Guide, 17, TextAnchor.UpperLeft);
+            guide.rectTransform.pivot = new Vector2(0f, 1f);
+            guide.rectTransform.anchoredPosition = new Vector2(PauseGuideLeft, PauseGuideTop);
+            guide.rectTransform.sizeDelta = new Vector2(PauseGuideWidth, 560f);
+            guide.color = new Color(0.78f, 0.72f, 0.64f);
+            guide.supportRichText = true;
+
             menu.Bind(
                 actionsAsset,
                 panel,
@@ -394,7 +403,63 @@ namespace AdaptiveBossArena.Editor
             screen.Bind(panel, group, headline, summary, dossier);
             panel.SetActive(false);
 
+            BuildOutcomeCard(root, screen);
+
             references.EndScreen = screen;
+        }
+
+        /// <summary>Where the pause menu's guide column starts, right of the buttons.</summary>
+        private const float PauseGuideLeft = 230f;
+
+        /// <summary>Top of the pause menu's guide column.</summary>
+        private const float PauseGuideTop = 240f;
+
+        /// <summary>Width of the pause menu's guide column.</summary>
+        private const float PauseGuideWidth = 700f;
+
+        /// <summary>Height of the verdict card's dark band.</summary>
+        private const float OutcomeCardHeight = 190f;
+
+        /// <summary>
+        /// The verdict card: a dark band across the middle of the screen carrying one spaced line, shown in the
+        /// slow seconds after the decisive blow and before the report.
+        /// </summary>
+        private static void BuildOutcomeCard(Transform root, EndScreen screen)
+        {
+            var card = new GameObject("OutcomeCard", typeof(RectTransform), typeof(CanvasGroup));
+            card.transform.SetParent(root, false);
+            var rect = card.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0f, 0.5f);
+            rect.anchorMax = new Vector2(1f, 0.5f);
+            rect.sizeDelta = new Vector2(0f, OutcomeCardHeight);
+            rect.anchoredPosition = Vector2.zero;
+
+            var group = card.GetComponent<CanvasGroup>();
+            group.alpha = 0f;
+            group.blocksRaycasts = false;
+            group.interactable = false;
+
+            // A band that darkens toward its middle, so the lettering sits on shadow and the arena shows above
+            // and below it.
+            var band = new GameObject("Band", typeof(RectTransform), typeof(Image));
+            band.transform.SetParent(card.transform, false);
+            var bandRect = band.GetComponent<RectTransform>();
+            bandRect.anchorMin = Vector2.zero;
+            bandRect.anchorMax = Vector2.one;
+            bandRect.offsetMin = Vector2.zero;
+            bandRect.offsetMax = Vector2.zero;
+            var bandImage = band.GetComponent<Image>();
+            bandImage.sprite = UiSprites.RadialGlow();
+            bandImage.color = new Color(0f, 0f, 0f, 0.82f);
+            bandImage.raycastTarget = false;
+
+            Text verdict = CreateText(card.transform, "Verdict", string.Empty, 84, TextAnchor.MiddleCenter);
+            verdict.rectTransform.sizeDelta = new Vector2(1800f, 120f);
+            verdict.rectTransform.anchoredPosition = Vector2.zero;
+            verdict.gameObject.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.95f);
+
+            screen.BindCard(group, verdict);
+            card.SetActive(false);
         }
 
         /// <summary>Creates the small current-weapon label above the player's vitals.</summary>

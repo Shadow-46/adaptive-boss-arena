@@ -96,6 +96,24 @@ namespace AdaptiveBossArena.Tests.EditMode
         }
 
         [Test]
+        public void AscendedChainsOneBlowLongerButOnlyFromTheMovesHeHas()
+        {
+            int ordinary = 0;
+            int ascended = 0;
+
+            for (uint seed = 1; seed <= 200; seed++)
+            {
+                ordinary = System.Math.Max(ordinary, AI.States.BossAttackState.ComboLength(1, new XorShiftRandomProvider(seed), 0.9f));
+                ascended = System.Math.Max(
+                    ascended, AI.States.BossAttackState.ComboLength(1, new XorShiftRandomProvider(seed), 0.9f, RunModifiers.AscendedComboBonus));
+            }
+
+            Assert.AreEqual(1, ordinary, "Phase two chains at most one extra blow.");
+            Assert.AreEqual(1 + RunModifiers.AscendedComboBonus, ascended, "Ascended strings one more.");
+            Assert.AreEqual(0, new RunModifiers().BossComboCeilingBonus);
+        }
+
+        [Test]
         public void AscendedOpensInTheSecondPhaseAndIsTougher()
         {
             var modifiers = new RunModifiers { Ascended = true };

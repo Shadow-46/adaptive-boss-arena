@@ -43,6 +43,15 @@ namespace AdaptiveBossArena.UI
         [Tooltip("The boss's dossier: what it read in the player and how it answered.")]
         private Text _dossier;
 
+        [Header("Outcome Card")]
+        [SerializeField]
+        [Tooltip("The band across the screen that carries the one-line verdict before the report.")]
+        private CanvasGroup _card;
+
+        [SerializeField]
+        [Tooltip("The verdict's lettering.")]
+        private Text _cardText;
+
         [Header("Timing")]
         [SerializeField]
         [Range(0.2f, 3f)]
@@ -58,6 +67,27 @@ namespace AdaptiveBossArena.UI
         // pink capitals read as an arcade's game-over card.
         private static readonly Color VictoryColor = new Color(0.84f, 0.72f, 0.46f);
         private static readonly Color DefeatColor = new Color(0.66f, 0.09f, 0.06f);
+
+        /// <summary>When the card starts to fade in, after the last blow has landed.</summary>
+        public const float CardInStart = 0.35f;
+
+        /// <summary>When the card is fully in.</summary>
+        public const float CardInEnd = 1.05f;
+
+        /// <summary>When the card starts to fade out.</summary>
+        public const float CardOutStart = 2.75f;
+
+        /// <summary>When the card has gone, and the report can follow.</summary>
+        public const float CardOutEnd = 3.25f;
+
+        /// <summary>How far the lettering spreads as it arrives, as a fraction of its width.</summary>
+        private const float CardSpread = 0.08f;
+
+        /// <summary>The verdict on a win: Igris is the Blood-Red Commander, and he has been felled.</summary>
+        public const string VictoryVerdict = "Commander felled";
+
+        /// <summary>The verdict on a death.</summary>
+        public const string DefeatVerdict = "Fallen";
 
         private bool _isRunning;
         private float _elapsed;
@@ -78,15 +108,68 @@ namespace AdaptiveBossArena.UI
             }
 
             _elapsed += Time.unscaledDeltaTime;
+            UpdateCard();
 
-            if (_elapsed < _delaySeconds)
+            float delay = ReportDelay;
+
+            if (_elapsed < delay)
             {
                 return;
             }
 
             if (_group != null)
             {
-                _group.alpha = Mathf.Clamp01((_elapsed - _delaySeconds) / _fadeSeconds);
+                _group.alpha = Mathf.Clamp01((_elapsed - delay) / _fadeSeconds);
+            }
+        }
+
+        /// <summary>
+        /// Seconds after the end before the report appears: after the card when there is one.
+        /// </summary>
+        /// <remarks>
+        /// The card is the moment; the report is the reading. Shown together, the report's paragraphs pulled the
+        /// eye off the one line that matters at the instant the fight was decided.
+        /// </remarks>
+        private float ReportDelay => _card != null ? Mathf.Max(_delaySeconds, CardOutEnd) : _delaySeconds;
+
+        /// <summary>Whether the verdict card is on screen now. For tests.</summary>
+        public bool IsCardShowing => _card != null && _card.alpha > 0f;
+
+        /// <summary>The card's opacity at a moment after the end: in, held, out.</summary>
+        /// <param name="elapsed">Seconds since the fight was decided.</param>
+        /// <returns>Zero to one.</returns>
+        public static float CardAlpha(float elapsed)
+        {
+            if (elapsed <= CardInStart || elapsed >= CardOutEnd)
+            {
+                return 0f;
+            }
+
+            if (elapsed < CardInEnd)
+            {
+                return Mathf.SmoothStep(0f, 1f, (elapsed - CardInStart) / (CardInEnd - CardInStart));
+            }
+
+            return elapsed < CardOutStart
+                ? 1f
+                : 1f - Mathf.SmoothStep(0f, 1f, (elapsed - CardOutStart) / (CardOutEnd - CardOutStart));
+        }
+
+        /// <summary>Fades the card and spreads its lettering as it arrives, like breath let out.</summary>
+        private void UpdateCard()
+        {
+            if (_card == null)
+            {
+                return;
+            }
+
+            _card.alpha = CardAlpha(_elapsed);
+
+            if (_cardText != null)
+            {
+                float arrival = Mathf.Clamp01((_elapsed - CardInStart) / (CardOutEnd - CardInStart));
+                float spread = 1f - CardSpread + CardSpread * Mathf.Sqrt(arrival);
+                _cardText.rectTransform.localScale = new Vector3(spread, 1f, 1f);
             }
         }
 
@@ -112,6 +195,18 @@ namespace AdaptiveBossArena.UI
             if (_group != null)
             {
                 _group.alpha = 0f;
+            }
+
+            if (_card != null)
+            {
+                _card.alpha = 0f;
+                _card.gameObject.SetActive(true);
+            }
+
+            if (_cardText != null)
+            {
+                _cardText.text = Core.Constants.BossIdentity.Spaced(won ? VictoryVerdict : DefeatVerdict);
+                _cardText.color = won ? VictoryColor : DefeatColor;
             }
 
             if (_headline != null)
@@ -146,6 +241,12 @@ namespace AdaptiveBossArena.UI
             {
                 _panel.SetActive(false);
             }
+
+            if (_card != null)
+            {
+                _card.alpha = 0f;
+                _card.gameObject.SetActive(false);
+            }
         }
 
         /// <summary>Asks for another attempt. Bound to the panel's retry button.</summary>
@@ -161,6 +262,15 @@ namespace AdaptiveBossArena.UI
         /// <param name="headline">Headline text.</param>
         /// <param name="summary">Summary text.</param>
         /// <param name="dossier">The boss's read-on-the-player text.</param>
+        /// <summary>Assigns the verdict card. Used by the interface generator.</summary>
+        /// <param name="card">The card's group.</param>
+        /// <param name="cardText">Its lettering.</param>
+        public void BindCard(CanvasGroup card, Text cardText)
+        {
+            _card = card;
+            _cardText = cardText;
+        }
+
         public void Bind(GameObject panel, CanvasGroup group, Text headline, Text summary, Text dossier)
         {
             _panel = panel;

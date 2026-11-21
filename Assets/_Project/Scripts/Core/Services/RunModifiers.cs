@@ -87,6 +87,12 @@ namespace AdaptiveBossArena.Core.Services
         /// <summary>Flasks added to or taken from the knight's usual count.</summary>
         public int HealChargeBonus => Profile.HealChargeBonus;
 
+        /// <summary>How many blows longer an Ascended Igris may string his chains.</summary>
+        public const int AscendedComboBonus = 1;
+
+        /// <summary>Extra blows the boss may chain: one under Ascended.</summary>
+        public int BossComboCeilingBonus => Ascended ? AscendedComboBonus : 0;
+
         /// <summary>The phase the boss opens the fight in.</summary>
         public int OpeningPhase => Ascended ? AscendedOpeningPhase : 0;
 

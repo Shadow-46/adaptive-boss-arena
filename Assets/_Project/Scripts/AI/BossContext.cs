@@ -201,6 +201,12 @@ namespace AdaptiveBossArena.AI
         /// </remarks>
         public float CooldownScale { get; set; } = 1f;
 
+        /// <summary>
+        /// Extra blows a chain may run to, beyond the phase's ceiling. Zero but in the Ascended rematch.
+        /// </summary>
+        /// <remarks>Set by the encounter, like <see cref="CooldownScale"/>, and never by learning.</remarks>
+        public int ComboCeilingBonus { get; set; }
+
         /// <summary>Set when a hit should interrupt the boss.</summary>
         public bool StaggerRequested { get; set; }
 
