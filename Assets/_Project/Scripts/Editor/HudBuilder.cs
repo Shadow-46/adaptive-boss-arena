@@ -389,8 +389,9 @@ namespace AdaptiveBossArena.Editor
             dossier.fontStyle = FontStyle.Italic;
 
             var screen = root.gameObject.AddComponent<EndScreen>();
-            CreateButton(
+            Button retry = CreateButton(
                 panel.transform, "Retry", "Try Again", new Vector2(-170f, OutcomeButtonY), screen.Restart);
+            screen.SetFirstSelected(retry != null ? retry.gameObject : null);
 
             // The fight is over, so this is the natural moment to change the challenge modifiers —
             // which live on the title screen and were previously unreachable from here.

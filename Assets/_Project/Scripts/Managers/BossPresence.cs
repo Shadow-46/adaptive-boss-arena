@@ -31,13 +31,13 @@ namespace AdaptiveBossArena.Game
 
         /// <summary>How brightly the scorch's edge glows in each phase.</summary>
         /// <remarks>Halved after the first capture, where under bloom the ring's arcs outshone Igris himself.</remarks>
-        private static readonly float[] EmberByPhase = { 0f, 0f, 0.7f, 1.1f };
+        private static readonly float[] EmberByPhase = { 0f, 0f, 0.5f, 0.65f };
 
         /// <summary>How brightly his eyes burn in each phase.</summary>
         private static readonly float[] EyesByPhase = { 0f, 1.2f, 2f, 3f };
 
         /// <summary>How strong the rim light behind him is in each phase.</summary>
-        private static readonly float[] RimByPhase = { 0f, 0.8f, 1.6f, 2.4f };
+        private static readonly float[] RimByPhase = { 0f, 0.8f, 1.3f, 1.6f };
 
         /// <summary>How fast every effect eases to its phase's value.</summary>
         private const float EaseHalfLife = 0.5f;

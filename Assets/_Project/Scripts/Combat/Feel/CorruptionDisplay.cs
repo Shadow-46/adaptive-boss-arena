@@ -30,17 +30,19 @@ namespace AdaptiveBossArena.Combat.Feel
         /// The Last Stand was 3.2, with the blade at 2, 32 embers a second and a 2.5 flare on top: under bloom his
         /// whole body read as a white glare, and the wind-ups the knight must read were lost inside it. Seen in a
         /// scripted capture of the set pieces; tempered so the cracks still blaze and the body still reads.
+        /// Tempered again (2.4 to 1.85, blade 1.5 to 1.05, embers 20 to 11) after a 2026-11-22 capture still showed
+        /// him as a pink-white blob in the Last Stand and the finisher: his silhouette is the read, not the glow.
         /// </remarks>
-        private static readonly float[] SeamHeatByPhase = { 1f, 1.5f, 2.2f, 2.4f };
+        private static readonly float[] SeamHeatByPhase = { 1f, 1.4f, 1.7f, 1.85f };
 
         /// <summary>How hot the blade burns in each phase, as a multiple of the ember: cold steel at the start.</summary>
-        private static readonly float[] BladeHeatByPhase = { 0f, 0.5f, 1.2f, 1.5f };
+        private static readonly float[] BladeHeatByPhase = { 0f, 0.5f, 0.9f, 1.05f };
 
         /// <summary>How fast the glow breathes in each phase, in pulses a second: slow, then labouring.</summary>
         private static readonly float[] BreathRateByPhase = { 0.5f, 0.8f, 1.3f, 2f };
 
         /// <summary>Embers shed off the armour each second in each phase.</summary>
-        private static readonly float[] EmbersPerSecondByPhase = { 0f, 6f, 16f, 20f };
+        private static readonly float[] EmbersPerSecondByPhase = { 0f, 5f, 9f, 11f };
 
         /// <summary>Plumes of heat rising off the armour each second in each phase: none until the fire is loose.</summary>
         private static readonly float[] HazePerSecondByPhase = { 0f, 0f, 7f, 9f };

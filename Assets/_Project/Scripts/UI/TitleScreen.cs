@@ -32,6 +32,10 @@ namespace AdaptiveBossArena.UI
         [Tooltip("The quit button, hidden on platforms where quitting does nothing.")]
         private GameObject _quitButton;
 
+        [SerializeField]
+        [Tooltip("The button selected on arrival, so a gamepad or the arrow keys can drive the menu.")]
+        private GameObject _firstSelected;
+
         /// <summary>Loads the fight. Bound to the start button.</summary>
         public void StartGame() => SceneManager.LoadScene(_arenaSceneName);
 
@@ -78,15 +82,22 @@ namespace AdaptiveBossArena.UI
             {
                 _quitButton.SetActive(false);
             }
+
+            // Nothing was selected, so a player on a gamepad arrived at a menu no stick could move through.
+            if (_firstSelected != null && UnityEngine.EventSystems.EventSystem.current != null)
+            {
+                UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(_firstSelected);
+            }
         }
 
         /// <summary>Assigns the scene to load. Used by the scene generator.</summary>
         /// <param name="arenaSceneName">Name of the arena scene.</param>
         /// <param name="quitButton">Quit button, hidden where quitting is meaningless.</param>
-        public void Bind(string arenaSceneName, GameObject quitButton = null)
+        public void Bind(string arenaSceneName, GameObject quitButton = null, GameObject firstSelected = null)
         {
             _arenaSceneName = arenaSceneName;
             _quitButton = quitButton;
+            _firstSelected = firstSelected;
         }
     }
 }

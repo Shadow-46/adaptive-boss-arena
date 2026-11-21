@@ -133,7 +133,7 @@ namespace AdaptiveBossArena.Editor
             var actions = AssetDatabase.LoadAssetAtPath<InputActionAsset>(InputActionsGenerator.AssetPath);
             SettingsMenu settings = SettingsMenuBuilder.Build(root, actions);
 
-            UiBuilder.CreateButton(root, "Start", "Fight", new Vector2(0f, -70f), titleScreen.StartGame);
+            Button fight = UiBuilder.CreateButton(root, "Start", "Fight", new Vector2(0f, -70f), titleScreen.StartGame);
             HowToFightPanel guide = BuildHowToFight(root, canvasObject);
             UiBuilder.CreateButton(root, "HowToFight", "How to Fight", new Vector2(0f, -140f), guide.Open);
             UiBuilder.CreateButton(root, "Settings", "Settings", new Vector2(0f, -210f), settings.Open);
@@ -145,7 +145,8 @@ namespace AdaptiveBossArena.Editor
 
             titleScreen.Bind(
                 Path.GetFileNameWithoutExtension(EditorMenus.ArenaScenePath),
-                quit != null ? quit.gameObject : null);
+                quit != null ? quit.gameObject : null,
+                fight != null ? fight.gameObject : null);
 
             BuildModifiers(root, canvasObject);
 

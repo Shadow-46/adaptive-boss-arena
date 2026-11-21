@@ -68,7 +68,7 @@ namespace AdaptiveBossArena.Combat.Feel
         private ParticleSystem _embers;
 
         /// <summary>Embers per second the boss sheds in each phase, from none while calm to a stream in its last.</summary>
-        private static readonly float[] EmbersPerSecondByPhase = { 0f, 4f, 10f, 20f };
+        private static readonly float[] EmbersPerSecondByPhase = { 0f, 3f, 6f, 9f };
 
         /// <summary>Assigns the ember material. Used by the prefab generator.</summary>
         /// <param name="material">Additive spark material.</param>
@@ -185,7 +185,7 @@ namespace AdaptiveBossArena.Combat.Feel
                     // Last Stand and beyond: a hotter, blown-out crimson so the desperation phase
                     // burns visibly brighter than the merely relentless one before it.
                     _targetColor = new Color(1f, 0.28f, 0.4f);
-                    _targetIntensity = 8.5f;
+                    _targetIntensity = 6.5f;
                     break;
             }
         }

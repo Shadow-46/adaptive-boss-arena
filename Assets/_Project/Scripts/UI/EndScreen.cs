@@ -43,6 +43,12 @@ namespace AdaptiveBossArena.UI
         [Tooltip("The boss's dossier: what it read in the player and how it answered.")]
         private Text _dossier;
 
+        [SerializeField]
+        [Tooltip("The button selected when the report appears, so a gamepad can retry without a mouse.")]
+        private GameObject _firstSelected;
+
+        private bool _selectedOnReport;
+
         [Header("Outcome Card")]
         [SerializeField]
         [Tooltip("The band across the screen that carries the one-line verdict before the report.")]
@@ -121,7 +127,17 @@ namespace AdaptiveBossArena.UI
             {
                 _group.alpha = Mathf.Clamp01((_elapsed - delay) / _fadeSeconds);
             }
+
+            if (!_selectedOnReport && _firstSelected != null && UnityEngine.EventSystems.EventSystem.current != null)
+            {
+                _selectedOnReport = true;
+                UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(_firstSelected);
+            }
         }
+
+        /// <summary>Sets the button selected when the report appears. Used by the interface generator.</summary>
+        /// <param name="button">Usually Try Again.</param>
+        public void SetFirstSelected(GameObject button) => _firstSelected = button;
 
         /// <summary>
         /// Seconds after the end before the report appears: after the card when there is one.
@@ -186,6 +202,7 @@ namespace AdaptiveBossArena.UI
         {
             _isRunning = true;
             _elapsed = 0f;
+            _selectedOnReport = false;
 
             if (_panel != null)
             {
