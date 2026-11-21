@@ -52,6 +52,20 @@ namespace AdaptiveBossArena.UI
         [Tooltip("Delay before the trailing fill starts chasing, so the gap is legible first.")]
         private float _trailDelaySeconds = 0.4f;
 
+        [SerializeField]
+        [Tooltip("Below this fraction the fill pulses toward the warning colour. Zero turns the warning off.")]
+        [Range(0f, 1f)]
+        private float _warnBelow;
+
+        [SerializeField]
+        [Tooltip("The colour a low bar pulses toward.")]
+        private Color _warnColor = new Color(1f, 0.85f, 0.45f);
+
+        /// <summary>Pulses per second while the bar warns: quick enough to catch the eye at the edge of vision.</summary>
+        private const float WarnPulseHz = 3f;
+
+        private Color _baseColor;
+        private bool _hasBaseColor;
         private float _current = 1f;
         private float _trailing = 1f;
 
@@ -87,6 +101,8 @@ namespace AdaptiveBossArena.UI
 
         private void Update()
         {
+            UpdateWarning();
+
             if (_trailingFill == null)
             {
                 return;
@@ -102,6 +118,61 @@ namespace AdaptiveBossArena.UI
 
             _trailing = MathUtil.Damp(_trailing, _current, _trailHalfLife, deltaTime);
             SetWidthFraction(_trailingFill, Mathf.Max(_trailing, _current));
+        }
+
+        /// <summary>Whether the bar is low enough to warn now. For tests.</summary>
+        public bool IsWarning => IsLow(_current, _warnBelow);
+
+        /// <summary>
+        /// Whether a fraction is in the warning band: above empty and below the threshold.
+        /// </summary>
+        /// <remarks>
+        /// Empty is excluded on purpose. A posture bar at zero is already broken, and the break has its own loud
+        /// beat; a pulse on top would only repeat it.
+        /// </remarks>
+        /// <param name="fraction">The bar's value.</param>
+        /// <param name="threshold">The warning threshold; zero disables the warning.</param>
+        /// <returns>True when the bar should warn.</returns>
+        public static bool IsLow(float fraction, float threshold) => threshold > 0f && fraction > 0f && fraction < threshold;
+
+        /// <summary>
+        /// Pulses the fill toward the warning colour while the bar is low, and restores it otherwise.
+        /// </summary>
+        /// <remarks>
+        /// On the posture bars this is the cue a duel turns on: the boss's bar pulsing says one more heavy breaks
+        /// him; the knight's says the next block will be broken. Both are visible on screen, so the boss gains
+        /// nothing from it, and he cannot see the HUD anyway.
+        /// </remarks>
+        private void UpdateWarning()
+        {
+            if (_fill == null || _warnBelow <= 0f)
+            {
+                return;
+            }
+
+            if (!_hasBaseColor)
+            {
+                _baseColor = _fill.color;
+                _hasBaseColor = true;
+            }
+
+            if (!IsLow(_current, _warnBelow))
+            {
+                _fill.color = _baseColor;
+                return;
+            }
+
+            float pulse = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * WarnPulseHz * Mathf.PI * 2f);
+            _fill.color = Color.Lerp(_baseColor, _warnColor, pulse);
+        }
+
+        /// <summary>Turns on the low-value warning. Used by the interface generator.</summary>
+        /// <param name="threshold">The fraction below which the bar warns.</param>
+        /// <param name="color">The colour it pulses toward.</param>
+        public void SetWarning(float threshold, Color color)
+        {
+            _warnBelow = Mathf.Clamp01(threshold);
+            _warnColor = color;
         }
 
         /// <summary>Sets the displayed value, snapping both fills. Used when a fight resets.</summary>

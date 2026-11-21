@@ -119,6 +119,28 @@ namespace AdaptiveBossArena.Game
         private WeaponTrail _playerTrail;
         private WeaponTrail _bossTrail;
         private Transform _bossTransform;
+        private PerilousFlare _perilousFlare;
+
+        /// <summary>Freeze on a deflect: shorter than a heavy's, so the duel's rhythm is marked, not stalled.</summary>
+        private const float DeflectHitStopSeconds = 0.055f;
+
+        /// <summary>Jolt on a deflect: steel meeting steel is felt in the hands.</summary>
+        private const float DeflectTrauma = 0.16f;
+
+        /// <summary>The world slows a breath after a deliberate parry, the riskier act earning the bigger beat.</summary>
+        private const float ParrySlowMotionScale = 0.4f;
+
+        /// <summary>How long the parry's slow breath lasts, in real seconds.</summary>
+        private const float ParrySlowMotionSeconds = 0.22f;
+
+        /// <summary>The extra jolt a parry adds to the deflect's.</summary>
+        private const float ParryTrauma = 0.14f;
+
+        /// <summary>Freeze on a held block: barely there, enough that a blocked blow lands instead of passing through.</summary>
+        private const float BlockHitStopSeconds = 0.025f;
+
+        /// <summary>Jolt on a held block.</summary>
+        private const float BlockTrauma = 0.1f;
 
         private void Awake()
         {
@@ -133,6 +155,10 @@ namespace AdaptiveBossArena.Game
 
             // Igris's presence as the fight turns: burning eyes, a rim of light, the floor scorched about him.
             gameObject.AddComponent<BossPresence>().Construct(_impactMaterial, _bloodMaterial);
+
+            // The glint at his head on a blow that cannot be blocked; the boss it sits on is found with his trail.
+            _perilousFlare = gameObject.AddComponent<PerilousFlare>();
+            _perilousFlare.Construct(_impactMaterial, null);
 
             if (_bloodMaterial != null)
             {
@@ -217,6 +243,12 @@ namespace AdaptiveBossArena.Game
             {
                 case CombatEventKind.AttackStarted:
                     TrailFor(combatEvent.Actor)?.Begin();
+
+                    if (combatEvent.Unblockable && combatEvent.Actor == CombatantTeam.Boss)
+                    {
+                        _perilousFlare?.Play();
+                    }
+
                     break;
 
                 case CombatEventKind.AttackLanded:
@@ -249,6 +281,17 @@ namespace AdaptiveBossArena.Game
                     // burst on the single most important beat in the fight.
                     Burst(combatEvent.Position, -combatEvent.Direction, ImpactFlavour.Deflect);
                     _shake?.PunchFov(-DeflectFovNarrow);
+
+                    // A short freeze and a jolt: the deflect is the fight's most important beat and it used to pass
+                    // without the weight a landed blow gets. Through the time service, so it composes with the rest.
+                    _time?.RequestHitStop(DeflectHitStopSeconds);
+                    _shake?.AddTrauma(DeflectTrauma);
+                    break;
+
+                case CombatEventKind.PlayerParried:
+                    // Published with Deflected, which already froze and sparked; the parry adds the slow breath.
+                    _time?.RequestSlowMotion(ParrySlowMotionScale, ParrySlowMotionSeconds);
+                    _shake?.Punch(ParryTrauma);
                     break;
 
                 case CombatEventKind.DodgePerformed:
@@ -259,6 +302,8 @@ namespace AdaptiveBossArena.Game
 
                 case CombatEventKind.Blocked:
                     Burst(combatEvent.Position, -combatEvent.Direction, ImpactFlavour.Block);
+                    _time?.RequestHitStop(BlockHitStopSeconds);
+                    _shake?.AddTrauma(BlockTrauma);
                     break;
 
                 case CombatEventKind.Parried when combatEvent.Actor != CombatantTeam.Player:
@@ -364,6 +409,7 @@ namespace AdaptiveBossArena.Game
                 {
                     _bossTrail = trail;
                     _bossTransform = (combatant as Component)?.transform;
+                    _perilousFlare?.SetBoss(_bossTransform);
                 }
             }
         }

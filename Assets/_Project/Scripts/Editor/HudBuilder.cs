@@ -58,6 +58,15 @@ namespace AdaptiveBossArena.Editor
         private static readonly Color StaminaColor = new Color(0.66f, 0.6f, 0.42f);
         private static readonly Color BossHealthColor = new Color(0.52f, 0.05f, 0.05f);
         private static readonly Color PostureColor = new Color(0.62f, 0.64f, 0.68f);
+
+        /// <summary>Posture left below which a bar warns that the next blow breaks the stance.</summary>
+        private const float PostureWarnFraction = 0.25f;
+
+        /// <summary>The knight's warning: danger.</summary>
+        private static readonly Color PlayerPostureWarnColor = new Color(1f, 0.25f, 0.15f);
+
+        /// <summary>The boss's warning: opportunity.</summary>
+        private static readonly Color BossPostureWarnColor = new Color(1f, 0.86f, 0.42f);
         private static readonly Color FocusColor = new Color(0.85f, 0.5f, 0.16f);
         private static readonly Color TrailColor = new Color(0.95f, 0.78f, 0.55f, 0.4f);
 
@@ -198,6 +207,9 @@ namespace AdaptiveBossArena.Editor
                 group.transform, "Posture", new Vector2(0f, 2f), new Vector2(420f, 10f),
                 PostureColor,
                 channels.PlayerPosture);
+
+            // Pulses red when one more block will break the guard: the warning to roll instead.
+            references.PlayerPosture.SetWarning(PostureWarnFraction, PlayerPostureWarnColor);
         }
 
         /// <summary>Creates the boss bar and phase pips, top centre.</summary>
@@ -223,6 +235,9 @@ namespace AdaptiveBossArena.Editor
                 group.transform, "Posture", new Vector2(0f, -32f), new Vector2(900f, 10f),
                 PostureColor,
                 channels.BossPosture);
+
+            // Pulses gold when one more heavy or deflect will break him: the cue to press.
+            references.BossPosture.SetWarning(PostureWarnFraction, BossPostureWarnColor);
 
             var pipsRoot = new GameObject("PhasePips", typeof(RectTransform));
             pipsRoot.transform.SetParent(group.transform, false);
