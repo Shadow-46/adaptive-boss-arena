@@ -7,7 +7,8 @@ namespace AdaptiveBossArena.Editor.Environment
 {
     /// <summary>
     /// Dresses the cathedral with what a commander's hall would hold: the blades of every challenger who fell
-    /// before the knight, planted in the stone, and chains hanging from the dark between the columns.
+    /// before the knight, driven into the crown of the ring wall, and chains hanging from the dark between the
+    /// columns.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -20,44 +21,37 @@ namespace AdaptiveBossArena.Editor.Environment
     /// the ruin, so none of it can block a blow, the camera or a telegraph, and the browser pays a few draw
     /// calls for it.
     /// </para>
+    /// <para>
+    /// The blades were first planted on the floor beyond the wall, where a screenshot showed none of them: the
+    /// ring wall is three metres tall and every camera is inside it. Driven into the wall's crown they stand in
+    /// silhouette above the fight, and they are bound to the crown's breakage, so a blade falls with its stone
+    /// and returns with it on a retry.
+    /// </para>
     /// </remarks>
     public static class RelicsBuilder
     {
-        /// <summary>Name of the planted swords' parent.</summary>
-        public const string SwordFieldName = "FallenBlades";
+        /// <summary>Name prefix of every planted blade.</summary>
+        public const string BladeNamePrefix = "FallenBlade_";
 
         /// <summary>Name of the hanging chains' parent.</summary>
         public const string ChainsName = "HangingChains";
 
-        /// <summary>How many fallen challengers' blades stand in the stone.</summary>
-        public const int SwordCount = 30;
 
         /// <summary>How many chains hang between the columns.</summary>
         public const int ChainCount = 8;
 
         private const uint LayoutSeed = 20261122u;
 
-        /// <summary>Nearest a blade stands to the fighting surface's edge, so none intrudes on the fight.</summary>
-        private const float SwordInnerGap = 0.8f;
+        /// <summary>How far a blade is driven into the crown, in metres.</summary>
+        private const float SwordSink = 0.3f;
 
-        /// <summary>Furthest out a blade stands.</summary>
-        private const float SwordOuterGap = 2.8f;
-
-        /// <summary>How far a blade is driven into the floor, in metres.</summary>
-        private const float SwordSink = 0.18f;
+        /// <summary>How far along its crown a blade may stand from the middle, as a share of the crown's width.</summary>
+        private const float CrownSpread = 0.38f;
 
         /// <summary>Least and most a planted blade leans from upright, in degrees.</summary>
         private const float SwordMinLean = 4f;
         private const float SwordMaxLean = 22f;
 
-        /// <summary>Blades stand in clusters, like the places the bravest fell; this many.</summary>
-        private const int SwordClusters = 7;
-
-        /// <summary>Angular spread of one cluster, in degrees.</summary>
-        private const float ClusterSpread = 16f;
-
-        /// <summary>Turns the clusters off the column angles so no blade stands inside a column's foot.</summary>
-        private const float ClusterOffsetDegrees = 11f;
 
         /// <summary>Height the chains hang from: the dark under the vault.</summary>
         private const float ChainTop = 15f;
@@ -73,7 +67,11 @@ namespace AdaptiveBossArena.Editor.Environment
         private const int ChainVariants = 3;
 
         private static readonly Color ChainColor = new Color(0.16f, 0.14f, 0.13f);
-        private static readonly Color RustColor = new Color(0.34f, 0.22f, 0.15f);
+        /// <summary>
+        /// Pale, weathered steel. A dark rust was tried first and the blades vanished into the hall's black: they
+        /// stand against the dark, so they must catch the braziers and the moon to be seen at all.
+        /// </summary>
+        private static readonly Color RelicSteelColor = new Color(0.62f, 0.58f, 0.52f);
 
         private static readonly string[] BladePrefabs =
         {
@@ -81,22 +79,61 @@ namespace AdaptiveBossArena.Editor.Environment
             "Assets/_Project/Prefabs/Weapons/WeaponGreatswordModel.prefab",
         };
 
-        /// <summary>Builds the sword field and the chains under the cathedral root.</summary>
+        /// <summary>Hangs the chains under the cathedral root.</summary>
         /// <param name="root">The cathedral's root.</param>
-        /// <param name="radius">The fighting surface's radius.</param>
         /// <param name="columnRingRadius">Where the columns stand, so the chains hang between them.</param>
         /// <param name="columnCount">How many columns there are.</param>
-        public static void Build(Transform root, float radius, float columnRingRadius, int columnCount)
+        public static void BuildChains(Transform root, float columnRingRadius, int columnCount) =>
+            HangChains(root, columnRingRadius, columnCount);
+
+        /// <summary>
+        /// Drives the blades of fallen challengers into one segment of the ring wall's crown.
+        /// </summary>
+        /// <remarks>
+        /// Most segments take one blade, every third takes two and every fifth none, so the rampart reads as a
+        /// place where many fell rather than a fence of identical posts.
+        /// </remarks>
+        /// <param name="crown">The crown block, whose local X is the wall's thickness and Z its length.</param>
+        /// <param name="crownSize">The crown's size.</param>
+        /// <param name="index">The segment's index, which seeds its blades.</param>
+        /// <returns>The planted blades' renderers, for the crown's breakage to take with it.</returns>
+        public static Renderer[] PlantOnCrown(Transform crown, Vector3 crownSize, int index)
         {
-            BuildSwordField(root, radius);
-            BuildChains(root, columnRingRadius, columnCount);
+            int count = index % 5 == 4 ? 0 : index % 3 == 0 ? 2 : 1;
+            var renderers = new List<Renderer>();
+
+            if (count == 0)
+            {
+                return renderers.ToArray();
+            }
+
+            List<GameObject> models = LoadModels();
+
+            if (models.Count == 0)
+            {
+                return renderers.ToArray();
+            }
+
+            Material rust = MaterialLibrary.GetOrCreateSurface("RelicSteel", RelicSteelColor, metallic: 0.85f, smoothness: 0.45f);
+            var random = new XorShiftRandomProvider(LayoutSeed + (uint)index * 7919u);
+
+            for (int i = 0; i < count; i++)
+            {
+                GameObject blade = Object.Instantiate(models[random.NextInt(0, models.Count)], crown);
+                blade.name = $"{BladeNamePrefix}{index:D2}_{i}";
+
+                float along = random.NextFloat(-CrownSpread, CrownSpread) * crownSize.z;
+                Vector3 top = crown.TransformPoint(new Vector3(0f, crownSize.y * 0.5f, along));
+                Plant(blade.transform, top, random);
+                Dress(blade, rust);
+                renderers.AddRange(blade.GetComponentsInChildren<Renderer>(true));
+            }
+
+            return renderers.ToArray();
         }
 
-        private static void BuildSwordField(Transform root, float radius)
+        private static List<GameObject> LoadModels()
         {
-            var field = new GameObject(SwordFieldName).transform;
-            field.SetParent(root, false);
-
             var models = new List<GameObject>();
 
             foreach (string path in BladePrefabs)
@@ -112,27 +149,13 @@ namespace AdaptiveBossArena.Editor.Environment
             if (models.Count == 0)
             {
                 Debug.LogWarning("[Adaptive Boss Arena] No weapon models to plant; build the prefabs first.");
-                return;
             }
 
-            Material rust = MaterialLibrary.GetOrCreateSurface("RustedBlade", RustColor, metallic: 0.6f, smoothness: 0.22f);
-            var random = new XorShiftRandomProvider(LayoutSeed);
-
-            for (int i = 0; i < SwordCount; i++)
-            {
-                float clusterAngle = (i % SwordClusters) * (360f / SwordClusters) + ClusterOffsetDegrees;
-                float angle = clusterAngle + random.NextFloat(-ClusterSpread, ClusterSpread);
-                float distance = radius + random.NextFloat(SwordInnerGap, SwordOuterGap);
-
-                GameObject blade = Object.Instantiate(models[random.NextInt(0, models.Count)], field);
-                blade.name = $"Blade_{i:D2}";
-                Plant(blade.transform, angle, distance, random);
-                Dress(blade, rust);
-            }
+            return models;
         }
 
-        /// <summary>Stands a blade point-down in the stone, leaning, turned to a random facing.</summary>
-        private static void Plant(Transform blade, float angle, float distance, XorShiftRandomProvider random)
+        /// <summary>Stands a blade point-down in the stone at a point, leaning, turned to a random facing.</summary>
+        private static void Plant(Transform blade, Vector3 foot, XorShiftRandomProvider random)
         {
             // The models point along their forward axis, grip at the origin, so pointing forward down plants the tip.
             Vector3 facing = Quaternion.Euler(0f, random.NextFloat(0f, 360f), 0f) * Vector3.forward;
@@ -141,8 +164,12 @@ namespace AdaptiveBossArena.Editor.Environment
             Quaternion tilt = Quaternion.AngleAxis(random.NextFloat(SwordMinLean, SwordMaxLean), leanAxis);
             blade.rotation = tilt * upright;
 
+            // Scaled to world size first: a crown parent may carry a scale, and the blade must keep the fight's.
+            Vector3 parentScale = blade.parent != null ? blade.parent.lossyScale : Vector3.one;
+            blade.localScale = new Vector3(1f / parentScale.x, 1f / parentScale.y, 1f / parentScale.z);
+
             float length = BladeLength(blade);
-            blade.position = Ring(angle, distance) - blade.forward * (length - SwordSink);
+            blade.position = foot - blade.forward * (length - SwordSink);
         }
 
         /// <summary>The model's reach along its forward axis, from its meshes' bounds.</summary>
@@ -175,7 +202,7 @@ namespace AdaptiveBossArena.Editor.Environment
 
         /// <summary>
         /// Strips a planted blade of everything that belongs to a held weapon: colliders, lights, the character
-        /// lighting layer, and the bright steel, which rusts.
+        /// lighting layer, and its own steel, which weathers.
         /// </summary>
         private static void Dress(GameObject blade, Material rust)
         {
@@ -206,7 +233,7 @@ namespace AdaptiveBossArena.Editor.Environment
             }
         }
 
-        private static void BuildChains(Transform root, float columnRingRadius, int columnCount)
+        private static void HangChains(Transform root, float columnRingRadius, int columnCount)
         {
             var chains = new GameObject(ChainsName).transform;
             chains.SetParent(root, false);

@@ -160,22 +160,36 @@ namespace AdaptiveBossArena.Tests.PlayMode
         }
     
         [UnityTest]
-        public IEnumerator TheFallenBladesStandOutsideTheFightAndBlockNothing()
+        public IEnumerator TheFallenBladesStandOnTheRampartsAboveTheFight()
         {
             yield return null;
 
-            GameObject field = GameObject.Find("FallenBlades");
-            Assert.IsNotNull(field, "The hall has no fallen blades.");
+            GameObject parapet = GameObject.Find("Parapet");
+            Assert.IsNotNull(parapet, "The ring wall has no parapet.");
 
-            Renderer[] blades = field.GetComponentsInChildren<Renderer>();
-            Assert.Greater(blades.Length, 0, "The blade field is empty.");
-            Assert.IsEmpty(field.GetComponentsInChildren<Collider>(), "A relic blade carries a collider.");
+            var blades = new System.Collections.Generic.List<Transform>();
 
-            foreach (Renderer blade in blades)
+            foreach (Transform child in parapet.GetComponentsInChildren<Transform>())
             {
-                Vector3 centre = blade.bounds.center;
-                float flat = new Vector2(centre.x, centre.z).magnitude;
-                Assert.Greater(flat, Radius - 0.5f, $"{blade.name} stands inside the fighting surface.");
+                if (child.name.StartsWith("FallenBlade_"))
+                {
+                    blades.Add(child);
+                }
+            }
+
+            Assert.Greater(blades.Count, 0, "No fallen blades stand on the ramparts.");
+
+            foreach (Transform blade in blades)
+            {
+                Assert.IsEmpty(blade.GetComponentsInChildren<Collider>(), $"{blade.name} carries a collider.");
+
+                foreach (Renderer part in blade.GetComponentsInChildren<Renderer>())
+                {
+                    // Above the wall's base, so they are seen over the fight and never stand in it.
+                    Assert.Greater(part.bounds.max.y, WallHeight, $"{blade.name} does not rise above the wall.");
+                    float flat = new Vector2(part.bounds.center.x, part.bounds.center.z).magnitude;
+                    Assert.Greater(flat, Radius - 0.6f, $"{blade.name} leans into the fighting surface.");
+                }
             }
         }
 

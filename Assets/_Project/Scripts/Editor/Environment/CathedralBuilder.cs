@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using AdaptiveBossArena.Combat;
 using AdaptiveBossArena.Combat.Feel;
@@ -165,8 +166,8 @@ namespace AdaptiveBossArena.Editor.Environment
             BuildGroundMist(root.transform, radius);
             BuildBraziers(root.transform, radius);
 
-            // Before the static-batching pass below, so the relics batch with the rest of the ruin.
-            RelicsBuilder.Build(root.transform, radius, radius + ColumnRingOffset, ColumnCount);
+            // Before the static-batching pass below, so the chains batch with the rest of the ruin.
+            RelicsBuilder.BuildChains(root.transform, radius + ColumnRingOffset, ColumnCount);
 
             // The dust and the candles are what the web build thins; hand them to the platform lighting, which
             // BuildShafts has just added beside the cathedral.
@@ -344,6 +345,8 @@ namespace AdaptiveBossArena.Editor.Environment
             var parapet = new GameObject("Parapet").transform;
             parapet.SetParent(root, false);
 
+            int segment = 0;
+
             foreach (Transform wall in walls)
             {
                 if (wall.TryGetComponent(out MeshRenderer renderer))
@@ -351,7 +354,7 @@ namespace AdaptiveBossArena.Editor.Environment
                     renderer.enabled = false;
                 }
 
-                BuildBreakableParapet(parapet, wall);
+                BuildBreakableParapet(parapet, wall, segment++);
             }
 
             // Beside the cathedral rather than inside it: the pool's pieces carry colliders, and the
@@ -368,7 +371,7 @@ namespace AdaptiveBossArena.Editor.Environment
         /// One segment of the parapet: a solid base, and a crown of stone on top that a slam or a body
         /// driven into the wall knocks off. Both are dressing over the unchanged collider.
         /// </summary>
-        private static void BuildBreakableParapet(Transform parent, Transform wall)
+        private static void BuildBreakableParapet(Transform parent, Transform wall, int segment)
         {
             Vector3 size = wall.localScale;
             float baseHeight = Mathf.Max(0.5f, size.y - ParapetCrownHeight);
@@ -380,7 +383,10 @@ namespace AdaptiveBossArena.Editor.Environment
             GameObject crown = Block(parent, wall.name + "_Crown", crownSize, 2f, _brick,
                 wall.position + Vector3.up * (baseHeight * 0.5f), wall.rotation);
 
-            crown.AddComponent<Destructible>().Bind(new Renderer[] { crown.GetComponent<MeshRenderer>() }, crownSize, ParapetCrownPieces);
+            // The fallen challengers' blades stand in the crown and go down with it when it breaks.
+            var crownRenderers = new List<Renderer> { crown.GetComponent<MeshRenderer>() };
+            crownRenderers.AddRange(RelicsBuilder.PlantOnCrown(crown.transform, crownSize, segment));
+            crown.AddComponent<Destructible>().Bind(crownRenderers.ToArray(), crownSize, ParapetCrownPieces);
         }
 
         private static void BuildColumns(Transform root, float radius)
