@@ -165,6 +165,12 @@ namespace AdaptiveBossArena.Combat.Feel
             ApplyTint(0f);
         }
 
+        /// <summary>The renderer of one body, in the order the colours are kept. For tests.</summary>
+        /// <param name="index">The body's index.</param>
+        /// <returns>The renderer, or null when there is no such body.</returns>
+        public Renderer BodyAt(int index) =>
+            _renderers != null && index >= 0 && index < _renderers.Length ? _renderers[index] : null;
+
         /// <summary>The resting colour of one body, after any tint. For tests.</summary>
         /// <param name="index">The body's index.</param>
         /// <returns>Its colour, or white when there is no such body.</returns>

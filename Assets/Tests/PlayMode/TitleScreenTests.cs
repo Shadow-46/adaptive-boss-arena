@@ -33,11 +33,15 @@ namespace AdaptiveBossArena.Tests.PlayMode
 
             foreach (string key in new[] { HowToFightPanel.SaveKey, "records", "run-modifiers" })
             {
-                string path = Path.Combine(TestSaveIsolation.Folder, key + ".json");
-
-                if (File.Exists(path))
+                // The backup too: the save service falls back to it when the main file is missing.
+                foreach (string suffix in new[] { ".json", ".json.bak", ".json.tmp" })
                 {
-                    File.Delete(path);
+                    string path = Path.Combine(TestSaveIsolation.Folder, key + suffix);
+
+                    if (File.Exists(path))
+                    {
+                        File.Delete(path);
+                    }
                 }
             }
 

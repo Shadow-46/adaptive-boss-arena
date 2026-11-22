@@ -91,30 +91,16 @@ namespace AdaptiveBossArena.Tests.PlayMode
             // A blow flashes the body and then restores its resting colour; the resting colour must be the tint.
             flash.Play();
 
-            for (int i = 0; i < 60; i++)
-            {
-                yield return null;
-            }
+            // Real seconds, not frames: a headless run turns sixty frames in less time than the flash lasts.
+            yield return new WaitForSecondsRealtime(0.6f);
+            yield return null;
 
-            Renderer body = FirstBody(flash);
+            Renderer body = flash.BodyAt(0);
             var block = new MaterialPropertyBlock();
             body.GetPropertyBlock(block);
             Color shown = block.GetColor("_BaseColor");
             Assert.AreEqual(tinted.r, shown.r, 0.02f, "The first blow wiped the tint.");
             Assert.AreEqual(tinted.b, shown.b, 0.02f, "The first blow wiped the tint.");
-        }
-
-        private static Renderer FirstBody(HitFlash flash)
-        {
-            foreach (Renderer candidate in flash.GetComponentsInChildren<Renderer>())
-            {
-                if (candidate is MeshRenderer || candidate is SkinnedMeshRenderer)
-                {
-                    return candidate;
-                }
-            }
-
-            return null;
         }
 
         [UnityTest]
