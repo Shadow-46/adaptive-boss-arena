@@ -92,6 +92,8 @@ namespace AdaptiveBossArena.Editor
             GameObject canvasObject = CreateCanvas();
             Transform root = canvasObject.transform;
 
+            BuildBackdrop(root);
+
             // A dying ember glow behind the lettering instead of a flat dark fill: the title is the first
             // thing anyone sees, and red capitals on black read as a placeholder.
             var glow = new GameObject("EmberGlow", typeof(RectTransform), typeof(Image));
@@ -303,6 +305,49 @@ namespace AdaptiveBossArena.Editor
             body.lineSpacing = 1.1f;
 
             return body;
+        }
+
+        /// <summary>A still of the fight itself, captured from the game, behind the whole title.</summary>
+        public const string BackdropPath = "Assets/_Project/Art/Title/TitleBackdrop.png";
+
+        /// <summary>How bright the backdrop is drawn: dim enough that the lettering and buttons own the screen.</summary>
+        private static readonly Color BackdropTint = new Color(0.42f, 0.4f, 0.4f, 1f);
+
+        /// <summary>
+        /// Lays a captured still of Igris in his hall behind the title, dimmed, under the ember glow.
+        /// </summary>
+        /// <remarks>
+        /// The title was red and bone lettering on black: the first thing anyone saw said nothing about the fight.
+        /// The still is a frame of the game's own showcase capture, the boss's back to the camera in the moonlit
+        /// hall, so the front door shows the place and the enemy without a second camera or scene to render them.
+        /// Skipped quietly when the image is missing, and the title falls back to black.
+        /// </remarks>
+        private static void BuildBackdrop(Transform root)
+        {
+            var image = AssetDatabase.LoadAssetAtPath<Texture2D>(BackdropPath);
+
+            if (image == null)
+            {
+                return;
+            }
+
+            var backdrop = new GameObject("Backdrop", typeof(RectTransform), typeof(RawImage));
+            backdrop.transform.SetParent(root, false);
+            var rect = backdrop.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            var raw = backdrop.GetComponent<RawImage>();
+            raw.texture = image;
+            raw.color = BackdropTint;
+            raw.raycastTarget = false;
+
+            // Kept to the screen's shape: a wider or taller window crops the still rather than stretching Igris.
+            var fitter = backdrop.AddComponent<AspectRatioFitter>();
+            fitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+            fitter.aspectRatio = image.width / (float)Mathf.Max(1, image.height);
         }
 
         private static GameObject CreateCanvas()
