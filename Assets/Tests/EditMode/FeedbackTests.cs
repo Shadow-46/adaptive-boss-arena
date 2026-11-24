@@ -1,6 +1,7 @@
 using AdaptiveBossArena.Game;
 using AdaptiveBossArena.UI;
 using NUnit.Framework;
+using UnityEngine;
 
 namespace AdaptiveBossArena.Tests.EditMode
 {
@@ -50,6 +51,51 @@ namespace AdaptiveBossArena.Tests.EditMode
             // strength with most of that left for a human to see it and roll.
             const float shortestPerilousWindUp = 0.55f;
             Assert.Less(PerilousFlare.GrowSeconds, shortestPerilousWindUp * 0.3f);
+        }
+    }
+
+    /// <summary>Tests for keeping the camera's lens out of Igris's body.</summary>
+    [TestFixture]
+    public sealed class CameraBodyClearanceTests
+    {
+        private const float Radius = 1.2f;
+        private const float Height = 3f;
+
+        [Test]
+        public void ABoomRunningIntoHimStopsAtHisEdge()
+        {
+            // Pivot 3 m in front of him, the boom running straight back toward him.
+            float clear = ArenaCameraRig.ClearOfBody(
+                new Vector3(0f, 1.6f, -3f), Vector3.forward, 4f, Vector3.zero, Radius, Height);
+
+            Assert.AreEqual(3f - Radius, clear, 1e-3f);
+        }
+
+        [Test]
+        public void ABoomPassingBesideHimIsUntouched()
+        {
+            float clear = ArenaCameraRig.ClearOfBody(
+                new Vector3(2f, 1.6f, -3f), Vector3.forward, 4f, Vector3.zero, Radius, Height);
+
+            Assert.AreEqual(4f, clear, 1e-4f);
+        }
+
+        [Test]
+        public void ABoomPassingOverHisHeadIsUntouched()
+        {
+            Vector3 up = new Vector3(0f, 1f, 1f).normalized;
+            float clear = ArenaCameraRig.ClearOfBody(new Vector3(0f, 2.9f, -1.5f), up, 4f, Vector3.zero, Radius, Height);
+
+            Assert.AreEqual(4f, clear, 1e-4f);
+        }
+
+        [Test]
+        public void OverlappingFightersKeepTheFullBoom()
+        {
+            float clear = ArenaCameraRig.ClearOfBody(
+                new Vector3(0.3f, 1.6f, 0f), Vector3.forward, 4f, Vector3.zero, Radius, Height);
+
+            Assert.AreEqual(4f, clear, 1e-4f, "With the pivot inside him there is no edge to stop at.");
         }
     }
 }

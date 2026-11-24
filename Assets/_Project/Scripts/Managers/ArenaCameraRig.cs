@@ -147,6 +147,18 @@ namespace AdaptiveBossArena.Game
         /// <summary>Radius of the sphere swept along the boom, so the lens never grazes a column.</summary>
         private const float BoomProbeRadius = 0.25f;
 
+        /// <summary>How tall the boss's body is treated as being, for keeping the lens out of it.</summary>
+        private const float BossBodyHeight = 3f;
+
+        /// <summary>The boss's body radius used when it carries no character controller to read.</summary>
+        private const float FallbackBossRadius = 0.8f;
+
+        /// <summary>Extra clearance kept between the lens and the boss's body, so his cloak never fills it.</summary>
+        private const float BossBodyClearance = 0.35f;
+
+        /// <summary>The boss's body radius, read once from his controller.</summary>
+        private float _secondaryRadius = -1f;
+
         /// <summary>The player's own sensitivity multiplier.</summary>
         private float _sensitivity = 1f;
 
@@ -584,6 +596,7 @@ namespace AdaptiveBossArena.Game
         {
             _primaryTarget = primary;
             _secondaryTarget = secondary;
+            _secondaryRadius = -1f;
         }
 
         /// <summary>Assigns the configuration. Used by the scene generator.</summary>
@@ -729,11 +742,80 @@ namespace AdaptiveBossArena.Game
                 allowed = Mathf.Max(0.4f, distance * (hit.distance / reach));
             }
 
+            // Igris is not on the arena layer, so the cast passes through him. With him behind the knight the lens
+            // ended up inside his body, the screen filled with burning armour.
+            if (reach > Mathf.Epsilon && _secondaryTarget != null)
+            {
+                float clear = ClearOfBody(pivot, along / reach, reach, _secondaryTarget.position,
+                    SecondaryRadius() + BossBodyClearance, BossBodyHeight);
+                allowed = Mathf.Min(allowed, Mathf.Max(0.4f, distance * (clear / reach)));
+            }
+
             _boom = allowed < _boom || _boom <= 0f
                 ? allowed
                 : MathUtil.Damp(_boom, allowed, _boomReturnHalfLife, Time.unscaledDeltaTime);
 
             return _boom;
+        }
+
+        /// <summary>
+        /// How far a line from the pivot can run before it enters a body, treated as an upright cylinder.
+        /// </summary>
+        /// <remarks>
+        /// Geometry rather than a physics query: the boss's controller is on a layer the camera has no business
+        /// casting against in general, and a cylinder is what keeps a lens out of a standing body. When the pivot
+        /// is already inside the cylinder (the fighters overlapping) nothing can be done and the full reach is kept.
+        /// </remarks>
+        /// <param name="pivot">Where the line starts.</param>
+        /// <param name="direction">Its unit direction.</param>
+        /// <param name="reach">How far it runs.</param>
+        /// <param name="bodyBase">The body's feet.</param>
+        /// <param name="radius">The cylinder's radius.</param>
+        /// <param name="height">The cylinder's height above its feet.</param>
+        /// <returns>The distance along the line to the body, or the full reach when it never enters.</returns>
+        public static float ClearOfBody(
+            Vector3 pivot, Vector3 direction, float reach, Vector3 bodyBase, float radius, float height)
+        {
+            var start = new Vector2(pivot.x - bodyBase.x, pivot.z - bodyBase.z);
+            var flat = new Vector2(direction.x, direction.z);
+            float a = Vector2.Dot(flat, flat);
+
+            if (a < 1e-6f || start.sqrMagnitude <= radius * radius)
+            {
+                return reach;
+            }
+
+            float b = 2f * Vector2.Dot(start, flat);
+            float c = start.sqrMagnitude - radius * radius;
+            float discriminant = b * b - 4f * a * c;
+
+            if (discriminant < 0f)
+            {
+                return reach;
+            }
+
+            float entry = (-b - Mathf.Sqrt(discriminant)) / (2f * a);
+
+            if (entry < 0f || entry > reach)
+            {
+                return reach;
+            }
+
+            float y = pivot.y + direction.y * entry;
+            return y >= bodyBase.y && y <= bodyBase.y + height ? entry : reach;
+        }
+
+        /// <summary>The boss's body radius, from his controller when he has one.</summary>
+        private float SecondaryRadius()
+        {
+            if (_secondaryRadius < 0f && _secondaryTarget != null)
+            {
+                _secondaryRadius = _secondaryTarget.TryGetComponent(out CharacterController body)
+                    ? body.radius * Mathf.Max(_secondaryTarget.lossyScale.x, _secondaryTarget.lossyScale.z)
+                    : FallbackBossRadius;
+            }
+
+            return Mathf.Max(0f, _secondaryRadius);
         }
 
         /// <summary>

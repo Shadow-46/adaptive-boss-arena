@@ -725,7 +725,7 @@ namespace AdaptiveBossArena.Editor
         /// </remarks>
         private static Material DressSparks(Material material)
         {
-            material.SetTexture("_BaseMap", SoftParticle());
+            material.SetTexture("_BaseMap", SoftParticleGlow());
             material.SetColor("_BaseColor", new Color(2.4f, 1.5f, 0.7f, 1f));
             EditorUtility.SetDirty(material);
 
@@ -747,12 +747,24 @@ namespace AdaptiveBossArena.Editor
             material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
         }
 
-        /// <summary>A white disc with a soft falloff, shared by every particle material.</summary>
-        private static Texture2D SoftParticle()
+        /// <summary>A white disc with a soft falloff in its alpha, for the alpha-blended particles.</summary>
+        private static Texture2D SoftParticle() => SoftDisc("SoftParticle", shapeInColour: false);
+
+        /// <summary>
+        /// The same disc with the falloff in its colour as well, for the additive sparks and embers.
+        /// </summary>
+        /// <remarks>
+        /// The additive particle shader adds the texture's colour and ignores its alpha, so a disc shaped only in
+        /// alpha drew every ember as a hard white square - seen in a 2026-11-24 capture of the Last Stand. The same
+        /// trap the presence effects hit in Stage O.
+        /// </remarks>
+        private static Texture2D SoftParticleGlow() => SoftDisc("SoftParticleGlow", shapeInColour: true);
+
+        /// <summary>Loads or draws a soft disc texture.</summary>
+        private static Texture2D SoftDisc(string name, bool shapeInColour)
         {
             const int Size = 64;
-            const string Name = "SoftParticle";
-            string path = EditorMenus.GeneratedMaterialFolder + "/" + Name + ".asset";
+            string path = EditorMenus.GeneratedMaterialFolder + "/" + name + ".asset";
 
             var existing = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
 
@@ -761,7 +773,7 @@ namespace AdaptiveBossArena.Editor
                 return existing;
             }
 
-            var texture = new Texture2D(Size, Size, TextureFormat.RGBA32, true) { name = Name, wrapMode = TextureWrapMode.Clamp };
+            var texture = new Texture2D(Size, Size, TextureFormat.RGBA32, true) { name = name, wrapMode = TextureWrapMode.Clamp };
 
             for (int y = 0; y < Size; y++)
             {
@@ -769,7 +781,9 @@ namespace AdaptiveBossArena.Editor
                 {
                     float r = new Vector2((x + 0.5f) / Size * 2f - 1f, (y + 0.5f) / Size * 2f - 1f).magnitude;
                     float alpha = 1f - Environment.CathedralBuilder.Edge(0.25f, 1f, r);
-                    texture.SetPixel(x, y, new Color(1f, 1f, 1f, alpha * alpha));
+                    float a = alpha * alpha;
+                    float c = shapeInColour ? a : 1f;
+                    texture.SetPixel(x, y, new Color(c, c, c, a));
                 }
             }
 
