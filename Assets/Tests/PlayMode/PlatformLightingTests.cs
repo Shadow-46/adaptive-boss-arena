@@ -123,6 +123,11 @@ namespace AdaptiveBossArena.Tests.PlayMode
         {
             // Found under its own parent: the columns have a Shaft_0 of their own.
             Renderer shaft = GameObject.Find("LightShafts").transform.GetChild(0).GetComponent<Renderer>();
+
+            // Measured from the desktop profile explicitly: a headless run starts on the reduced tier, where the
+            // shafts are already the web's, and comparing the web against itself always failed.
+            _lighting.Apply(web: false);
+            yield return null;
             float desktopAlpha = shaft.sharedMaterial.GetColor("_BaseColor").a;
 
             _lighting.Apply(web: true);

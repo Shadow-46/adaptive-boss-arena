@@ -39,7 +39,9 @@ namespace AdaptiveBossArena.Tests.PlayMode
 
                 yield return null;
 
-                Assert.AreEqual(BloodDecalPool.Capacity, pool.VisibleCount, "Blood piled up past its pool.");
+                // The pool is smaller on the reduced tier, which is the tier a headless test run picks.
+                int capacity = EffectBudget.IsReduced ? BloodDecalPool.WebCapacity : BloodDecalPool.Capacity;
+                Assert.AreEqual(capacity, pool.VisibleCount, "Blood piled up past its pool.");
             }
             finally
             {
