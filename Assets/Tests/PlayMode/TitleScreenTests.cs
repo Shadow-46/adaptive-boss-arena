@@ -126,6 +126,37 @@ namespace AdaptiveBossArena.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator ClearRecordsAsksTwiceThenErases()
+        {
+            // A win written straight into the save, then the title reloaded to read it.
+            var records = new RecordsData();
+            records.RecordAttempt(new AttemptSummary(true, Difficulty.Knight, false, 200f, 0.5f, 1, 2, 1, 3, 1, "Blade"));
+            ServiceRegistry.Current.Get<ISaveService>().Save("records", records);
+            SceneManager.LoadScene("MainMenu", LoadSceneMode.Single);
+
+            for (int i = 0; i < WarmUpFrames; i++)
+            {
+                yield return null;
+            }
+
+            Text panel = GameObject.Find("Records").GetComponent<Text>();
+            StringAssert.Contains("wins 1", panel.text, "The written win did not show.");
+
+            Button clear = FindButton("ClearRecords");
+            Assert.IsNotNull(clear, "No clear button on the title.");
+
+            clear.onClick.Invoke();
+            yield return null;
+            StringAssert.Contains("wins 1", panel.text, "One click erased the records.");
+            Assert.AreEqual(RunModifierMenu.ConfirmClearCaption, clear.GetComponentInChildren<Text>().text);
+
+            clear.onClick.Invoke();
+            yield return null;
+            StringAssert.DoesNotContain("wins 1", panel.text, "The second click did not erase the records.");
+            Assert.AreEqual(RunModifierMenu.ClearCaption, clear.GetComponentInChildren<Text>().text);
+        }
+
+        [UnityTest]
         public IEnumerator FightIsSelectedForAGamepad()
         {
             yield return null;

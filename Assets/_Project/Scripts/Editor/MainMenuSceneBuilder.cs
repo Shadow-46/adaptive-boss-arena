@@ -206,6 +206,11 @@ namespace AdaptiveBossArena.Editor
 
             Text records = BuildRecordsPanel(root);
 
+            Button clear = UiBuilder.CreateButton(
+                root, "ClearRecords", RunModifierMenu.ClearCaption, new Vector2(RecordsColumnX + 160f, -470f),
+                menu.ClearRecords);
+            menu.BindClear(clear.GetComponentInChildren<Text>());
+
             menu.BindProgression(
                 difficulty.GetComponentInChildren<Text>(), blurb, tint.GetComponentInChildren<Text>(), ascended,
                 ascendedLabel, records);

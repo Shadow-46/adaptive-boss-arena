@@ -57,6 +57,20 @@ namespace AdaptiveBossArena.UI
         [Tooltip("The records panel's body.")]
         private Text _recordsText;
 
+        [SerializeField]
+        [Tooltip("The clear-records button's label, which asks for a second click before erasing.")]
+        private Text _clearLabel;
+
+        /// <summary>The clear button's resting caption.</summary>
+        public const string ClearCaption = "Clear Records";
+
+        /// <summary>The caption asking for the second, confirming click.</summary>
+        public const string ConfirmClearCaption = "Click again to erase";
+
+        /// <summary>Seconds the confirmation stays armed before the button forgets the first click.</summary>
+        private const float ClearConfirmSeconds = 4f;
+
+        private float _clearArmedUntil = float.NegativeInfinity;
         private RecordsData _records = new RecordsData();
         private ISaveService _saveService;
         private RunModifiers _modifiers = new RunModifiers();
@@ -102,6 +116,49 @@ namespace AdaptiveBossArena.UI
         /// <summary>Turns the Ascended rematch on or off. Ignored while it is still locked.</summary>
         /// <param name="on">Whether to fight the rematch.</param>
         public void SetAscended(bool on) => Change(() => _modifiers.Ascended = on && _records.AscendedUnlocked);
+
+        /// <summary>
+        /// Erases every record and trial, on the second click within a few seconds of the first.
+        /// </summary>
+        /// <remarks>
+        /// Two clicks because it cannot be undone. Unearned choices fall back with it: the Ascended rematch locks
+        /// again and the armour returns to steel.
+        /// </remarks>
+        public void ClearRecords()
+        {
+            if (Time.unscaledTime > _clearArmedUntil)
+            {
+                _clearArmedUntil = Time.unscaledTime + ClearConfirmSeconds;
+                SetClearCaption(ConfirmClearCaption);
+                return;
+            }
+
+            _clearArmedUntil = float.NegativeInfinity;
+            _records = new RecordsData();
+            _saveService?.Save(SaveKeys.Records, _records);
+            SetClearCaption(ClearCaption);
+            Change(Sanitise);
+        }
+
+        private void Update()
+        {
+            if (_clearLabel != null && _clearLabel.text == ConfirmClearCaption && Time.unscaledTime > _clearArmedUntil)
+            {
+                SetClearCaption(ClearCaption);
+            }
+        }
+
+        private void SetClearCaption(string caption)
+        {
+            if (_clearLabel != null)
+            {
+                _clearLabel.text = caption;
+            }
+        }
+
+        /// <summary>Assigns the clear button's label. Used by the scene generator.</summary>
+        /// <param name="label">The label.</param>
+        public void BindClear(Text label) => _clearLabel = label;
 
         /// <summary>
         /// Clears any choice a saved file holds that the player has not earned.
